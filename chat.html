@@ -3,7 +3,7 @@
 <div id="help"></div>
 <div class="bottom-bar-container">
   <div class="quick-keys">
-    <button style="opacity:0; width:70%;"></button>
+    <button style="opacity:0; height:90%;"></button>
     <button type="button" onclick="kit.say('ls .', 'prompt')">LS</button>
     <button type="button" onclick="kit.say('cd ..', 'prompt')">CD ..</button>
     <button type="button" onclick="kit.say('clear', 'prompt')">CLEAR</button>
@@ -63,12 +63,17 @@ textarea {
   color: lime;
 }
 .quick-keys {
+  position: fixed;
+  right: 10px;
+  bottom: 12vh;
   display: flex;
-  overflow-x: auto;
+  flex-direction: column;
+  align-items: flex-end;
   gap: 12px;
   padding: 10px;
   background: transparent;
-
+  overflow-y: auto;
+  overflow-x: hidden;
   scrollbar-width: none;
 }
 .quick-keys::-webkit-scrollbar { display: none; }
