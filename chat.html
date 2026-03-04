@@ -3,7 +3,7 @@
 <div id="help"></div>
 <div class="bottom-bar-container">
   <div class="quick-keys">
-    <button style="opacity:0; height:90%;"></button>
+    <button style="opacity:0; width:75%;"></button>
     <button type="button" onclick="kit.say('ls .', 'prompt')">LS</button>
     <button type="button" onclick="kit.say('cd ..', 'prompt')">CD ..</button>
     <button type="button" onclick="kit.say('clear', 'prompt')">CLEAR</button>
@@ -59,21 +59,18 @@ textarea {
   text-align: left;
 }
 #help {
-  padding: 0 1em;
   color: lime;
 }
 .quick-keys {
-  position: fixed;
-  right: 10px;
-  bottom: 12vh;
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
+  flex-direction: row;
+  align-items: center;
   gap: 12px;
   padding: 10px;
   background: transparent;
-  overflow-y: auto;
-  overflow-x: hidden;
+
+  overflow-x: auto;
+  overflow-y: hidden;
   scrollbar-width: none;
 }
 .quick-keys::-webkit-scrollbar { display: none; }
@@ -115,7 +112,6 @@ textarea {
   right: 0;
   z-index: 100;
   background: transparent;
-
 }
 .input-wrap {
   flex: 1;
@@ -187,6 +183,8 @@ input:focus::placeholder { opacity: 0.5; }
 <script src="util.js"></script>
 <script>;(function(chat){ chat();
 var prompt, history = [], histIndex = -1;
+var shell = B.all('#shell')[0];
+var help = B.all('#help')[0];
 (prompt = B.all('#prompt')[0]).focus();
 kit.ear('chat',(eve)=>{
   //console.log(">", eve.detail || eve.data);
@@ -226,10 +224,10 @@ prompt.oninput = function(eve){
   prompt.wait = setTimeout(async function(){
     var answer = await AI.shell("1 sentence reply for terminal shell or code help:" + prompt.value);
     var v = B.new('div'); v.innerHTML = answer; // NEVER ADD TO DOM, TO PREVENT XSS!!!!!
-    v = v.all('.a')[0]; 
+    v = v.all('.a')[0] || v;
     var atBottom = (B.scrollHeight - B.scrollTop - B.clientHeight < 50) && (shell.scrollHeight - shell.scrollTop - shell.clientHeight < 50);
     help.innerHTML = ''; // empty!
-    help.textContent = v.textContent;
+    help.textContent = v.textContent || '';
     prompt.try = (v.all('code')[0] || v.all('b')[0] || {}).textContent||'';
     if(atBottom) { B.scrollTop = B.scrollHeight; shell.scrollTop = shell.scrollHeight; }
   },333);
