@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1080" viewBox="0 0 1080 1080" role="img" aria-label="Code on Phone square social preview">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#030005"/>
+      <stop offset="45%" stop-color="#14061e"/>
+      <stop offset="100%" stop-color="#080010"/>
+    </linearGradient>
+    <radialGradient id="glowA" cx="0.75" cy="0.25" r="0.6">
+      <stop offset="0%" stop-color="#d946ef" stop-opacity="0.32"/>
+      <stop offset="100%" stop-color="#d946ef" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowB" cx="0.1" cy="0.92" r="0.65">
+      <stop offset="0%" stop-color="#a855f7" stop-opacity="0.22"/>
+      <stop offset="100%" stop-color="#a855f7" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="phoneGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1a0b23"/>
+      <stop offset="100%" stop-color="#090210"/>
+    </linearGradient>
+    <linearGradient id="strokeGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#d946ef"/>
+      <stop offset="100%" stop-color="#a855f7"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1080" height="1080" fill="url(#bg)"/>
+  <rect width="1080" height="1080" fill="url(#glowA)"/>
+  <rect width="1080" height="1080" fill="url(#glowB)"/>
+
+  <g opacity="0.24">
+    <path d="M0 835 L210 710 L430 790 L610 700 L790 760 L1080 600" stroke="#d946ef" stroke-width="3" fill="none"/>
+    <path d="M0 890 L260 760 L500 870 L700 760 L900 850 L1080 760" stroke="#a855f7" stroke-width="3" fill="none"/>
+  </g>
+
+  <g transform="translate(90,120)">
+    <text x="0" y="0" fill="#cbd5e1" font-family="Arial, Helvetica, sans-serif" font-size="26" letter-spacing="4">CODE ON PHONE</text>
+    <text x="0" y="110" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="98" font-weight="800">Ship from</text>
+    <text x="0" y="208" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="98" font-weight="800">anywhere.</text>
+    <text x="0" y="280" fill="#cbd5e1" font-family="Arial, Helvetica, sans-serif" font-size="38">$999 per seat</text>
+  </g>
+
+  <g transform="translate(610,360)">
+    <rect x="0" y="0" width="360" height="610" rx="56" fill="url(#phoneGrad)" stroke="url(#strokeGrad)" stroke-width="5"/>
+    <rect x="124" y="0" width="112" height="26" fill="#07010d"/>
+    <rect x="34" y="72" width="292" height="432" rx="20" fill="#0b0512" stroke="#2a1235" stroke-width="1"/>
+    <text x="54" y="118" fill="#5b4a67" font-family="Courier New, monospace" font-size="15">// remote mode</text>
+    <text x="54" y="156" fill="#d946ef" font-family="Courier New, monospace" font-size="18">if</text>
+    <text x="76" y="156" fill="#ffffff" font-family="Courier New, monospace" font-size="18"> productivity &lt; goal {</text>
+    <text x="54" y="188" fill="#ffffff" font-family="Courier New, monospace" font-size="18">  assign_work("MOBILE")</text>
+    <text x="54" y="220" fill="#ffffff" font-family="Courier New, monospace" font-size="18">}</text>
+    <rect x="34" y="530" width="292" height="56" rx="14" fill="#13081a" stroke="#5f2575" stroke-width="1"/>
+    <text x="180" y="566" text-anchor="middle" fill="#d946ef" font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="700">DEPLOY</text>
+  </g>
+</svg>
