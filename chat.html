@@ -1,24 +1,28 @@
 <link rel="stylesheet" href="/gun/kit/web.css"><script src="/gun/kit/web.js"></script>
-<div id="shell"></div>
-<div id="help"></div>
-<div class="bottom-bar-container">
-  <div class="quick-keys">
-    <button style="opacity:0; width:75%;"></button>
+<div id="shell">
+<div style="background: red; height: 2700px; display:none;" >asdf</div>
+</div>
+
+
+  <div class="kit">
+    <button style="opacity:0; width:90%;"></button>
     <button type="button" onclick="kit.say('ls .', 'prompt')">LS</button>
-    <button type="button" onclick="kit.say('cd ..', 'prompt')">CD ..</button>
+    <button type="button" onclick="kit.say('cd ..', 'prompt')">CD</button>
     <button type="button" onclick="kit.say('clear', 'prompt')">CLEAR</button>
     <button type="button" onclick="kit.say('pwd', 'prompt')">PWD</button>
     <button type="button" onclick="kit.say('git status', 'prompt')">GIT</button>
     <button type="button" onclick="kit.say('npm start', 'prompt')">NPM</button>
     <button type="button" onclick="kit.say('ps', 'prompt')">PS</button>
   </div>
-  <form onsubmit="kit.say('','prompt'); return false;" class="prompt-bar">
-    <div class="input-wrap">
-      <span class="prompt-symbol">$&nbsp;</span>
-      <textarea id="prompt" name="cmd" placeholder="" autokomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" rows="1"></textarea>
-    </div>
+
+  <form onsubmit="kit.say('','prompt'); return false;">
+    <div id="help"></div>
+    
+     
+      <textarea id="prompt" name="cmd" placeholder="$" autokomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" rows="1"></textarea>
+
   </form>
-</div>
+
 <style>
 :root { --fill: var(--mood); }
 ::selection {
@@ -44,8 +48,7 @@ textarea {
   justify-content: flex-start;
   align-items: stretch;
   overflow-y: auto;
-  padding-bottom: 150px; /* Increased padding to account for fixed bottom bar */
-  scroll-padding-bottom: 150px; /* Ensures scroll behavior accounts for fixed bar */
+
 }
 #shell > div {
   white-space: pre-wrap;
@@ -61,27 +64,32 @@ textarea {
 #help {
   color: lime;
 }
-.quick-keys {
+.kit {
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 12px;
-  padding: 10px;
+  gap: 0.2em;
+  padding: 0.2em;
   background: transparent;
-
-  overflow-x: auto;
-  overflow-y: hidden;
+z-index: 9999;
+  overflow-x: scroll;
+  overflow-y: scroll;
   scrollbar-width: none;
+  position: fixed ;
+  right: 0;
+  bottom: 10%;
+  height: 5em;
+  width: 100%;
 }
-.quick-keys::-webkit-scrollbar { display: none; }
-.quick-keys button {
+.kit::-webkit-scrollbar { display: none; }
+.kit button {
   flex: 0 0 auto;
   background: rgba(0,0,0,0.2);
   backdrop-filter: blur(var(--blur));
   border: 1px solid var(--pop);
   color: #fff;
-  padding: 12px 25px;
-  border-radius: 10px;
+  padding: 0.2em 0.5em;
+  border-radius: 1em;
   font-family: 'Courier New', monospace;
   font-size: 1.1em;
   font-weight: 900;
@@ -91,52 +99,44 @@ textarea {
   box-shadow: 0 0 10px rgba(191,0,255,0.2);
   transition: all 0.2s;
 }
-.quick-keys button:active {
+.kit button:active {
   background: var(--pop);
   color: var(--mood);
   transform: scale(0.92);
   text-shadow: none;
 }
-.prompt-bar {
-  display: flex;
-  padding: 10px;
-  background: var(--fill);
-  border-top: 2px solid var(--pop);
-  gap: 10px;
-  align-items: center;
-}
-.bottom-bar-container {
+
+form {
   position: fixed;
-  bottom: 0;
+  bottom: 3em;
   left: 0;
   right: 0;
   z-index: 100;
   background: transparent;
-}
-.input-wrap {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  background: rgba(255,255,255,0.05);
   border: 1px solid var(--pop);
-  border-radius: 20px;
-  padding: 0 15px;
-  box-shadow: inset 0 0 10px rgba(191,0,255,0.2);
+  border-top: none;
+  border-left: none;
+  border-right: none;
+  border-radius: 9em;
+  backdrop-filter: blur(var(--blur));
+ 
+    ;
 }
-.prompt-symbol { color: var(--pop); font-family: monospace; font-weight: bold; font-size: 1.2em; }
-.input-wrap textarea {
+
+
+textarea {
   flex: 1;
   background: transparent;
   border: none;
   color: white;
   font-family: 'Courier New', monospace;
   font-size: 1.2em;
-  padding: 12px 0;
+  padding: 0.2em 0;
   outline: none;
   resize: none;
   overflow-y: hidden;
 }
-.input-wrap textarea:focus::placeholder { opacity: 0.3; }
+textarea:focus::placeholder { opacity: 0.3; }
 iframe {
   display: block;
   width: 100%;
@@ -161,24 +161,7 @@ input:focus { animation: none; }
 input::placeholder { opacity: 1; }
 input:focus::placeholder { opacity: 0.5; }
 
-.ls { width: 100% }
-.ls {
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-}
-.ls a {
-  align-items: center;
-  justify-content: center;
-  min-width: 4em;
-  min-height: 2em;
-  padding: 0.5em;
-  text-align: center;
-  border: 1px solid var(--pop);
-  backdrop-filter:  blur(var(--blur));
-}
-.ls a:hover {
-  background: var(--pop);
-  color: var(--mood);
-}
+
 </style>
 <script src="util.js"></script>
 <script>;(function(chat){ chat();
