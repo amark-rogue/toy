@@ -167,6 +167,9 @@ iframe {
   border: none;
   height: 0;
   overflow-x: hidden;
+  pointer-events: auto;
+  touch-action: pan-y;
+  overscroll-behavior: contain;
 }
 /*#shell > div {
   overflow: hidden;
@@ -260,23 +263,8 @@ B.all('#help')[0].ear('pointerdown',function(eve){
   eve.preventDefault();
   kit.say(prompt.try, 'prompt.try');
 });
-var cleanShellNoise = function(s){
-  if(!s){ return s }
-  return s
-    .replace(/(?:^|\r?\n)WARNING: terminal is not fully functional(?:\r?\n|$)/g, '\n')
-    .replace(/(?:^|\r?\n)Press RETURN to continue(?:\r?\n|$)/g, '\n')
-    .replace(/(?:\r?\n)?--More--(?:\r?\n)?/g, '\n');
-};
-var maybeAutoContinue = function(s, now){
-  s = (s||'').flat();
-  if(!/(Press RETURN to continue|--More--|\(END\))/.test(s)){ return }
-  now = Date.now();
-  if(stream.autoContinueAt && (now - stream.autoContinueAt < 700)){ return }
-  stream.autoContinueAt = now;
-  kit.say('\r', 'host');
-};
 var stream = function(t){
-  maybeAutoContinue(t);
+  (window.shellReply || {}).maybeContinue && window.shellReply.maybeContinue(t, {state: stream, send: function(c){ kit.say(c, 'host') }});
   stream.live || (stream.live = (function(card, pre){
     card = B.new('div');
     card.className = 'reply-card streaming';
@@ -288,8 +276,8 @@ var stream = function(t){
     return card;
   }()));
   stream.live.raw += t;
-  stream.live.pre.textContent = cleanShellNoise(stream.live.raw).flat();
-  stream.last = cleanShellNoise((stream.last||'')+t);
+  stream.live.pre.textContent = ((window.shellReply || {}).clean ? window.shellReply.clean(stream.live.raw) : stream.live.raw).flat();
+  stream.last = (window.shellReply || {}).clean ? window.shellReply.clean((stream.last||'')+t) : ((stream.last||'')+t);
   var atBottom = (B.scrollHeight - B.scrollTop - B.clientHeight < 50) && (shell.scrollHeight - shell.scrollTop - shell.clientHeight < 50);
   if(atBottom) { B.scrollTop = B.scrollHeight; shell.scrollTop = shell.scrollHeight; }
   (stream.eat || CMD.bash)(stream.last);
@@ -342,6 +330,7 @@ CMD.bash = function(S, cmdl, cmd, tmp){
       if(!cmd){ return }
       var i = B.new('iframe');
       i.src = './cmd/'+cmd+'.html';
+      i.setAttribute('scrolling','no');
       v.upgrading = 1;
       v.append(i);
       kit.ear('load', function(eve){
