@@ -6,13 +6,13 @@
 
   <div class="kit">
     <button style="opacity:0; width:90%;"></button>
-    <button type="button" onclick="kit.say('ls .', 'prompt')">LS</button>
-    <button type="button" onclick="kit.say('cd ..', 'prompt')">CD</button>
-    <button type="button" onclick="kit.say('clear', 'prompt')">CLEAR</button>
-    <button type="button" onclick="kit.say('pwd', 'prompt')">PWD</button>
-    <button type="button" onclick="kit.say('git status', 'prompt')">GIT</button>
-    <button type="button" onclick="kit.say('npm start', 'prompt')">NPM</button>
-    <button type="button" onclick="kit.say('ps', 'prompt')">PS</button>
+    <button type="button" onclick="console.log('bclick');kit.say('ls .', 'prompt')">ls</button>
+    <button type="button" onclick="kit.say('cd ..', 'prompt')">cd</button>
+    <button type="button" onclick="kit.say('clear', 'prompt')">clear</button>
+    <button type="button" onclick="kit.say('pwd', 'prompt')">pwd</button>
+    <button type="button" onclick="kit.say('git status', 'prompt')">git</button>
+    <button type="button" onclick="kit.say('npm start', 'prompt')">npm</button>
+    <button type="button" onclick="kit.say('ps', 'prompt')">ps</button>
   </div>
 
   <form onsubmit="kit.say('','prompt'); return false;">
@@ -69,13 +69,13 @@ textarea {
   gap: 0.2em;
   padding: 0.2em;
   background: transparent;
-z-index: 9999;
+z-index: 99;
   overflow-x: scroll;
   overflow-y: scroll;
   scrollbar-width: none;
   position: fixed ;
   right: 0;
-  bottom: 10%;
+  bottom: 13%;
   height: 5em;
   width: 100%;
 }
@@ -85,9 +85,9 @@ z-index: 9999;
   background: rgba(0,0,0,0.2);
   backdrop-filter: blur(var(--blur));
   border: 1px solid var(--pop);
-  color: #fff;
-  padding: 0.2em 0.5em;
-  border-radius: 1em;
+
+  padding: 0.5em 1em;
+  border-radius: 0.5em;
   font-family: 'Courier New', monospace;
   font-size: 1.1em;
   font-weight: 900;
@@ -115,7 +115,7 @@ form {
   border-top: none;
   border-left: none;
   border-right: none;
-  border-radius: 9em;
+  border-radius: 1em;
   backdrop-filter: blur(var(--blur));
 }
 
@@ -175,8 +175,10 @@ kit.ear('prompt',(eve)=>{
   var val = prompt.value.trim();
   if(val && history[history.length-1] !== val) { history.push(val); }
   histIndex = history.length;
+  console.log(prompt.value);
   kit.say(prompt.value+'\r','host');
   prompt.value = "";
+  window.buzz();
   autoGrow(prompt);
 });
 kit.ear('prompt.try',(eve)=>{

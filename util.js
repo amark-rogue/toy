@@ -20,9 +20,9 @@ ESC = {"'":'','"':'','#':'\n'};
 var D = document, B = D.body;
 
 window.buzz = function(ms) {
-  try { if (navigator.vibrate) navigator.vibrate(ms || 15); } catch(e) {}
+  try { if (navigator.vibrate) navigator.vibrate(ms || 9); } catch(e) {}
 };
-document.addEventListener('pointerdown', function(e) {
+document.addEventListener('pointerdown', function(e) { return;
   var t = e.target;
   if (t.tagName === 'BUTTON' || t.closest('button') || t.tagName === 'A' || t.closest('a') || t.closest('[class$="-box"]')) {
     buzz(15);

@@ -14,7 +14,7 @@ input::placeholder { opacity: 1; }
 </style>
 <script>;(function(cop){
 host.focus();
-//console.off=1;
+console.off=1;
 cop.sign = async ()=>{ if(cop.ws){ return }
   cop.ws = new WebSocket((localStorage.host=host.value).replace(/^http/,'ws')||'ws://localhost:8022');
   cop.ws.onopen = ()=>{
