@@ -5,7 +5,7 @@
 
 
   <div class="kit">
-    <button style="opacity:0; width:90%;"></button>
+    <button style="opacity:0; width:70%;"></button>
     <button type="button" onclick="console.log('bclick');kit.say('ls .', 'prompt')">ls</button>
     <button type="button" onclick="kit.say('cd ..', 'prompt')">cd</button>
     <button type="button" onclick="kit.say('clear', 'prompt')">clear</button>
@@ -44,7 +44,7 @@ textarea {
 #shell {
   width: 100%;
   box-sizing: border-box;
-  padding: 0 0.5em;
+  padding: 0 0;
   display: block;
   padding-bottom: 8em; /* Ensure content isn't hidden behind the fixed form */
 }
@@ -58,6 +58,34 @@ textarea {
 #shell > div > p {
   display: block;
   text-align: left;
+}
+.reply-card {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.4em 0.2em;
+  margin: 0;
+  border: none;
+  border-bottom: 1px solid var(--pop);
+  border-radius: 1em;
+  background: transparent;
+  backdrop-filter: blur(var(--blur));
+}
+.reply-card.streaming {
+  border-bottom-color: rgba(0,255,200,0.55);
+}
+.reply-card pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: 'Courier New', monospace;
+}
+.reply-card.ready-upgrade {
+  border-bottom-color: var(--pop);
+  cursor: pointer;
+  touch-action: pan-y;
+}
+.reply-card.ready-upgrade:active {
+  background: rgba(255,255,255,0.05);
 }
 #help {
   color: lime;
@@ -232,9 +260,38 @@ B.all('#help')[0].ear('pointerdown',function(eve){
   eve.preventDefault();
   kit.say(prompt.try, 'prompt.try');
 });
+var cleanShellNoise = function(s){
+  if(!s){ return s }
+  return s
+    .replace(/(?:^|\r?\n)WARNING: terminal is not fully functional(?:\r?\n|$)/g, '\n')
+    .replace(/(?:^|\r?\n)Press RETURN to continue(?:\r?\n|$)/g, '\n')
+    .replace(/(?:\r?\n)?--More--(?:\r?\n)?/g, '\n');
+};
+var maybeAutoContinue = function(s, now){
+  s = (s||'').flat();
+  if(!/(Press RETURN to continue|--More--|\(END\))/.test(s)){ return }
+  now = Date.now();
+  if(stream.autoContinueAt && (now - stream.autoContinueAt < 700)){ return }
+  stream.autoContinueAt = now;
+  kit.say('\r', 'host');
+};
 var stream = function(t){
-  //stream.all = (stream.all||'')+t;
-  stream.last = (stream.last||'')+t;
+  maybeAutoContinue(t);
+  stream.live || (stream.live = (function(card, pre){
+    card = B.new('div');
+    card.className = 'reply-card streaming';
+    pre = B.new('pre');
+    card.append(pre);
+    card.pre = pre;
+    card.raw = '';
+    shell.append(card);
+    return card;
+  }()));
+  stream.live.raw += t;
+  stream.live.pre.textContent = cleanShellNoise(stream.live.raw).flat();
+  stream.last = cleanShellNoise((stream.last||'')+t);
+  var atBottom = (B.scrollHeight - B.scrollTop - B.clientHeight < 50) && (shell.scrollHeight - shell.scrollTop - shell.clientHeight < 50);
+  if(atBottom) { B.scrollTop = B.scrollHeight; shell.scrollTop = shell.scrollHeight; }
   (stream.eat || CMD.bash)(stream.last);
 }, CMD = {};
 
@@ -266,23 +323,42 @@ CMD.bash = function(S, cmdl, cmd, tmp){
   }
   S = arr;
   stream.last = '';
+  if(stream.live){
+    stream.live.remove();
+    stream.live = null;
+  }
   var atBottom = (B.scrollHeight - B.scrollTop - B.clientHeight < 50) && (shell.scrollHeight - shell.scrollTop - shell.clientHeight < 50);
-  S.forEach(function(s,v,t,p){ if(!(t = s.flat()).trim()){ return }
-    (p = B.new('p')).append(t); (v = B.new('div')).append(p); shell.append(v);
-    cmd = t.cut(['\r\n','\n','\r'],ESC)[0]; // 1st line
-    //console.log(s, [cmd], CMD[cmd], Object.keys(CMD));
-    cmd = cmd.trim().split(/\s+/)[0].trim(); // 1st word
-    var i = B.new('iframe');
-    i.src = './cmd/'+cmd+'.html';
-    v.append(i);
-    kit.ear('load', function(eve){
-      if(eve.detail === undefined) return; // Ignore native iframe load (e.g. 404)
-      if(eve.target !== i) return;
-      kit.say(s,cmd, i.contentWindow);
-      var p = v.all('p')[0];
-      if(p) p.remove();
-    }, i);
-    //(tmp = CMD[cmd]) && tmp(s,v);
+  S.forEach(function(s,v,t,p){
+    if(!(t = s.flat()).trim()){ return }
+    (p = B.new('pre')).textContent = t;
+    (v = B.new('div')).className = 'reply-card ready-upgrade';
+    v.raw = s;
+    v.append(p);
+    v.ear('click', function(eve){
+      if(v.upgraded || v.upgrading){ return }
+      cmd = t.cut(['\r\n','\n','\r'],ESC)[0].trim();
+      cmd = cmd.replace(/^.*(?:\$|#|>|PS>)\s*/, '');
+      cmd = cmd.trim().split(/\s+/)[0].trim();
+      if(!cmd){ return }
+      var i = B.new('iframe');
+      i.src = './cmd/'+cmd+'.html';
+      v.upgrading = 1;
+      v.append(i);
+      kit.ear('load', function(eve){
+        if(eve.detail === undefined) return; // Ignore native iframe load (e.g. 404)
+        if(eve.target !== i) return;
+        kit.say(s,cmd, i.contentWindow);
+        v.upgraded = 1;
+        v.upgrading = 0;
+        v.classList.remove('ready-upgrade');
+      }, i);
+      setTimeout(function(){
+        if(v.upgraded || !v.upgrading){ return }
+        v.upgrading = 0;
+        i.remove();
+      },900);
+    });
+    shell.append(v);
   });
   if(atBottom) { B.scrollTop = B.scrollHeight; shell.scrollTop = shell.scrollHeight; }
 }

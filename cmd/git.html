@@ -1,15 +1,21 @@
 <link rel="stylesheet" href="/gun/kit/web.css"><script src="/gun/kit/web.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/diff/diff.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/diff2html/bundles/js/diff2html.min.js"></script>
+
 <div id="container" class="git-box">
   <div class="header">
     <div class="icon">🐙</div>
     <div class="title">GIT: <span id="subcmd" class="highlight"></span></div>
   </div>
-  <pre id="results" class="results-list"></pre>
+  <div id="results" class="results-list"></div>
   <div class="actions">
-    <button class="fat-btn" onclick="kit.say('git status', 'prompt')">STATUS</button>
-    <button class="fat-btn" onclick="kit.say('git add .', 'prompt')">ADD ALL</button>
-    <button class="fat-btn" onclick="kit.say('git commit -m 'update'', 'prompt.try')">COMMIT</button>
-    <button class="fat-btn" onclick="kit.say('git push', 'prompt')">PUSH</button>
+    <button class="fat-btn" onpointerdown="kit.say('git status', 'prompt.try')" onclick="kit.say('git status', 'prompt')">STATUS</button>
+    <button class="fat-btn" onpointerdown="kit.say('git diff', 'prompt.try')" onclick="kit.say('git diff', 'prompt')">DIFF</button>
+    <button class="fat-btn" onpointerdown="kit.say('git add .', 'prompt.try')" onclick="kit.say('git add .', 'prompt')">ADD ALL</button>
+    <button class="fat-btn" onpointerdown="kit.say('git commit -m \'update\'', 'prompt.try')" onclick="kit.say('git commit -m \'update\'', 'prompt')">COMMIT</button>
+    <button class="fat-btn" onpointerdown="kit.say('git push', 'prompt.try')" onclick="kit.say('git push', 'prompt')">PUSH</button>
   </div>
 </div>
 <style>
@@ -72,19 +78,138 @@
   transform: scale(0.95);
   text-shadow: none;
 }
+
+/* File Card Styles for Diff */
+.file-card {
+    background: #111;
+    border: 1px solid #333;
+    border-radius: 8px;
+    margin-bottom: 1em;
+    overflow: hidden;
+}
+.file-header {
+    background: #222;
+    padding: 1em;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+}
+.file-name {
+    flex: 1;
+    font-weight: bold;
+    color: #ff0055;
+    font-size: 1.2em;
+}
+.btn-save-header {
+    background: var(--pop);
+    color: white;
+    border: none;
+    padding: 0.5em 1em;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    margin-right: 1em;
+}
+.chevron {
+    transition: transform 0.2s;
+}
+.collapsed .chevron {
+    transform: rotate(-90deg);
+}
+.collapsed .file-content {
+    display: none;
+}
+.file-content {
+    background: #000;
+}
+/* CodeMirror overrides */
+.CodeMirror {
+    height: auto !important;
+    background: #000 !important;
+    color: #eee !important;
+}
+.cm-s-default .cm-diff-add { color: lime; background: rgba(0, 255, 0, 0.1); display: inline-block; width: 100%; }
+.cm-s-default .cm-diff-del { color: red; background: rgba(255, 0, 0, 0.1); display: inline-block; width: 100%; }
+.cm-diff-inline-add { background: rgba(0, 255, 0, 0.4); border-radius: 2px; }
+.cm-diff-inline-del { background: rgba(255, 0, 0, 0.4); text-decoration: line-through; border-radius: 2px; }
+.cm-s-default .cm-diff-header { color: #aaa; }
+.cm-s-default .cm-diff-file { color: cyan; font-weight: bold; }
+
+/* Status List Styles */
+.ls { 
+  width: 100%; 
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 15px;
+  padding: 10px;
+}
+.ls .status-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1em 0.5em;
+  text-align: center;
+  background: linear-gradient(135deg, rgba(191, 0, 255, 0.1), rgba(0,0,0,0.6));
+  border: 2px solid var(--pop, #ff0055);
+  border-radius: 16px;
+  backdrop-filter: blur(5px);
+  font-family: 'Courier New', monospace;
+  font-weight: 900;
+  text-shadow: 0 0 5px var(--pop, #ff0055);
+  box-shadow: 0 5px 15px rgba(191, 0, 255, 0.2), inset 0 0 10px rgba(191, 0, 255, 0.1);
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  cursor: pointer;
+  word-break: break-word;
+  user-select: none;
+}
+.ls .status-item:active {
+  background: var(--pop, #ff0055);
+  color: #000 !important;
+  transform: scale(0.92);
+  text-shadow: none;
+  box-shadow: 0 0 30px var(--pop, #ff0055);
+}
+.ls .status-item:active span {
+  color: #000 !important;
+  filter: none !important;
+}
 </style>
 <script src="../util.js"></script>
+<script src="./git/diff.js"></script>
+<script src="./git/status.js"></script>
 <script>
 kit.ear('git', function hear(eve) {
   var s = eve.detail || eve.data || "";
-  var lines = s.flat().trim().split('\n');
+  
+  // Clean ANSI escape codes from server response
+  var cleanS = s.flat().replace(/\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])/g, '');
+  var lines = cleanS.trim().split('\n');
   var cmdLine = lines[0].trim();
   
   var args = cmdLine.replace(/^git\s+/, '').split(/\s+/);
   subcmd.innerText = args[0] || "COMMAND";
   
   var outLines = lines.slice(1).join('\n');
-  results.textContent = outLines;
+  
+  const container = document.getElementById('results');
+  
+  // If it's a diff command OR it contains patch headers
+  if (args[0] === 'diff' || outLines.includes('diff --git')) {
+      if (window.renderDiff) {
+          window.renderDiff(outLines, container);
+      } else {
+          container.textContent = "Loading visualizer...";
+      }
+  } else if (args[0] === 'status') {
+      if (window.renderStatus) {
+          window.renderStatus(outLines, container);
+      } else {
+          container.textContent = "Loading status...";
+      }
+  } else {
+      container.textContent = outLines;
+  }
   
   hear.off();
 });

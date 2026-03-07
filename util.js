@@ -22,6 +22,26 @@ var D = document, B = D.body;
 window.buzz = function(ms) {
   try { if (navigator.vibrate) navigator.vibrate(ms || 9); } catch(e) {}
 };
+window.shellReply = window.shellReply || {
+  clean: function(s){
+    if(!s){ return s }
+    return (''+s)
+      .replace(/(?:^|\r?\n)WARNING: terminal is not fully functional(?:\r?\n|$)/g, '\n')
+      .replace(/(?:^|\r?\n)Press RETURN to continue(?:\r?\n|$)/g, '\n')
+      .replace(/(?:\r?\n)?--More--(?:\r?\n)?/g, '\n');
+  },
+  maybeContinue: function(s, opt, now){
+    opt = opt || {};
+    s = (s||'').flat();
+    if(!/(Press RETURN to continue|--More--|\(END\))/.test(s)){ return false }
+    now = Date.now();
+    var state = opt.state || this;
+    if(state.autoContinueAt && (now - state.autoContinueAt < (opt.wait || 700))){ return false }
+    state.autoContinueAt = now;
+    if(opt.send){ opt.send('\r') }
+    return true;
+  }
+};
 document.addEventListener('pointerdown', function(e) { return;
   var t = e.target;
   if (t.tagName === 'BUTTON' || t.closest('button') || t.tagName === 'A' || t.closest('a') || t.closest('[class$="-box"]')) {
