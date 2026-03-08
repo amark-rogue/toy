@@ -5,14 +5,14 @@
 
 
   <div class="kit">
-    <button style="opacity:0; width:70%;"></button>
-    <button type="button" onclick="console.log('bclick');kit.say('ls .', 'prompt')">ls</button>
-    <button type="button" onclick="kit.say('cd ..', 'prompt')">cd</button>
-    <button type="button" onclick="kit.say('clear', 'prompt')">clear</button>
-    <button type="button" onclick="kit.say('pwd', 'prompt')">pwd</button>
-    <button type="button" onclick="kit.say('git status', 'prompt')">git</button>
-    <button type="button" onclick="kit.say('npm start', 'prompt')">npm</button>
-    <button type="button" onclick="kit.say('ps', 'prompt')">ps</button>
+    <span class="kit-spacer"></span>
+    <button type="button" onclick="console.log('bclick');kit.say('ls .', 'prompt')"><span class="btn-icon">&#9776;</span>ls</button>
+    <button type="button" onclick="kit.say('cd ..', 'prompt')"><span class="btn-icon">&#8593;</span>cd</button>
+    <button type="button" onclick="kit.say('clear', 'prompt')"><span class="btn-icon">&#10005;</span>clear</button>
+    <button type="button" onclick="kit.say('pwd', 'prompt')"><span class="btn-icon">&#9673;</span>pwd</button>
+    <button type="button" onclick="kit.say('git status', 'prompt')"><span class="btn-icon">&#9826;</span>git</button>
+    <button type="button" onclick="kit.say('npm start', 'prompt')"><span class="btn-icon">&#9654;</span>npm</button>
+    <button type="button" onclick="kit.say('ps', 'prompt')"><span class="btn-icon">&#9881;</span>ps</button>
   </div>
 
   <form onsubmit="kit.say('','prompt'); return false;">
@@ -62,74 +62,122 @@ textarea {
 .reply-card {
   width: 100%;
   box-sizing: border-box;
-  padding: 0.4em 0.2em;
+  padding: 0.5em 0.6em;
   margin: 0;
   border: none;
-  border-bottom: 1px solid var(--pop);
-  border-radius: 1em;
+  border-left: 2px solid rgba(191,0,255,0.15);
+  border-bottom: 1px solid rgba(191,0,255,0.12);
+  border-radius: 0;
   background: transparent;
-  backdrop-filter: blur(var(--blur));
+  transition: border-color 0.3s, background 0.3s;
 }
 .reply-card.streaming {
-  border-bottom-color: rgba(0,255,200,0.55);
+  border-left-color: rgba(0,255,200,0.6);
+  background: rgba(0,255,200,0.03);
 }
 .reply-card pre {
   margin: 0;
   white-space: pre-wrap;
   word-break: break-word;
   font-family: 'Courier New', monospace;
+  font-size: 0.85em;
+  line-height: 1.5;
+  color: rgba(255,255,255,0.8);
 }
 .reply-card.ready-upgrade {
-  border-bottom-color: var(--pop);
+  border-left-color: var(--pop);
   cursor: pointer;
   touch-action: pan-y;
 }
 .reply-card.ready-upgrade:active {
-  background: rgba(255,255,255,0.05);
+  background: rgba(191,0,255,0.06);
+}
+.cmd-line {
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+  font-family: 'Courier New', monospace;
+  font-weight: 700;
+  font-size: 0.85em;
+  color: var(--pop);
+  padding: 0.3em 0.5em;
+  margin-bottom: 0.2em;
+  background: rgba(191,0,255,0.06);
+  border-radius: 0.4em;
+  white-space: pre-wrap;
+  word-break: break-word;
+  letter-spacing: 0.02em;
 }
 #help {
-  color: lime;
+  color: rgba(0,255,180,0.7);
+  font-family: 'Courier New', monospace;
+  font-size: 0.75em;
+  padding: 0.3em 0.6em;
+  line-height: 1.4;
+  max-height: 3em;
+  overflow: hidden;
 }
 .kit {
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 0.2em;
-  padding: 0.2em;
-  background: transparent;
-z-index: 99;
-  overflow-x: scroll;
-  overflow-y: scroll;
+  gap: 0.35em;
+  padding: 0.3em 0.5em;
+  background: rgba(0,0,0,0.3);
+  backdrop-filter: blur(12px);
+  z-index: 99;
+  overflow-x: auto;
+  overflow-y: hidden;
   scrollbar-width: none;
-  position: fixed ;
+  position: fixed;
   right: 0;
   bottom: 13%;
-  height: 5em;
+  height: auto;
   width: 100%;
+  border-top: 1px solid rgba(191,0,255,0.1);
 }
 .kit::-webkit-scrollbar { display: none; }
+.kit-spacer {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: block;
+  pointer-events: none;
+}
 .kit button {
   flex: 0 0 auto;
-  background: rgba(0,0,0,0.2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15em;
+  background: rgba(191,0,255,0.08);
   backdrop-filter: blur(var(--blur));
-  border: 1px solid var(--pop);
-
-  padding: 0.5em 1em;
-  border-radius: 0.5em;
+  border: 1px solid rgba(191,0,255,0.25);
+  padding: 0.4em 0.7em;
+  border-radius: 0.6em;
   font-family: 'Courier New', monospace;
-  font-size: 1.1em;
-  font-weight: 900;
+  font-size: 0.8em;
+  font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
-  text-shadow: 0 0 5px var(--pop);
-  box-shadow: 0 0 10px rgba(191,0,255,0.2);
-  transition: all 0.2s;
+  transition: all 0.15s ease;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.kit button .btn-icon {
+  font-size: 1.1em;
+  opacity: 0.6;
+  display: block;
+  line-height: 1;
+}
+.kit button:hover {
+  background: rgba(191,0,255,0.15);
+  border-color: rgba(191,0,255,0.5);
 }
 .kit button:active {
   background: var(--pop);
   color: var(--mood);
   transform: scale(0.92);
-  text-shadow: none;
+  border-color: var(--pop);
 }
 
 form {
@@ -138,13 +186,12 @@ form {
   left: 0;
   right: 0;
   z-index: 100;
-  background: transparent;
-  border: 1px solid var(--pop);
-  border-top: none;
-  border-left: none;
-  border-right: none;
-  border-radius: 1em;
-  backdrop-filter: blur(var(--blur));
+  background: rgba(0,0,0,0.4);
+  border: none;
+  border-top: 1px solid rgba(191,0,255,0.2);
+  border-radius: 0;
+  backdrop-filter: blur(16px);
+  padding: 0.2em 0;
 }
 
 
@@ -152,15 +199,17 @@ textarea {
   flex: 1;
   background: transparent;
   border: none;
-  color: white;
+  color: rgba(255,255,255,0.95);
   font-family: 'Courier New', monospace;
-  font-size: 1.2em;
-  padding: 0.2em 0;
+  font-size: 1.1em;
+  padding: 0.4em 0.6em;
   outline: none;
   resize: none;
   overflow-y: hidden;
+  caret-color: var(--pop);
 }
-textarea:focus::placeholder { opacity: 0.3; }
+textarea:focus::placeholder { opacity: 0.2; }
+textarea::placeholder { color: rgba(191,0,255,0.4); }
 iframe {
   display: block;
   width: 100%;
@@ -199,7 +248,7 @@ kit.ear('chat',(eve)=>{
   //console.log(">", eve.detail || eve.data);
   stream(eve.detail || eve.data);
 });
-kit.ear('prompt',(eve)=>{
+window.addEventListener('prompt',(eve)=>{
   var cmd = eve.detail||eve.data;
   if(cmd){ prompt.value = cmd }
   var val = prompt.value.trim();
@@ -211,7 +260,7 @@ kit.ear('prompt',(eve)=>{
   window.buzz();
   autoGrow(prompt);
 });
-kit.ear('prompt.try',(eve)=>{
+window.addEventListener('prompt.try',(eve)=>{
   prompt.value = eve.detail||eve.data;
   //prompt.focus(); prompt.select();
 });
@@ -275,7 +324,7 @@ var stream = function(t){
     return card;
   }()));
   stream.live.raw += t;
-  stream.live.pre.textContent = ((window.shellReply || {}).clean ? window.shellReply.clean(stream.live.raw) : stream.live.raw).flat();
+  stream.live.pre.textContent = ((window.shellReply || {}).clean ? window.shellReply.clean(stream.live.raw) : stream.live.raw).flat().replace(/\r/g, '');
   stream.last = (window.shellReply || {}).clean ? window.shellReply.clean((stream.last||'')+t) : ((stream.last||'')+t);
   var atBottom = (B.scrollHeight - B.scrollTop - B.clientHeight < 50) && (shell.scrollHeight - shell.scrollTop - shell.clientHeight < 50);
   if(atBottom) { B.scrollTop = B.scrollHeight; shell.scrollTop = shell.scrollHeight; }
@@ -284,27 +333,29 @@ var stream = function(t){
 
 ;(function(){
 var F = ['$','#','>','C:\\>','PS>','>>>','...','(venv)','>>'];
+var P = ['$','#','>','C:\\>','PS>','>>>','...','(venv)','>>'];
+function scrub(s){ return s.flat().replace(/\r/g, '') }
 stream.eat = function(s){
-  var f = s.cut(F,ESC);
+  var flat = scrub(s);
+  var f = flat.cut(F,ESC);
   if(!f[1]){ setTimeout(t=>{if(F.forEach){shell.append("cannot find prompt. custom shell being used?")}}); return }
   F = f[1];
-  f = f[0].split('\r\n').slice(-1)[0]; // make more unique?
+  f = f[0].split('\n').slice(-1)[0];
   F = f+F;
-  //console.log("prompt:", [F]);
   (stream.eat = CMD.bash)(s);
 }
 CMD.bash = function(S, cmdl, cmd, tmp){
-  var arr = S.split(F);
-  if(arr[arr.length-1].flat().trim()){ 
-    var P = ['$','#','>','C:\\>','PS>','>>>','...','(venv)','>>'];
-    if(P.some(c => S.flat().replace(/\s+$/, '').endsWith(c))){
-      var lines = S.split('\n'), lastL = lines[lines.length-1];
+  var flat = scrub(S);
+  var arr = flat.split(F);
+  if(arr[arr.length-1].trim()){
+    if(P.some(function(c){ return flat.replace(/\s+$/, '').endsWith(c) })){
+      var lines = flat.split('\n'), lastL = lines[lines.length-1];
       var newF = lastL.cut(P, ESC);
       if(newF[1]){
-        var nextF = newF[0].split('\r').slice(-1)[0] + newF[1];
-        S = S.split(F).join(nextF);
+        var nextF = newF[0] + newF[1];
+        flat = flat.split(F).join(nextF);
         F = nextF;
-        arr = S.split(F);
+        arr = flat.split(F);
       } else return;
     } else return;
   }
@@ -316,15 +367,36 @@ CMD.bash = function(S, cmdl, cmd, tmp){
   }
   var atBottom = (B.scrollHeight - B.scrollTop - B.clientHeight < 50) && (shell.scrollHeight - shell.scrollTop - shell.clientHeight < 50);
   S.forEach(function(s,v,t,p){
-    if(!(t = s.flat()).trim()){ return }
-    (p = B.new('pre')).textContent = t;
+    if(!(t = s.trim())){ return }
+    var lines = t.split('\n');
+    var cmdLine = lines[0].trim();
+    var output = lines.slice(1).join('\n');
+
+    // Handle clear command
+    if(cmdLine === 'clear' || cmdLine === 'cls'){
+      shell.innerHTML = '';
+      return;
+    }
+
     (v = B.new('div')).className = 'reply-card ready-upgrade';
     v.raw = s;
-    v.append(p);
-    setTimeout(function(eve){
+
+    if(cmdLine){
+      var cmdEl = B.new('div');
+      cmdEl.className = 'cmd-line';
+      cmdEl.textContent = '$ ' + cmdLine;
+      v.append(cmdEl);
+    }
+
+    if(output.trim()){
+      (p = B.new('pre')).textContent = output;
+      v.append(p);
+    }
+
+    // Try iframe upgrade for rich command rendering
+    setTimeout(function(){
       if(v.upgraded || v.upgrading){ return }
-      cmd = t.cut(['\r\n','\n','\r'],ESC)[0].trim();
-      cmd = cmd.replace(/^.*(?:\$|#|>|PS>)\s*/, '');
+      cmd = cmdLine.replace(/^.*(?:\$|#|>|PS>)\s*/, '');
       cmd = cmd.trim().split(/\s+/)[0].trim();
       if(!cmd){ return }
       var i = B.new('iframe');
@@ -333,13 +405,14 @@ CMD.bash = function(S, cmdl, cmd, tmp){
       v.upgrading = 1;
       v.append(i);
       kit.ear('load', function(eve){
-        if(eve.detail === undefined) return; // Ignore native iframe load (e.g. 404)
+        if(eve.detail === undefined) return;
         if(eve.target !== i) return;
-        kit.say(s,cmd, i);
+        kit.say(t, cmd, i);
         v.upgraded = 1;
         v.upgrading = 0;
         v.classList.remove('ready-upgrade');
-        v.all('pre')[0].remove();
+        if(cmdEl) cmdEl.remove();
+        v.all('pre').forEach(function(el){ el.remove() });
       }, i);
       setTimeout(function(){
         if(v.upgraded || !v.upgrading){ return }
@@ -354,10 +427,10 @@ CMD.bash = function(S, cmdl, cmd, tmp){
 }());
 //kit.ear('clear',eve=>{console.log(1); shell.innerHTML = "";});
 CMD.cd = function(s,v){
-  var t = s.flat();
+  var t = (''+s).flat().replace(/\r/g, '');
   if(t.toLowerCase().includes('not a directory')){
     v.style.display = 'none';
-    var cmdLine = t.cut(['\r\n','\n','\r'],ESC)[0];
+    var cmdLine = t.split('\n')[0];
     var file = cmdLine.trim().replace(/^cd\s+/,'').trim();
     if(file){ chat.prompt('cat "' + file + '"'); }
   }
