@@ -20,7 +20,7 @@ cop.sign = async ()=>{ if(cop.ws){ return }
   cop.ws.onopen = ()=>{
     console.log('ws open');
     cop.ws.send(localStorage.pass=pass.value);
-    cop.ws.send('ls .\r');
+
     location.path = 'chat.html';
   };
 

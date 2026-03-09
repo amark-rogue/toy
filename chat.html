@@ -5,15 +5,7 @@
 
 
   <div class="kit">
-    <button style="opacity:0; width:70%;"></button>
-    <button type="button" onclick="console.log('bclick');kit.say('ls .', 'prompt')">ls</button>
-    <button type="button" onclick="kit.say('cd ..', 'prompt')">cd</button>
-    <button type="button" onclick="kit.say('clear', 'prompt')">clear</button>
-    <button type="button" onclick="kit.say('pwd', 'prompt')">pwd</button>
-    <button type="button" onclick="kit.say('git status', 'prompt')">git</button>
-    <button type="button" onclick="kit.say('npm start', 'prompt')">npm</button>
-    <button type="button" onclick="kit.say('ps', 'prompt')">ps</button>
-    <button type="button" onclick="kit.say('whoami', 'prompt')">who</button>
+    
   </div>
 
   <form onsubmit="kit.say('','prompt'); return false;">
@@ -74,6 +66,7 @@ textarea {
   align-items: center;
   gap: 0.2em;
   padding: 0.2em;
+  padding-left: 70vw;
   background: transparent;
 z-index: 99;
   overflow-x: scroll;
@@ -168,7 +161,11 @@ input:focus::placeholder { opacity: 0.5; }
 var prompt;
 var shell = B.all('#shell')[0];
 var help = B.all('#help')[0];
+var belt = B.all('.kit')[0];
 (prompt = B.all('#prompt')[0]).focus();
+
+
+
 kit.ear('chat',(eve)=>{
   //console.log(">", eve.detail || eve.data);
   stream(eve.detail || eve.data);
@@ -181,6 +178,7 @@ kit.ear('prompt',(eve)=>{
   prompt.value = "";
   window.buzz();
 });
+
 kit.ear('prompt.try',(eve)=>{
   prompt.value = eve.detail||eve.data;
 });
@@ -198,6 +196,19 @@ prompt.onkeydown = function(eve){
     kit.say('', 'prompt');
   }
 };
+            
+kit.ear('belt', function(eve, data, b){
+  data = eve.detail || eve.data;
+  b = B.new('button');
+
+  b.textContent = data.name||data[0];
+
+  b.onclick = function(){
+    kit.say(data.prompt||[1], 'prompt');
+  };
+  belt.append(b);
+});
+                         
 prompt.oninput = function(eve){
   autoGrow(prompt);
   //console.log("oninput?", prompt.value, eve);
@@ -265,6 +276,7 @@ stream.eat = function(s){
 }
 CMD.bash = function(S, cmdl, cmd, tmp){
   var arr = S.split(F);
+
   if(arr[arr.length-1].flat().trim()){ 
     var P = ['$','#','>','C:\\>','PS>','>>>','...','(venv)','>>'];
     if(P.some(c => S.flat().replace(/\s+$/, '').endsWith(c))){
@@ -325,16 +337,12 @@ CMD.bash = function(S, cmdl, cmd, tmp){
   if(atBottom) { B.scrollTop = B.scrollHeight; shell.scrollTop = shell.scrollHeight; }
 }
 }());
-kit.ear('clear',eve=>{shell.innerHTML = "";});
-CMD.cd = function(s,v){
-  var t = s.flat();
-  if(t.toLowerCase().includes('not a directory')){
-    v.style.display = 'none';
-    var cmdLine = t.cut(['\r\n','\n','\r'],ESC)[0];
-    var file = cmdLine.trim().replace(/^cd\s+/,'').trim();
-    if(file){ chat.prompt('cat "' + file + '"'); }
-  }
-}
+kit.ear('clear',eve=>{shell.innerHTML = ""; console.log("clear call"); });
+
+kit.say('clear', 'prompt');
+//kit.say('whoami', 'prompt');
+//kit.say('ls .', 'prompt');
+console.log(1) ;
 
 var f = "\u001b[0;32m~/marknadal\u001b[0m \u001b[0;97m$";
 var p = ["\u001b[?2004h\u001b[0;32m~/marknadal\u001b[0m \u001b[0;97m$\u001b[0m \r\n\u001b[?2004l\r","\u001b[?2004h\u001b[0;32m~/marknadal\u001b[0m \u001b[0;97m$\u001b[0m clear\r\n\u001b[?2004l\r","\u001b[H\u001b[2J","\u001b[?2004h\u001b[0;32m~/marknadal\u001b[0m \u001b[0;97m$\u001b[0m \r\n\u001b[?2004l\r\u001b[?2004h\u001b[0;32m~/marknadal\u001b[0m \u001b[0;97m$\u001b[0m ls .\r\n\u001b[?2004l\r","\u001b[0m\u001b[01;34m2022\u001b[0m         debug        index.html     \u001b[01;34mrandom\u001b[0m         tantra-training.html\r\nREADME.md    gemini.json  install.sh     settings.json  \u001b[01;34mtmp\u001b[0m\r\ncollab.html  git.html     prompt         ssh.js\r\n\u001b[01;34mcop\u001b[0m          git.js       property.html  \u001b[01;34msurviving\u001b[0m\r\n","\u001b[?2004h\u001b[0;32m~/marknadal\u001b[0m \u001b[0;97m$\u001b[0m "];
