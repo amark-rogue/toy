@@ -55,38 +55,15 @@ textarea {
   width: 100%;
   display: block;
   margin-bottom: 0.5em;
-}
-#shell > div > p {
-  display: block;
-  text-align: left;
-}
-.reply-card {
-  width: 100%;
-  box-sizing: border-box;
-  padding: 0.4em 0.2em;
-  margin: 0;
   border: none;
   border-bottom: 1px solid var(--pop);
   border-radius: 1em;
   background: transparent;
   backdrop-filter: blur(var(--blur));
 }
-.reply-card.streaming {
-  border-bottom-color: rgba(0,255,200,0.55);
-}
-.reply-card pre {
-  margin: 0;
-  white-space: pre-wrap;
-  word-break: break-word;
-  font-family: 'Courier New', monospace;
-}
-.reply-card.ready-upgrade {
-  border-bottom-color: var(--pop);
-  cursor: pointer;
-  touch-action: pan-y;
-}
-.reply-card.ready-upgrade:active {
-  background: rgba(255,255,255,0.05);
+#shell > div > p {
+  display: block;
+  text-align: left;
 }
 #help {
   color: lime;
@@ -140,14 +117,11 @@ form {
   right: 0;
   z-index: 100;
   background: transparent;
-  border: 1px solid var(--pop);
-  border-top: none;
-  border-left: none;
-  border-right: none;
+  border: none;
+  border-bottom: 1px solid var(--pop);
   border-radius: 1em;
   backdrop-filter: blur(var(--blur));
 }
-
 
 textarea {
   flex: 1;
@@ -182,7 +156,6 @@ iframe {
 #shell > div:last-child {
   height: auto;
 }*/
-form { width: 100%; }
 input { animation: pulse 2s infinite; }
 input:focus { animation: none; }
 input::placeholder { opacity: 1; }
@@ -192,7 +165,7 @@ input:focus::placeholder { opacity: 0.5; }
 </style>
 <script src="util.js"></script>
 <script>;(function(chat){ chat();
-var prompt, history = [], histIndex = -1;
+var prompt;
 var shell = B.all('#shell')[0];
 var help = B.all('#help')[0];
 (prompt = B.all('#prompt')[0]).focus();
@@ -204,19 +177,15 @@ kit.ear('prompt',(eve)=>{
   var cmd = eve.detail||eve.data;
   if(cmd){ prompt.value = cmd }
   var val = prompt.value.trim();
-  if(val && history[history.length-1] !== val) { history.push(val); }
-  histIndex = history.length;
-  console.log(prompt.value);
   kit.say(prompt.value+'\r','host');
   prompt.value = "";
   window.buzz();
-  autoGrow(prompt);
 });
 kit.ear('prompt.try',(eve)=>{
   prompt.value = eve.detail||eve.data;
-  //prompt.focus(); prompt.select();
 });
 prompt.onkeydown = function(eve){
+  return;
   if(eve.key === 'ArrowUp') {
     if(histIndex > 0) { histIndex--; prompt.value = history[histIndex]; }
     eve.preventDefault();
@@ -253,9 +222,9 @@ const autoGrow = (textarea) => {
   }, 100);
 };
 
-prompt.addEventListener('focus', () => {
+prompt.onfocus = function(eve){
   autoGrow(prompt);
-});
+};
 
 autoGrow(prompt);
 B.all('#help')[0].ear('pointerdown',function(eve){
@@ -326,6 +295,9 @@ CMD.bash = function(S, cmdl, cmd, tmp){
       if(v.upgraded || v.upgrading){ return }
       cmd = t.cut(['\r\n','\n','\r'],ESC)[0].trim();
       cmd = cmd.replace(/^.*(?:\$|#|>|PS>)\s*/, '');
+      var p = B.new('p');
+      p.innerText = cmd;
+      v.append(p);
       cmd = cmd.trim().split(/\s+/)[0].trim();
       if(!cmd){ return }
       var i = B.new('iframe');
@@ -353,7 +325,7 @@ CMD.bash = function(S, cmdl, cmd, tmp){
   if(atBottom) { B.scrollTop = B.scrollHeight; shell.scrollTop = shell.scrollHeight; }
 }
 }());
-//kit.ear('clear',eve=>{console.log(1); shell.innerHTML = "";});
+kit.ear('clear',eve=>{shell.innerHTML = "";});
 CMD.cd = function(s,v){
   var t = s.flat();
   if(t.toLowerCase().includes('not a directory')){
