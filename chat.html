@@ -318,7 +318,27 @@ CMD.bash = function(S, cmdl, cmd, tmp){
       var cmd = t.cut(['\r\n','\n','\r'],ESC)[0].trim();
       cmd = cmd.replace(/^.*(?:\$|#|>|PS>)\s*/, '');
       var p = B.new('p');
-      p.innerText = cmd;
+
+      var promptText = (Array.isArray(F) ? '$' : (F.flat ? F.flat() : F)).trim();
+      var match = promptText.match(/^(.*?)([\$#>]\s*)$/);
+      if (match) {
+         var pathPart = match[1].trim();
+         var symPart = match[2].trim();
+         var colonIdx = pathPart.lastIndexOf(':');
+         var pathOnly = colonIdx !== -1 ? pathPart.substring(colonIdx + 1) : pathPart;
+         var prefix = colonIdx !== -1 ? pathPart.substring(0, colonIdx + 1) : "";
+         var parts = pathOnly.split('/');
+         if (parts.length > 4) {
+           pathOnly = parts.slice(0, 2).join('/') + '/.../' + parts.slice(-2).join('/');
+         }
+         promptText = prefix + pathOnly ;
+      }
+      
+      
+      p.innerText = promptText;
+      v.append(p);
+      p = B.new('p');
+      p.innerText = symPart+' '+cmd;
       v.append(p);
       cmd = cmd.trim().split(/\s+/)[0].trim();
       if(!cmd){ return }
