@@ -49,7 +49,7 @@ window.renderStatus = function(statusText, containerEl) {
         if (!fileStr || isHint) {
             // This is regular text (like "On branch main")
             const textDiv = document.createElement('div');
-            textDiv.style.cssText = "width: 100%; grid-column: 1 / -1; color: #aaa; text-align: center; font-family: monospace; padding: 0.2em;";
+            textDiv.style.cssText = "width: 100%; grid-column: 1 / -1; color: #eee; text-align: left; font-family: 'Courier New', monospace; padding: 0.2em 1em; white-space: pre-wrap;";
             textDiv.textContent = line;
             listDiv.appendChild(textDiv);
             return;

@@ -214,7 +214,7 @@ kit.ear('belt', function(eve, data, b){
   b.id = b.textContent = name;
 
   b.onclick = function(){
-    kit.say(data.prompt||[1], 'prompt');
+    kit.say(data.prompt||data[1], 'prompt');
   };
   belt.append(b);
 });
@@ -286,6 +286,7 @@ stream.eat = function(s){
 }
 CMD.bash = function(S, cmdl, cmd, tmp){
   var arr = S.split(F);
+  var usedF = F;
 
   if(arr[arr.length-1].flat().trim()){ 
     var P = ['$','#','>','C:\\>','PS>','>>>','...','(venv)','>>'];
@@ -307,7 +308,10 @@ CMD.bash = function(S, cmdl, cmd, tmp){
     stream.live = null;
   }
   var atBottom = (B.scrollHeight - B.scrollTop - B.clientHeight < 50) && (shell.scrollHeight - shell.scrollTop - shell.clientHeight < 50);
-  S.forEach(function(s,v,t,p){
+  var oldF = usedF;
+  var firstChunk = true;
+  S.forEach(function(s,i){
+    var v,t,p;
     if(!(t = s.flat()).trim()){ return }
     (p = B.new('pre')).textContent = t;
     (v = B.new('div')).className = 'reply-card ready-upgrade';
@@ -319,7 +323,9 @@ CMD.bash = function(S, cmdl, cmd, tmp){
       cmd = cmd.replace(/^.*(?:\$|#|>|PS>)\s*/, '');
       var p = B.new('p');
 
-      var promptText = (Array.isArray(F) ? '$' : (F.flat ? F.flat() : F)).trim();
+      var promptToUse = firstChunk ? oldF : F;
+      firstChunk = false;
+      var promptText = (Array.isArray(promptToUse) ? '$' : (promptToUse.flat ? promptToUse.flat() : promptToUse)).trim();
       var match = promptText.match(/^(.*?)([\$#>]\s*)$/);
       if (match) {
          var pathPart = match[1].trim();
