@@ -1,87 +1,98 @@
-<link rel="stylesheet" href="/gun/kit/web.css"><script src="/gun/kit/web.js"></script>
-<div id="shell"></div>
-<div id="help"></div>
-<div class="bottom-bar-container">
-  <div class="quick-keys">
-    <button style="opacity:0; width:75%;"></button>
-    <button type="button" onclick="kit.say('ls .', 'prompt')">LS</button>
-    <button type="button" onclick="kit.say('cd ..', 'prompt')">CD ..</button>
-    <button type="button" onclick="kit.say('clear', 'prompt')">CLEAR</button>
-    <button type="button" onclick="kit.say('pwd', 'prompt')">PWD</button>
-    <button type="button" onclick="kit.say('git status', 'prompt')">GIT</button>
-    <button type="button" onclick="kit.say('npm start', 'prompt')">NPM</button>
-    <button type="button" onclick="kit.say('ps', 'prompt')">PS</button>
-  </div>
-  <form onsubmit="kit.say('','prompt'); return false;" class="prompt-bar">
-    <div class="input-wrap">
-      <span class="prompt-symbol">$&nbsp;</span>
-      <textarea id="prompt" name="cmd" placeholder="" autokomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" rows="1"></textarea>
-    </div>
-  </form>
+<link rel="stylesheet" href="./gun/kit/web.css"><script src="./gun/kit/web.js"></script>
+
+
+
+<div id="shell">
+
 </div>
+
+
+  <div class="kit">
+    
+  </div>
+
+  <form onsubmit="kit.say('','prompt'); return false;">
+    <div id="help"></div>
+    
+     
+      <textarea id="prompt" name="cmd" placeholder="$" autokomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" rows="1"></textarea>
+
+  </form>
+
 <style>
 :root { --fill: var(--mood); }
 ::selection {
   background: var(--pop);
   color: var(--fill);
 }
+body, html {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+}
 body {
   background: var(--fill);
-  display: flex; /* Use flexbox to stack content vertically */
-  flex-direction: column;
-  min-height: 100vh; /* Ensure body takes full viewport height */
-  overflow-x: hidden;
+  display: block; /* Removed flex so it can just flow and scroll naturally */
 }
 textarea {
   height: 100%;
 }
 #shell {
   width: 100%;
-  flex-grow: 1; /* Allow shell to take available space */
-  padding: 0 0.5em;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  align-items: stretch;
-  overflow-y: auto;
-  padding-bottom: 150px; /* Increased padding to account for fixed bottom bar */
-  scroll-padding-bottom: 150px; /* Ensures scroll behavior accounts for fixed bar */
+  box-sizing: border-box;
+  padding: 0 0;
+  display: block;
+  padding-bottom: 8em; /* Ensure content isn't hidden behind the fixed form */
 }
 #shell > div {
   white-space: pre-wrap;
   word-break: break-all;
   width: 100%;
   display: block;
+  fl-oat: left;
+  te-xt-align: left;
   margin-bottom: 0.5em;
+  border: none;
+  border-bottom: 1px solid var(--pop);
+  border-radius: 1em;
+  background: transparent;
+  backdrop-filter: blur(var(--blur));
 }
 #shell > div > p {
   display: block;
+  fl-oat: left;
   text-align: left;
 }
 #help {
   color: lime;
 }
-.quick-keys {
+.kit {
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 12px;
-  padding: 10px;
+  gap: 0.2em;
+  padding: 0.2em;
+  padding-left: 70vw;
   background: transparent;
-
-  overflow-x: auto;
-  overflow-y: hidden;
+z-index: 99;
+  overflow-x: scroll;
+  overflow-y: scroll;
   scrollbar-width: none;
+  position: fixed ;
+  right: 0;
+  bottom: 13%;
+  height: 5em;
+  width: 100%;
 }
-.quick-keys::-webkit-scrollbar { display: none; }
-.quick-keys button {
+.kit::-webkit-scrollbar { display: none; }
+.kit button {
   flex: 0 0 auto;
   background: rgba(0,0,0,0.2);
   backdrop-filter: blur(var(--blur));
   border: 1px solid var(--pop);
-  color: #fff;
-  padding: 12px 25px;
-  border-radius: 10px;
+
+  padding: 0.5em 1em;
+  border-radius: 0.5em;
   font-family: 'Courier New', monospace;
   font-size: 1.1em;
   font-weight: 900;
@@ -91,58 +102,47 @@ textarea {
   box-shadow: 0 0 10px rgba(191,0,255,0.2);
   transition: all 0.2s;
 }
-.quick-keys button:active {
+.kit button:active {
   background: var(--pop);
   color: var(--mood);
   transform: scale(0.92);
   text-shadow: none;
 }
-.prompt-bar {
-  display: flex;
-  padding: 10px;
-  background: var(--fill);
-  border-top: 2px solid var(--pop);
-  gap: 10px;
-  align-items: center;
-}
-.bottom-bar-container {
+
+form {
   position: fixed;
-  bottom: 0;
+  bottom: 3em;
   left: 0;
   right: 0;
   z-index: 100;
   background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--pop);
+  border-radius: 1em;
+  backdrop-filter: blur(var(--blur));
 }
-.input-wrap {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid var(--pop);
-  border-radius: 20px;
-  padding: 0 15px;
-  box-shadow: inset 0 0 10px rgba(191,0,255,0.2);
-}
-.prompt-symbol { color: var(--pop); font-family: monospace; font-weight: bold; font-size: 1.2em; }
-.input-wrap textarea {
+
+textarea {
   flex: 1;
   background: transparent;
   border: none;
   color: white;
   font-family: 'Courier New', monospace;
   font-size: 1.2em;
-  padding: 12px 0;
+  padding: 0.2em 0;
   outline: none;
   resize: none;
   overflow-y: hidden;
 }
-.input-wrap textarea:focus::placeholder { opacity: 0.3; }
+textarea:focus::placeholder { opacity: 0.3; }
 iframe {
   display: block;
   width: 100%;
   border: none;
   height: 0;
   overflow-x: hidden;
+  pointer-events: auto;
+  touch-action: pan-y;
 }
 /*#shell > div {
   overflow: hidden;
@@ -155,68 +155,70 @@ iframe {
 #shell > div:last-child {
   height: auto;
 }*/
-form { width: 100%; }
 input { animation: pulse 2s infinite; }
 input:focus { animation: none; }
 input::placeholder { opacity: 1; }
 input:focus::placeholder { opacity: 0.5; }
 
-.ls { width: 100% }
-.ls {
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-}
-.ls a {
-  align-items: center;
-  justify-content: center;
-  min-width: 4em;
-  min-height: 2em;
-  padding: 0.5em;
-  text-align: center;
-  border: 1px solid var(--pop);
-  backdrop-filter:  blur(var(--blur));
-}
-.ls a:hover {
-  background: var(--pop);
-  color: var(--mood);
-}
+
 </style>
 <script src="util.js"></script>
 <script>;(function(chat){ chat();
-var prompt, history = [], histIndex = -1;
+var prompt;
 var shell = B.all('#shell')[0];
 var help = B.all('#help')[0];
+var belt = B.all('.kit')[0];
 (prompt = B.all('#prompt')[0]).focus();
+
+
+
 kit.ear('chat',(eve)=>{
-  //console.log(">", eve.detail || eve.data);
   stream(eve.detail || eve.data);
 });
 kit.ear('prompt',(eve)=>{
   var cmd = eve.detail||eve.data;
   if(cmd){ prompt.value = cmd }
   var val = prompt.value.trim();
-  if(val && history[history.length-1] !== val) { history.push(val); }
-  histIndex = history.length;
   kit.say(prompt.value+'\r','host');
   prompt.value = "";
-  autoGrow(prompt);
+  window.buzz();
 });
+
 kit.ear('prompt.try',(eve)=>{
   prompt.value = eve.detail||eve.data;
-  //prompt.focus(); prompt.select();
 });
+
+var history = [], hi=1;
 prompt.onkeydown = function(eve){
-  if(eve.key === 'ArrowUp') {
-    if(histIndex > 0) { histIndex--; prompt.value = history[histIndex]; }
-    eve.preventDefault();
-  } else if (eve.key === 'ArrowDown') {
-    if(histIndex < history.length - 1) { histIndex++; prompt.value = history[histIndex]; }
-    else { histIndex = history.length; prompt.value = ''; }
-    eve.preventDefault();
-  } else if (eve.key === 'Enter' && !eve.shiftKey) {
+  if (eve.key === 'Enter' && !eve.shiftKey) {
     eve.preventDefault();
     kit.say('', 'prompt');
+    return;
+  }
+  if(eve.key === 'ArrowUp') {
+    if(hi > 0) { hi--; prompt.value = history[hi]; }
+    eve.preventDefault();
+  } else if (eve.key === 'ArrowDown') {
+    if(hi < history.length - 1) { hi++; prompt.value = history[hi]; }
+    else { hi = history.length; prompt.value = ''; }
+    eve.preventDefault();
   }
 };
+            
+kit.ear('belt', function(eve, data, b){
+  data = eve.detail || eve.data;
+  var name = data.name||data[0];
+  if(B.all('#'+name)[0]){return}
+  b = B.new('button');
+
+  b.id = b.textContent = name;
+
+  b.onclick = function(){
+    kit.say(data.prompt||data[1], 'prompt');
+  };
+  belt.append(b);
+});
+                         
 prompt.oninput = function(eve){
   autoGrow(prompt);
   //console.log("oninput?", prompt.value, eve);
@@ -241,9 +243,9 @@ const autoGrow = (textarea) => {
   }, 100);
 };
 
-prompt.addEventListener('focus', () => {
+prompt.onfocus = function(eve){
   autoGrow(prompt);
-});
+};
 
 autoGrow(prompt);
 B.all('#help')[0].ear('pointerdown',function(eve){
@@ -252,8 +254,22 @@ B.all('#help')[0].ear('pointerdown',function(eve){
   kit.say(prompt.try, 'prompt.try');
 });
 var stream = function(t){
-  //stream.all = (stream.all||'')+t;
-  stream.last = (stream.last||'')+t;
+  (window.shellReply || {}).maybeContinue && window.shellReply.maybeContinue(t, {state: stream, send: function(c){ kit.say(c, 'host') }});
+  stream.live || (stream.live = (function(card, pre){
+    card = B.new('div');
+    card.className = 'reply-card streaming';
+    pre = B.new('pre');
+    card.append(pre);
+    card.pre = pre;
+    card.raw = '';
+    shell.append(card);
+    return card;
+  }()));
+  stream.live.raw += t;
+  stream.live.pre.textContent = ((window.shellReply || {}).clean ? window.shellReply.clean(stream.live.raw) : stream.live.raw).flat();
+  stream.last = (window.shellReply || {}).clean ? window.shellReply.clean((stream.last||'')+t) : ((stream.last||'')+t);
+  var atBottom = (B.scrollHeight - B.scrollTop - B.clientHeight < 50) && (shell.scrollHeight - shell.scrollTop - shell.clientHeight < 50);
+  if(atBottom) { B.scrollTop = B.scrollHeight; shell.scrollTop = shell.scrollHeight; }
   (stream.eat || CMD.bash)(stream.last);
 }, CMD = {};
 
@@ -270,6 +286,8 @@ stream.eat = function(s){
 }
 CMD.bash = function(S, cmdl, cmd, tmp){
   var arr = S.split(F);
+  var usedF = F;
+
   if(arr[arr.length-1].flat().trim()){ 
     var P = ['$','#','>','C:\\>','PS>','>>>','...','(venv)','>>'];
     if(P.some(c => S.flat().replace(/\s+$/, '').endsWith(c))){
@@ -285,38 +303,82 @@ CMD.bash = function(S, cmdl, cmd, tmp){
   }
   S = arr;
   stream.last = '';
+  if(stream.live){
+    stream.live.remove();
+    stream.live = null;
+  }
   var atBottom = (B.scrollHeight - B.scrollTop - B.clientHeight < 50) && (shell.scrollHeight - shell.scrollTop - shell.clientHeight < 50);
-  S.forEach(function(s,v,t,p){ if(!(t = s.flat()).trim()){ return }
-    (p = B.new('p')).append(t); (v = B.new('div')).append(p); shell.append(v);
-    cmd = t.cut(['\r\n','\n','\r'],ESC)[0]; // 1st line
-    //console.log(s, [cmd], CMD[cmd], Object.keys(CMD));
-    cmd = cmd.trim().split(/\s+/)[0].trim(); // 1st word
-    var i = B.new('iframe');
-    i.src = './cmd/'+cmd+'.html';
-    v.append(i);
-    kit.ear('load', function(eve){
-      if(eve.detail === undefined) return; // Ignore native iframe load (e.g. 404)
-      if(eve.target !== i) return;
-      kit.say(s,cmd, i.contentWindow);
-      var p = v.all('p')[0];
-      if(p) p.remove();
-    }, i);
-    //(tmp = CMD[cmd]) && tmp(s,v);
+  var oldF = usedF;
+  var firstChunk = true;
+  S.forEach(function(s,i){
+    var v,t,p;
+    if(!(t = s.flat()).trim()){ return }
+    (p = B.new('pre')).textContent = t;
+    (v = B.new('div')).className = 'reply-card ready-upgrade';
+    v.raw = s;
+    v.append(p);
+    setTimeout(function(eve){
+      if(v.upgraded || v.upgrading){ return }
+      var cmd = t.cut(['\r\n','\n','\r'],ESC)[0].trim();
+      cmd = cmd.replace(/^.*(?:\$|#|>|PS>)\s*/, '');
+      var p = B.new('p');
+
+      var promptToUse = firstChunk ? oldF : F;
+      firstChunk = false;
+      var promptText = (Array.isArray(promptToUse) ? '$' : (promptToUse.flat ? promptToUse.flat() : promptToUse)).trim();
+      var match = promptText.match(/^(.*?)([\$#>]\s*)$/);
+      if (match) {
+         var pathPart = match[1].trim();
+         var symPart = match[2].trim();
+         var colonIdx = pathPart.lastIndexOf(':');
+         var pathOnly = colonIdx !== -1 ? pathPart.substring(colonIdx + 1) : pathPart;
+         var prefix = colonIdx !== -1 ? pathPart.substring(0, colonIdx + 1) : "";
+         var parts = pathOnly.split('/');
+         if (parts.length > 4) {
+           pathOnly = parts.slice(0, 2).join('/') + '/.../' + parts.slice(-2).join('/');
+         }
+         promptText = prefix + pathOnly ;
+      }
+      
+      
+      p.innerText = promptText;
+      v.append(p);
+      p = B.new('p');
+      p.innerText = symPart+' '+cmd;
+      v.append(p);
+      cmd = cmd.trim().split(/\s+/)[0].trim();
+      if(!cmd){ return }
+      //if(cmd === 'clear'){ kit.say(s, 'clear'); return; }
+      var i = B.new('iframe');
+      i.src = './cmd/'+cmd+'.html';
+      i.setAttribute('scrolling','no');
+      v.upgrading = 1;
+      v.append(i);
+      kit.ear('load', function(eve){
+        if(eve.detail === undefined) return; // Ignore native iframe load (e.g. 404)
+        if(eve.target !== i) return;
+        kit.say(s,cmd, i);
+        v.upgraded = 1;
+        v.upgrading = 0;
+        v.classList.remove('ready-upgrade');
+        v.all('pre')[0].remove();
+      }, i);
+      setTimeout(function(){
+        if(v.upgraded || !v.upgrading){ return }
+        v.upgrading = 0;
+        i.remove();
+      },900);
+    },99);
+    shell.append(v);
   });
   if(atBottom) { B.scrollTop = B.scrollHeight; shell.scrollTop = shell.scrollHeight; }
 }
 }());
-//kit.ear('clear',eve=>{console.log(1); shell.innerHTML = "";});
-CMD.cd = function(s,v){
-  var t = s.flat();
-  if(t.toLowerCase().includes('not a directory')){
-    v.style.display = 'none';
-    var cmdLine = t.cut(['\r\n','\n','\r'],ESC)[0];
-    var file = cmdLine.trim().replace(/^cd\s+/,'').trim();
-    if(file){ chat.prompt('cat "' + file + '"'); }
-  }
-}
+kit.ear('clear',eve=>{return;shell.innerHTML = ""; });
 
+//kit.say('clear', 'prompt');
+kit.say('whoami', 'prompt');
+kit.say('ls .', 'prompt');
 var f = "\u001b[0;32m~/marknadal\u001b[0m \u001b[0;97m$";
 var p = ["\u001b[?2004h\u001b[0;32m~/marknadal\u001b[0m \u001b[0;97m$\u001b[0m \r\n\u001b[?2004l\r","\u001b[?2004h\u001b[0;32m~/marknadal\u001b[0m \u001b[0;97m$\u001b[0m clear\r\n\u001b[?2004l\r","\u001b[H\u001b[2J","\u001b[?2004h\u001b[0;32m~/marknadal\u001b[0m \u001b[0;97m$\u001b[0m \r\n\u001b[?2004l\r\u001b[?2004h\u001b[0;32m~/marknadal\u001b[0m \u001b[0;97m$\u001b[0m ls .\r\n\u001b[?2004l\r","\u001b[0m\u001b[01;34m2022\u001b[0m         debug        index.html     \u001b[01;34mrandom\u001b[0m         tantra-training.html\r\nREADME.md    gemini.json  install.sh     settings.json  \u001b[01;34mtmp\u001b[0m\r\ncollab.html  git.html     prompt         ssh.js\r\n\u001b[01;34mcop\u001b[0m          git.js       property.html  \u001b[01;34msurviving\u001b[0m\r\n","\u001b[?2004h\u001b[0;32m~/marknadal\u001b[0m \u001b[0;97m$\u001b[0m "];
 
@@ -378,3 +440,6 @@ window.AI = {
 
 }));
 </script>
+
+
+<script src="/gun/fix.js"></script>

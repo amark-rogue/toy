@@ -1,4 +1,4 @@
-<link rel="stylesheet" href="/gun/kit/web.css"><script src="/gun/kit/web.js"></script>
+<link rel="stylesheet" href="./gun/kit/web.css"><script src="./gun/kit/web.js"></script>
 <form id="sign" onsubmit="cop.sign()">
   <input id="host" name="host" placeholder="host:" class="fog sap lip">
   <input id="pass" name="pass" type="password" placeholder="pass:" class="fog sap lip">
@@ -6,19 +6,21 @@
 </form>
 <style>
 :root { --fill: var(--mood); }
-body { back-ground-image: url('https://picsum.photos/1200/900'); }
-iframe { width: 100%; }
+body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; back-ground-image: url('https://picsum.photos/1200/900'); }
+body { display: flex; flex-direction: column; }
+#sign { flex-shrink: 0; }
+iframe { width: 100%; flex: 1; min-height: 0; height: 0 !important; border: none; display: block; }
 input::placeholder { opacity: 1; }
 </style>
 <script>;(function(cop){
 host.focus();
-//console.off=1;
+console.off=1;
 cop.sign = async ()=>{ if(cop.ws){ return }
   cop.ws = new WebSocket((localStorage.host=host.value).replace(/^http/,'ws')||'ws://localhost:8022');
   cop.ws.onopen = ()=>{
     console.log('ws open');
     cop.ws.send(localStorage.pass=pass.value);
-    cop.ws.send('ls .\r');
+
     location.path = 'chat.html';
   };
 

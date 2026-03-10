@@ -7,7 +7,7 @@ var W = window, D = document, SW = screen.width, SH = screen.height, ON = 'addEv
 }());
 var tmp = D[HI]('meta'); tmp.name = 'viewport'; tmp.content = 'width=device-width, initial-scale=1, interactive-widget=resizes-content'; D.head.appendChild(tmp);
 //(tmp=D[HI]('link')).rel="stylesheet"; tmp.href=((D.currentScript||'').src||'').replace('.js','.css'); D.head.appendChild(tmp); // auto-add CSS?
-tmp = D.head.parentNode.style; if(W.parent === W) { tmp['overscroll-behavior-y'] = 'contain'; tmp['background-color'] = 'var(--fill)'; } else { tmp['overflow'] = 'hidden' } 
+tmp = D.head.parentNode.style; if(W.parent === W) { tmp['overscroll-behavior-y'] = 'contain'; tmp['background-color'] = 'var(--fill)'; } else { tmp['overflow-y'] = 'auto'; tmp['overscroll-behavior-y'] = 'auto'; } 
 function LOAD(src, h, s){ (s = D[HI]('script')).onload = h; s.src = src; D.head.appendChild(s) };
 function MAP(scroll, screen){ return (scroll / screen)>>0 }; // scroll, screen
 kit = function(){};
@@ -35,8 +35,8 @@ W[ON]('message',function(eve,data,i,tmp){
     kit.say(data.data||data.detail,data.type,0,1);
     return;
   }
-  if('ear'==data.type){ kit.ear(data.detail||data.data,function hear(eve){ if(!(i||'').contentWindow){hear.off(); return } i.contentWindow.postMessage({data:eve.detail||eve.data,type:eve.type,wrap:-1}, DEV?'*':location.origin) }); return; }
-  kit.say(data.data||data.detail,data.type,i);
+  if('ear'==data.type){ kit.ear(data.detail||data.data,function hear(eve){ if(!(i||'').contentWindow){hear.off(); return } if(kit._echo && kit._echo.i === i && kit._echo.t === eve.type){ return } i.contentWindow.postMessage({data:eve.detail||eve.data,type:eve.type,wrap:-1}, DEV?'*':location.origin) }); return; }
+  kit._echo = {i:i,t:data.type}; kit.say(data.data||data.detail,data.type,i); kit._echo = null;
 });
 kit.views = new Map;
 (kit.size = function(b,d,h,w,last){
@@ -77,10 +77,103 @@ kit.watch.resize = function(){
 
 kit.watch.low = function(v,l,f){ f='getBoundingClientRect'; return Math.max(((v[f]?v[f]():'').bottom||0) + (W.pageYOffset || D.documentElement.scrollTop),l||0) }
 kit.watch.wide = function(v,l,f){ f='getBoundingClientRect'; return Math.max(((v[f]?v[f]():'').right||0) + (W.pageXOffset || D.documentElement.scrollLeft),l||0) }
+kit.frame = {};
+kit.frame.visible = function(i, r, s){
+  if(!i || !i.isConnected){ return 0 }
+  r = i.getBoundingClientRect();
+  if(!r || r.width < 2 || r.height < 2){ return 0 }
+  s = W.getComputedStyle(i);
+  if(!s || s.display === 'none' || s.visibility === 'hidden' || s.opacity === '0'){ return 0 }
+  return 1;
+};
+kit.frame.active = function(vw, vh, best, bestZ, bestI, r, s, z){
+  var hash = (location.hash || '').replace(/^#/, ''), byHash;
+  if(hash && (byHash = D.getElementById(hash)) && byHash.tagName === 'IFRAME' && kit.frame.visible(byHash)){ return byHash }
+  best = D.querySelector('iframe.main.page') || D.querySelector('iframe.main') || D.querySelector('iframe.page');
+  if(best && kit.frame.visible(best)){ return best }
+  vw = W.innerWidth || D.documentElement.clientWidth || 0;
+  vh = W.innerHeight || D.documentElement.clientHeight || 0;
+  D.querySelectorAll('iframe').forEach(function(i, idx){
+    var area, visW, visH;
+    if(!kit.frame.visible(i)){ return }
+    r = i.getBoundingClientRect();
+    visW = Math.max(0, Math.min(vw, r.right) - Math.max(0, r.left));
+    visH = Math.max(0, Math.min(vh, r.bottom) - Math.max(0, r.top));
+    area = visW * visH;
+    if(area <= 0){ return }
+    s = W.getComputedStyle(i);
+    z = parseInt(s.zIndex, 10);
+    z = isNaN(z) ? 0 : z;
+    if(!best || z > bestZ || (z === bestZ && area > bestI) || (z === bestZ && area === bestI && idx > (best && best.__kitIdx || -1))){
+      best = i;
+      bestZ = z;
+      bestI = area;
+      best.__kitIdx = idx;
+    }
+  });
+  return best || null;
+};
+kit.frame.isMain = function(i){
+  return !!(i && i === kit.frame.active());
+};
+kit.frame.setMainScroll = function(i,d,b){
+  try{
+    d = i && i.contentDocument; if(!d){ return }
+    i._kitSubLocked = 0;
+    b = d.body || d.documentElement;
+    d.documentElement.style.overflow = '';
+    d.documentElement.style.overscrollBehavior = '';
+    if(b){
+      b.style.overflow = '';
+      b.style.overscrollBehavior = '';
+      b.style.touchAction = '';
+    }
+    i.style.overscrollBehavior = '';
+    i.style.touchAction = '';
+  }catch(e){}
+};
+kit.frame.setSubScroll = function(i,d,b){
+  try{
+    d = i && i.contentDocument; if(!d){ return }
+    i._kitSubLocked = 1;
+    b = d.body || d.documentElement;
+    d.documentElement.style.overflow = 'hidden';
+    d.documentElement.style.overscrollBehavior = '';
+    if(b){
+      b.style.overflow = 'hidden';
+      b.style.overscrollBehavior = '';
+      b.style.touchAction = '';
+    }
+    i.style.overscrollBehavior = '';
+    i.style.touchAction = '';
+  }catch(e){}
+};
+kit.frame.refresh = function(){
+  D.querySelectorAll('iframe').forEach(function(i){
+    if(kit.frame.isMain(i)){ kit.frame.setMainScroll(i) }
+    else { kit.frame.setSubScroll(i) }
+  });
+};
+kit.frame.lockScroll = function(i,d,b,w,y){
+  if(!i){ return }
+  function apply(){
+    try{
+      d = i.contentDocument; w = i.contentWindow;
+      if(!d || !w){ return }
+      if(kit.frame.isMain(i)){ kit.frame.setMainScroll(i) }
+      else { kit.frame.setSubScroll(i) }
+    }catch(e){}
+  }
+  apply();
+  i.addEventListener('load', apply);
+};
 kit.ear('join iframe',kit.add=function(eve){
   //console.log(location.pathname.split('/').slice(-1)[0], "JOIN");
   kit.views.set(eve.target.contentWindow, eve.target);
+  kit.frame.lockScroll(eve.target);
+  kit.frame.refresh();
 });
+W[ON]('hashchange', kit.frame.refresh);
 W[ON]('load', kit.watch.resize);
 W[ON]('resize', kit.watch.resize);
 W[ON]('pageshow', kit.watch.resize);
@@ -119,6 +212,7 @@ kit.http = {createServer: function(h){
   (i = D[ID](id) || D[HI]('iframe')).id || (i.id = id);
   D.querySelectorAll('.main').forEach(function(e){ e.classList.remove('main') });
   i.className = 'main page'; i.src||(i===D.body)||(i.srcdoc = data, D.body.appendChild(i)); location.hash = i.id; // TODO: BUG? Prevent double hash change
+  kit.frame && kit.frame.refresh && kit.frame.refresh();
 }};
 W[ON]('submit', function(eve, act){ eve.preventDefault();
   act = (eve.target.action||'').replace(location.__dirname+'/','').split('#')[0];
@@ -194,6 +288,7 @@ W[ON]('DOMContentLoaded',function(m){
     eve && kit.up({newURL: eve.newURL, oldURL: eve.oldURL},'hashchange');
   }; W[ON]('hashchange',change) }());
   kit.up('','load');
+  kit.frame && kit.frame.refresh && kit.frame.refresh();
   return;
   //if(location.hash){ kit.say('','hashchange') }
 });
