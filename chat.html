@@ -1,4 +1,7 @@
 <link rel="stylesheet" href="./gun/kit/web.css"><script src="./gun/kit/web.js"></script>
+
+
+
 <div id="shell">
 
 </div>
@@ -46,6 +49,8 @@ textarea {
   word-break: break-all;
   width: 100%;
   display: block;
+  fl-oat: left;
+  te-xt-align: left;
   margin-bottom: 0.5em;
   border: none;
   border-bottom: 1px solid var(--pop);
@@ -55,6 +60,7 @@ textarea {
 }
 #shell > div > p {
   display: block;
+  fl-oat: left;
   text-align: left;
 }
 #help {
@@ -309,13 +315,14 @@ CMD.bash = function(S, cmdl, cmd, tmp){
     v.append(p);
     setTimeout(function(eve){
       if(v.upgraded || v.upgrading){ return }
-      cmd = t.cut(['\r\n','\n','\r'],ESC)[0].trim();
+      var cmd = t.cut(['\r\n','\n','\r'],ESC)[0].trim();
       cmd = cmd.replace(/^.*(?:\$|#|>|PS>)\s*/, '');
       var p = B.new('p');
       p.innerText = cmd;
       v.append(p);
       cmd = cmd.trim().split(/\s+/)[0].trim();
       if(!cmd){ return }
+      //if(cmd === 'clear'){ kit.say(s, 'clear'); return; }
       var i = B.new('iframe');
       i.src = './cmd/'+cmd+'.html';
       i.setAttribute('scrolling','no');
@@ -407,3 +414,6 @@ window.AI = {
 
 }));
 </script>
+
+
+<script src="/gun/fix.js"></script>
