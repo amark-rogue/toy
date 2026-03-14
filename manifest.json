@@ -1,7 +1,8 @@
 {
   "name": "TOY",
   "short_name": "Code on Phone",
-  "start_url": "./app.html",
+  "start_url": "app.html",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#000000",
   "theme_color": "#000000",
@@ -9,8 +10,7 @@
     {
       "src": "https://codeonphone.com/+/toy.png",
       "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "type": "image/png"
     }
   ]
 }
