@@ -235,10 +235,10 @@ prompt.oninput = function(eve){
   if(prompt.wait){ clearTimeout(prompt.wait) }
   prompt.wait = setTimeout(async function(){
     var answer = await AI.shell("1 sentence reply for terminal shell or code help:" + prompt.value);
-    var v = B.new('div'); v.innerHTML = answer; // NEVER ADD TO DOM, TO PREVENT XSS!!!!!
-    v = v.all('.a')[0] || v;
+    var doc = new DOMParser().parseFromString(answer, 'text/html');
+    var v = doc.querySelector('.a') || doc.body;
     var atBottom = (B.scrollHeight - B.scrollTop - B.clientHeight < 50) && (shell.scrollHeight - shell.scrollTop - shell.clientHeight < 50);
-    help.innerHTML = ''; // empty!
+    help.textContent = '';
     help.textContent = v.textContent || '';
     prompt.try = (v.all('code')[0] || v.all('b')[0] || {}).textContent||'';
     if(atBottom) { B.scrollTop = B.scrollHeight; shell.scrollTop = shell.scrollHeight; }

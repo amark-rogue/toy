@@ -139,16 +139,16 @@ kit.say(['Gemini','gemini --help'], 'belt');
   
 CMD = {};
 CMD.ls = function(s,v,f,cmd){ 
-  v.tag('ls',+1).innerHTML = '';
+  v.tag('ls',+1).textContent = '';
   cmd = (s=s.flat()).cut('\n',ESC); s = cmd[2]; cmd = cmd[0];
   
 
 
   f = (s.indexOf('\t')+1)? '\t' : /\s+/;
   s = s.replaceAll('\r\n','\t').replaceAll('\r','\t').replaceAll('\n','\t').replaceAll(/\s{2,}/g,'\t');
-  
+
   var isBack = B.new('a');
-  isBack.innerHTML = '..';
+  isBack.textContent = '..';
   isBack.dataset.val = '..';
   v.append(isBack);
 
@@ -166,7 +166,7 @@ CMD.ls = function(s,v,f,cmd){
     // For pure UI, let's just make it look cool based on this guess
     
     a.dataset.kind = isFile? 'file' : 'folder';
-    a.innerHTML = item + fold;
+    a.textContent = item + fold;
     v.append(a);
   });
   
