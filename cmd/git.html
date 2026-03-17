@@ -1,235 +1,441 @@
-<link rel="stylesheet" href="../gun/kit/web.css"><script src="../gun/kit/web.js"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js" integrity="sha384-ZYmwuq4n2gOcNxMSiJ6jyTj+BbIrilr7p6dlq6q5nmSWKmsH9UU4K1qqjycMkfmR" crossorigin="anonymous"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/diff/diff.min.js" integrity="sha384-LQlEpxhPVss01BpgFtFS619MjPWXEFWC+AtH7y0Oi8fLkMa1HEdyjV3AK/CUFj4v" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/diff2html/bundles/js/diff2html.min.js" integrity="sha384-X6/ZXflvpFfCMcPkCC2/ydjb6KJqTsoQq2eGjzB5LfWgXs3VsjbfaEKKVWsfQIAy" crossorigin="anonymous"></script>
-
-<div class="icon header">🐙</div>
-<div class="title">GIT: <span id="subcmd" class="highlight"></span>
-  <div id="results" class="results-list"></div>
-  <div class="actions">
-    <button class="fat-btn" onpointerdown="kit.say('git status', 'prompt.try')" onclick="kit.say('git status', 'prompt')">STATUS</button>
-    <button class="fat-btn" onpointerdown="kit.say('git diff', 'prompt.try')" onclick="kit.say('git diff', 'prompt')">DIFF</button>
-    <button class="fat-btn" onpointerdown="kit.say('git add .', 'prompt.try')" onclick="kit.say('git add .', 'prompt')">ADD ALL</button>
-    <button class="fat-btn" onpointerdown="kit.say('git commit -m \'update\'', 'prompt.try')" onclick="kit.say('git commit -m \'update\'', 'prompt')">COMMIT</button>
-    <button class="fat-btn" onpointerdown="kit.say('git push', 'prompt.try')" onclick="kit.say('git push', 'prompt')">PUSH</button>
-  </div>
-</div>
-<template id="empt">
-  <div class="gitnote"></div>
-</template>
-<template id="diffm">
-  <div class="file-card collapsed">
-    <div class="file-header">
-      <div class="file-name"></div>
-      <button class="btn-save-header fat-btn-small">APPLY PATCH</button>
-      <div class="chevron">&#9660;</div>
-    </div>
-    <div class="file-content">
-      <textarea></textarea>
-    </div>
-  </div>
-</template>
-<template id="statm">
-  <div class="status-item">
-    <span class="sticon"></span>
-    <span class="stfile"></span>
-    <span class="sttag"></span>
-  </div>
-</template>
-<template id="textm">
-  <div class="statnote"></div>
-</template>
-<style>
-
-.header {
-  background: linear-gradient(90deg, rgba(255, 0, 85, 0.3), transparent);
-  padding: 1em;
-  display: flex; align-items: center;
-}
-.icon { font-size: 2.5em; margin-right: 15px; filter: drop-shadow(0 0 10px #ff0055); }
-.title { font-family: 'Courier New', monospace; font-size: 1.4em; font-weight: 900; color: white; }
-.highlight { color: #ff0055; text-shadow: 0 0 10px #ff0055; text-transform: uppercase; }
-
-.actions {
-  display: flex;
-  flex-wrap: wrap;
-  padding: 1em;
-  gap: 10px;
-  background: rgba(0,0,0,0.5);
-  border-top: 1px dashed rgba(255,0,85,0.5);
-}
-
-.fat-btn:active {
-  background: #ff0055;
-  color: black;
-  transform: scale(0.95);
-  text-shadow: none;
-}
-
-/* File Card Styles for Diff */
-.file-card {
-    background: #111;
-    border: 1px solid #333;
-    border-radius: 8px;
-    margin-bottom: 1em;
-    overflow: hidden;
-}
-.file-header {
-    background: #222;
-    padding: 1em;
-    display: flex;
-    align-items: center;
-    cursor: pointer;
-}
-.file-name {
-    flex: 1;
-    font-weight: bold;
-    color: #ff0055;
-    font-size: 1.2em;
-}
-.btn-save-header {
-    background: var(--pop);
-    color: white;
-    border: none;
-    padding: 0.5em 1em;
-    border-radius: 4px;
-    cursor: pointer;
-    font-weight: bold;
-    margin-right: 1em;
-}
-.chevron {
-    transition: transform 0.2s;
-}
-.collapsed .chevron {
-    transform: rotate(-90deg);
-}
-.collapsed .file-content {
-    display: none;
-}
-.file-content {
-    background: #000;
-}
-.gitnote {
-    padding: 1em;
-    text-align: center;
-    color: #888;
-}
-/* CodeMirror overrides */
-.CodeMirror {
-    height: auto !important;
-    background: #000 !important;
-    color: #eee !important;
-}
-.cm-s-default .cm-diff-add { color: lime; background: rgba(0, 255, 0, 0.1); display: inline-block; width: 100%; }
-.cm-s-default .cm-diff-del { color: red; background: rgba(255, 0, 0, 0.1); display: inline-block; width: 100%; }
-.cm-diff-inline-add { background: rgba(0, 255, 0, 0.4); border-radius: 2px; }
-.cm-diff-inline-del { background: rgba(255, 0, 0, 0.4); text-decoration: line-through; border-radius: 2px; }
-.cm-s-default .cm-diff-header { color: #aaa; }
-.cm-s-default .cm-diff-file { color: cyan; font-weight: bold; }
-.cmfat {
-  padding-bottom: 5em;
-  font-size: 1.2em;
-  letter-spacing: 0.05em;
-  font-family: 'Courier New', monospace;
-}
-
-/* Status List Styles */
-.ls { 
-  width: 100%; 
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 15px;
-  padding: 10px;
-}
-.ls .status-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 1em 0.5em;
-  text-align: center;
-  background: linear-gradient(135deg, rgba(191, 0, 255, 0.1), rgba(0,0,0,0.6));
-  border: 2px solid var(--pop, #ff0055);
-  border-radius: 16px;
-  backdrop-filter: blur(5px);
-  font-family: 'Courier New', monospace;
-  font-weight: 900;
-  text-shadow: 0 0 5px var(--pop, #ff0055);
-  box-shadow: 0 5px 15px rgba(191, 0, 255, 0.2), inset 0 0 10px rgba(191, 0, 255, 0.1);
-  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  cursor: pointer;
-  word-break: break-word;
-  user-select: none;
-}
-.ls .statnote {
-  width: 100%;
-  grid-column: 1 / -1;
-  color: #eee;
-  text-align: left;
-  font-family: 'Courier New', monospace;
-  padding: 0.2em 1em;
-  white-space: pre-wrap;
-}
-.sticon {
-  font-size: 1.5em;
-}
-.stfile {
-  display: block;
-}
-.sttag {
-  display: block;
-  font-size: 0.7em;
-  opacity: 0.6;
-}
-.ls .status-item:active {
-  background: var(--pop, #ff0055);
-  color: #000 !important;
-  transform: scale(0.92);
-  text-shadow: none;
-  box-shadow: 0 0 30px var(--pop, #ff0055);
-}
-.ls .status-item:active span {
-  color: #000 !important;
-  filter: none !important;
-}
-</style>
+<link rel="stylesheet" href="../gun/kit/web.css">
+<script src="../gun/kit/web.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.9.0/jquery.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/a11y-dark.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/amark/monotype/monotype.js" integrity="sha384-3c6Vpd2P7HeANlkSl3fzNZzvzICdxV7UypVSY4oqoH927hRmgK7+7mDFLoQtw4Dc" crossorigin="anonymous"></script>
 <script src="../util.js"></script>
-<script src="./git/diff.js"></script>
-<script src="./git/status.js"></script>
+
+<style>
+:root { --bg: #000; --text: #fff; --act: #00ffc8; --yes: #34c759; --hot: #ff3b30; }
+body, html { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: 'Courier New', monospace; overflow-x: hidden; }
+
+.git-ui { width: 100%; display: flex; flex-direction: column; }
+.file-row { display: flex; align-items: center; padding: 1em; border-bottom: 1px solid #222; background: #050505; }
+.stage-toggle { width: 2em; height: 2em; border-radius: 50%; border: 2px solid var(--yes); display: grid; place-items: center; margin-right: 1em; cursor: pointer; flex-shrink: 0; transition: 0.2s; }
+.stage-toggle.checked { background: var(--yes); }
+.file-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 1.2em; font-weight: bold; cursor: pointer; }
+.file-name.status-A { color: var(--yes); }
+.file-name.status-M { color: var(--act); }
+.file-name.status-D { color: var(--hot); }
+.file-name.status-Q { color: #ff0055; }
+.twirl { cursor: pointer; padding: 1em; color: var(--act); font-size: 1.5em; transition: 0.2s; user-select: none; }
+.twirl.open { transform: rotate(90deg); }
+
+.editor-wrapper { display: none; width: 100%; background: #000; padding: 0; box-sizing: border-box; }
+.editor-wrapper.active { display: block; }
+
+pre, code {
+  margin: 0; padding: 0;
+  font-family: 'Courier New', monospace;
+  font-size: 18px; 
+  letter-spacing: 0.05em;
+  line-height: 2.2em; 
+  word-wrap: break-word;
+  white-space: pre-wrap;
+  outline: none;
+  display: block;
+  width: 100%;
+}
+
+code { counter-reset: line; padding-bottom: 1em; }
+
+.line { display: block; counter-increment: line; position: relative; }
+.line::before {
+  content: counter(line);
+  display: inline-block;
+  width: 2.5em;
+  text-align: right;
+  margin-right: 1em;
+  font-size: 0.5em; 
+  color: #555;
+  user-select: none;
+  vertical-align: middle;
+}
+
+.prefix { display: inline-block; width: 1em; user-select: none; color: #555; font-weight: bold; }
+.line.add { background: rgba(52, 199, 89, 0.15); }
+.line.add .prefix { color: var(--yes); }
+.line.del { background: rgba(255, 59, 48, 0.15); }
+.line.del .prefix { color: var(--hot); }
+.line.header { color: #888; background: #111; }
+.line.chunk { color: var(--act); background: #0a1a1a; font-weight: bold; }
+
+.char-add { background: rgba(52, 199, 89, 0.4); text-shadow: 0 0 5px #000; }
+.char-del { background: rgba(255, 59, 48, 0.4); text-decoration: line-through; text-shadow: 0 0 5px #000; }
+</style>
+
+<div id="app" class="git-ui"></div>
+
 <script>
+var app = document.getElementById('app');
+
 kit.ear('git', function hear(eve) {
   var s = eve.detail || eve.data || "";
   
-  // Clean ANSI escape codes from server response
-  var cleanS = s.flat().replace(/\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])/g, '');
-  var lines = cleanS.trim().split('\n');
-  var cmdLine = lines[0].trim();
+  // Use util.js shellReply to clean pager text, then .flat() to strip ANSI
+  var raw = window.shellReply && window.shellReply.clean ? window.shellReply.clean(s) : String(s);
+  raw = raw.flat().replace(/[\r\n]+.*(?:\$|#|>)\s*$/, '');
   
-  var args = cmdLine.replace(/^git\s+/, '').split(/\s+/);
-  subcmd.innerText = args[0] || "COMMAND";
+  // The first line of the shell output contains the prompt and command executed
+  var lines = raw.trim().split('\n');
+  var cmdLine = lines[0] || '';
+  var cmdMatch = cmdLine.match(/(?:\$|#|>|PS>)\s*(.*)$/);
+  var fullCmd = cmdMatch ? cmdMatch[1] : cmdLine;
   
-  var outLines = lines.slice(1).join('\n');
+  var isDiff = fullCmd.indexOf(' diff') >= 0 || raw.indexOf('diff --git') >= 0;
   
-  const container = document.getElementById('results');
-  
-  // If it's a diff command OR it contains patch headers
-  if (args[0] === 'diff' || outLines.includes('diff --git')) {
-      if (window.renderDiff) {
-          window.renderDiff(outLines, container);
-      } else {
-          container.textContent = "Loading visualizer...";
-      }
-  } else if (args[0] === 'status') {
-      if (window.renderStatus) {
-          window.renderStatus(outLines, container);
-      } else {
-          container.textContent = "Loading status...";
-      }
+  if (isDiff && raw.indexOf('@@@DIFF@@@') === -1) {
+      renderStandaloneDiff(raw);
+  } else if (raw.indexOf('@@@DIFF@@@') >= 0) {
+      var parts = raw.split('@@@DIFF@@@');
+      renderCombined(parts[0], parts[1]);
   } else {
-      container.textContent = outLines;
+      renderStatus(raw);
   }
-  
   hear.off();
 });
+
+function parseStatus(raw) {
+    var lines = raw.split(/\r?\n/);
+    var files = [];
+    var currentSection = '';
+
+    lines.forEach(function(line) {
+        if (!line.trim()) return;
+        
+        if (line.indexOf('Changes to be committed:') >= 0) { currentSection = 'staged'; return; }
+        if (line.indexOf('Changes not staged for commit:') >= 0) { currentSection = 'unstaged'; return; }
+        if (line.indexOf('Untracked files:') >= 0) { currentSection = 'untracked'; return; }
+
+        var matchShort = line.match(/^([ MADRCU?!]{2})\s+(.+)$/);
+        var matchLong = line.match(/^[\t ]+(?:([a-z ]+):\s+)?(.+)$/);
+        var isHint = line.trim().startsWith('(') || line.trim().startsWith('no changes') || line.trim().startsWith('nothing to commit') || line.trim().startsWith('Changes');
+        
+        var st = '';
+        var f = '';
+
+        if (matchShort && !line.match(/^[\t ]/)) {
+            st = matchShort[1];
+            f = matchShort[2].trim();
+        } else if (matchLong && !isHint) {
+            var action = matchLong[1] ? matchLong[1].trim() : '';
+            var path = matchLong[2].trim();
+            f = path.indexOf(' -> ') >= 0 ? path.split(' -> ')[1] : path;
+            
+            st = ' M';
+            if (currentSection === 'staged') {
+                if (action.indexOf('modified') >= 0) { st = 'M '; }
+                else if (action.indexOf('new file') >= 0) { st = 'A '; }
+                else if (action.indexOf('deleted') >= 0) { st = 'D '; }
+                else if (action.indexOf('renamed') >= 0) { st = 'R '; }
+            } else if (currentSection === 'unstaged') {
+                if (action.indexOf('modified') >= 0) { st = ' M'; }
+                else if (action.indexOf('deleted') >= 0) { st = ' D'; }
+            } else if (currentSection === 'untracked' || !action) {
+                st = '??';
+            }
+        }
+        
+        if (f && !isHint) {
+            if(f.startsWith('"') && f.endsWith('"')) f = f.substring(1, f.length-1);
+            var isStaged = (st[0] !== ' ' && st[0] !== '?');
+            var kind = 'M';
+            if (st.indexOf('?') >= 0) kind = 'Q';
+            else if (st.indexOf('A') >= 0) kind = 'A';
+            else if (st.indexOf('D') >= 0) kind = 'D';
+            
+            var display = f;
+            if (display.length > 30) {
+                var pts = display.split('/');
+                if (pts.length > 2) display = '.../' + pts.slice(-2).join('/');
+            }
+            files.push({ path: f, display: display, staged: isStaged, kind: kind, raw: st });
+        }
+    });
+
+    var unique = {};
+    files.forEach(function(file) {
+        if (!unique[file.path]) unique[file.path] = file;
+        else {
+            unique[file.path].staged = unique[file.path].staged || file.staged;
+            if (file.kind !== 'Q') unique[file.path].kind = file.kind; 
+        }
+    });
+    
+    return Object.values(unique);
+}
+
+function parseDiffs(rawDiff) {
+    var lines = rawDiff.split(/\r?\n/);
+    var diffs = {};
+    var currentFile = null;
+    var currentPatch = [];
+    
+    for (var i = 0; i < lines.length; i++) {
+        var line = lines[i];
+        if (line.startsWith('diff --git ')) {
+            if (currentFile) diffs[currentFile] = currentPatch.join('\n') + '\n';
+            var match = line.match(/ a\/(.*?)\s+b\/(.*)/);
+            currentFile = match ? match[2] : null;
+            currentPatch = [line];
+        } else if (currentFile) {
+            currentPatch.push(line);
+        }
+    }
+    if (currentFile) diffs[currentFile] = currentPatch.join('\n') + '\n';
+    return diffs;
+}
+
+function highlightDiff(text) {
+    var lines = text.split('\n');
+    var out = [];
+    
+    var getCommon = function(s1, s2) {
+        var pre = 0, suf = 0;
+        while(pre < s1.length && pre < s2.length && s1[pre] === s2[pre]) pre++;
+        while(suf < s1.length - pre && suf < s2.length - pre && s1[s1.length - 1 - suf] === s2[s2.length - 1 - suf]) suf++;
+        return [pre, suf];
+    };
+    function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+    
+    for (var i = 0; i < lines.length; i++) {
+        var line = lines[i];
+        if (line.startsWith('-') && !line.startsWith('--- ')) {
+            out.push({ type: 'del', text: line, raw: line.substring(1), pfx: '-' });
+        } else if (line.startsWith('+') && !line.startsWith('+++ ')) {
+            var prev = out[out.length - 1];
+            if (prev && prev.type === 'del') {
+                var addText = line.substring(1);
+                var delText = prev.raw;
+                var same = getCommon(delText, addText);
+                var pre = same[0], suf = same[1];
+                if (delText.length - suf > pre || addText.length - suf > pre) {
+                    prev.pre = pre; prev.suf = suf;
+                    out.push({ type: 'add', text: line, raw: addText, pre: pre, suf: suf, pfx: '+' });
+                    continue;
+                }
+            }
+            out.push({ type: 'add', text: line, raw: line.substring(1), pfx: '+' });
+        } else if (line.startsWith('@@')) {
+            out.push({ type: 'chunk', text: line, pfx: '' });
+        } else if (line.startsWith('---') || line.startsWith('+++') || line.startsWith('diff') || line.startsWith('index')) {
+            out.push({ type: 'header', text: line, pfx: '' });
+        } else {
+            var pfx = line.charAt(0) === ' ' ? ' ' : '';
+            var r = pfx ? line.substring(1) : line;
+            out.push({ type: 'ctx', text: line, raw: r, pfx: pfx });
+        }
+    }
+    
+    var html = '';
+    for (var i = 0; i < out.length; i++) {
+        var o = out[i];
+        if (o.type === 'header' || o.type === 'chunk') {
+            html += '<span class="line ' + o.type + '">' + esc(o.text) + '</span>\n';
+            continue;
+        }
+        
+        var hlContent = '';
+        if (o.pre !== undefined) {
+            var start = esc(o.raw.substring(0, o.pre));
+            var mid = esc(o.raw.substring(o.pre, o.raw.length - o.suf));
+            var end = esc(o.raw.substring(o.raw.length - o.suf));
+            hlContent = start + '<span class="char-' + o.type + '">' + mid + '</span>' + end;
+        } else {
+            if (o.raw && o.raw.trim() !== '') {
+                try {
+                    hlContent = hljs.highlightAuto(o.raw).value;
+                } catch(e) { hlContent = esc(o.raw); }
+            } else {
+                hlContent = esc(o.raw || '');
+            }
+        }
+        
+        html += '<span class="line ' + o.type + '"><span class="prefix">' + o.pfx + '</span>' + hlContent + '</span>\n';
+    }
+    
+    if (html.endsWith('\n')) html = html.slice(0, -1);
+    return html;
+}
+
+function createEditor(file, initialDiff) {
+    var wrap = document.createElement('div');
+    wrap.className = 'editor-wrapper';
+    
+    var pre = document.createElement('pre');
+    var code = document.createElement('code');
+    code.setAttribute('contenteditable', 'true');
+    code.spellcheck = false;
+    
+    if (!initialDiff) {
+        initialDiff = "diff --git a/"+file+" b/"+file+"\n--- a/"+file+"\n+++ b/"+file+"\n@@ -0,0 +0,0 @@\n // Loading diff in a new card below...";
+    }
+    
+    code.innerHTML = highlightDiff(initialDiff);
+    pre.appendChild(code);
+    wrap.appendChild(pre);
+    
+    var saveTimer;
+    $(code).keyup(function(e) {
+        var r = monotype(code[0]);
+        var txt = $(code).text();
+        code.innerHTML = highlightDiff(txt);
+        r.restore();
+        
+        clearTimeout(saveTimer);
+        saveTimer = setTimeout(function() {
+            var cmd = "cat << 'EOF_PATCH' | git apply --whitespace=nowarn\n" + txt + "\nEOF_PATCH";
+            window.parent.kit.say(cmd, 'host');
+        }, 1500);
+    }).keydown(function(e) {
+        var prevent = { '13': '\n', '9': '    ' };
+        if(e.keyCode in prevent){
+            e.preventDefault();
+            var r = monotype(code[0]);
+            var txt = $(code).text();
+            var out = txt.slice(0, r.s) + prevent[e.keyCode] + txt.slice(r.e);
+            code.innerHTML = highlightDiff(out);
+            r.e = r.s + prevent[e.keyCode].length;
+            r.s = r.e;
+            r.restore();
+            
+            clearTimeout(saveTimer);
+            saveTimer = setTimeout(function() {
+                var cmd = "cat << 'EOF_PATCH' | git apply --whitespace=nowarn\n" + out + "\nEOF_PATCH";
+                window.parent.kit.say(cmd, 'host');
+            }, 1500);
+        }
+    });
+    
+    return { wrapper: wrap, code: code };
+}
+
+function renderStandaloneDiff(raw) {
+    var diffs = parseDiffs(raw);
+    for (var f in diffs) {
+        var existingRow = document.querySelector('.file-row[data-path="' + f.replace(/"/g, '\\"') + '"]');
+        if (existingRow) {
+            var w = existingRow.nextSibling;
+            var code = w.querySelector('code');
+            code.innerHTML = highlightDiff(diffs[f]);
+            w.classList.add('active');
+            existingRow.querySelector('.twirl').classList.add('open');
+            continue;
+        }
+
+        var ed = createEditor(f, diffs[f]);
+        ed.wrapper.classList.add('active');
+        
+        var row = document.createElement('div');
+        row.className = 'file-row';
+        row.setAttribute('data-path', f);
+        row.innerHTML = '<div class="file-name status-M">'+f+'</div><div class="twirl open">▶</div>';
+        
+        row.onclick = function() {
+            var w = this.nextSibling;
+            w.classList.toggle('active');
+            this.querySelector('.twirl').classList.toggle('open');
+        };
+        
+        app.appendChild(row);
+        app.appendChild(ed.wrapper);
+    }
+}
+
+function renderStatus(raw) {
+    var files = parseStatus(raw);
+    if (files.length === 0) {
+        app.innerHTML = '<div style="padding:2em;text-align:center;color:#666;">Working tree clean.</div>';
+        return;
+    }
+    
+    files.forEach(function(f) {
+        var row = document.createElement('div');
+        row.className = 'file-row';
+        row.setAttribute('data-path', f.path);
+        row.innerHTML = '<div class="stage-toggle ' + (f.staged ? 'checked' : '') + '"></div><div class="file-name status-' + f.kind + '">' + f.display + '</div><div class="twirl">▶</div>';
+        
+        var ed = createEditor(f.path, '');
+        
+        row.querySelector('.stage-toggle').onclick = function(e) {
+            e.stopPropagation();
+            var isStaged = this.classList.contains('checked');
+            var cmd = isStaged ? 'git restore --staged "' + f.path + '"' : 'git add "' + f.path + '"';
+            window.parent.kit.say(cmd, 'host');
+            this.classList.toggle('checked');
+        };
+        
+        row.onclick = function(e) {
+            if (e.target.classList.contains('stage-toggle')) return;
+            var w = this.nextSibling;
+            var t = this.querySelector('.twirl');
+            
+            if (w.classList.contains('active')) {
+                w.classList.remove('active');
+                t.classList.remove('open');
+            } else {
+                w.classList.add('active');
+                t.classList.add('open');
+                
+                var code = w.querySelector('code');
+                if (code.textContent.indexOf('// Loading diff in a new card below...') >= 0) {
+                    var diffFlag = f.staged ? '--cached' : '';
+                    window.parent.kit.say('git --no-pager diff ' + diffFlag + ' "' + f.path + '"', 'prompt');                }
+            }
+        };
+        
+        app.appendChild(row);
+        app.appendChild(ed.wrapper);
+    });
+}
+
+function renderCombined(statusRaw, diffRaw) {
+    var files = parseStatus(statusRaw);
+    var diffs = parseDiffs(diffRaw);
+    
+    if (files.length === 0) {
+        app.innerHTML = '<div style="padding:2em;text-align:center;color:#666;">Working tree clean.</div>';
+        return;
+    }
+    
+    files.forEach(function(f) {
+        var row = document.createElement('div');
+        row.className = 'file-row';
+        row.setAttribute('data-path', f.path);
+        row.innerHTML = '<div class="stage-toggle ' + (f.staged ? 'checked' : '') + '"></div><div class="file-name status-' + f.kind + '">' + f.display + '</div><div class="twirl">▶</div>';
+        
+        var ed = createEditor(f.path, diffs[f.path] || '');
+        
+        row.querySelector('.stage-toggle').onclick = function(e) {
+            e.stopPropagation();
+            var isStaged = this.classList.contains('checked');
+            var cmd = isStaged ? 'git restore --staged "' + f.path + '"' : 'git add "' + f.path + '"';
+            window.parent.kit.say(cmd, 'host');
+            this.classList.toggle('checked');
+        };
+        
+        row.onclick = function(e) {
+            if (e.target.classList.contains('stage-toggle')) return;
+            var w = this.nextSibling;
+            var t = this.querySelector('.twirl');
+            
+            if (w.classList.contains('active')) {
+                w.classList.remove('active');
+                t.classList.remove('open');
+            } else {
+                w.classList.add('active');
+                t.classList.add('open');
+                
+                var code = w.querySelector('code');
+                if (code.textContent.indexOf('// Loading diff in a new card below...') >= 0) {
+                    var diffFlag = f.staged ? '--cached' : '';
+                    window.parent.kit.say('git --no-pager diff ' + diffFlag + ' "' + f.path + '"', 'prompt');                }
+            }
+        };
+        
+        app.appendChild(row);
+        app.appendChild(ed.wrapper);
+    });
+}
 </script>
