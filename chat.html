@@ -20,7 +20,7 @@
 
   </form>
 
-<button id="scroll" onclick="B.scrollTop = B.scrollHeight; shell.scrollTop = shell.scrollHeight; this.style.display='none';" style="display:none; position:fixed; bottom:6em; right:1em; z-index:101; background:var(--pop, lime); color:var(--mood, black); border:none; border-radius:50%; width:2em; height:2em; font-size:2em; cursor:pointer; align-items:center; justify-content:center; text-align:center;opacity:0.6;">↓</button>
+<button id="scroll" onclick="B.scrollTop = B.scrollHeight; shell.scrollTop = shell.scrollHeight; this.style.display='none';" style="display:none; position:fixed; bottom:2em; right:40%; z-index:101; background:var(--pop, lime); color:var(--mood, black); border:none; border-radius:50%; width:2em; height:2em; font-size:2em; cursor:pointer; align-items:center; justify-content:center; text-align:center;opacity:0.6;">↓</button>
 
 
 
@@ -106,30 +106,38 @@ textarea {
   opacity: 0;
 }
 .kit {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 0.2em;
   padding: 0.2em;
-  padding-left: 70vw;
   background: transparent;
 z-index: 101;
-  overflow-x: scroll;
   overflow-y: scroll;
   scrollbar-width: none;
   position: fixed ;
   right: 0;
-  bottom: 13%;
+  bottom: 0;
   height: 5em;
-  width: 100%;
+
+  max-width: 5em;
+  pad-ding-top: 90vh;
+  border-radius: 9% 0 0 0;
+  back-ground: pink;
+  
+  transition: all 1.2s cubic-bezier(0.1, 0.9, 0.2, 1);
+   transition-delay: 0.5s;
 }
+ .kit.open { 
+   height: 100vh;
+   border-radius: 0; 
+   overflow-x: visible; 
+   transition: 0.2s all;
+  transition-delay: 0s;
+  }
 .kit::-webkit-scrollbar { display: none; }
 .kit button {
   flex: 0 0 auto;
   background: rgba(0,0,0,0.2);
   backdrop-filter: blur(var(--blur));
   border: 1px solid var(--pop);
-
+ 
   padding: 0.5em 1em;
   border-radius: 0.5em;
   font-family: 'Courier New', monospace;
@@ -327,7 +335,15 @@ kit.ear('belt', function(eve, data, b){
   };
   belt.append(b);
 });
-
+kit.ear('pointerdown',(eve)=>{
+   belt.tag('open',1);
+}, belt);
+window.addEventListener('pointerup',(eve)=>{
+   belt.tag('open',-1);
+});
+window.addEventListener('touchend',(eve)=>{
+   belt.tag('open',-1);
+});
                          setTimeout(()=>{
 [
   {name: 'esc', key: 1},
@@ -511,6 +527,8 @@ kit.ear('clear',eve=>{return;shell.innerHTML = ""; });
 //kit.say('clear', 'prompt');
 kit.say('whoami', 'prompt');
 kit.say('ls .', 'prompt');
+                         
+                         
 var f = "\u001b[0;32m~/marknadal\u001b[0m \u001b[0;97m$";
 var p = ["\u001b[?2004h\u001b[0;32m~/marknadal\u001b[0m \u001b[0;97m$\u001b[0m \r\n\u001b[?2004l\r","\u001b[?2004h\u001b[0;32m~/marknadal\u001b[0m \u001b[0;97m$\u001b[0m clear\r\n\u001b[?2004l\r","\u001b[H\u001b[2J","\u001b[?2004h\u001b[0;32m~/marknadal\u001b[0m \u001b[0;97m$\u001b[0m \r\n\u001b[?2004l\r\u001b[?2004h\u001b[0;32m~/marknadal\u001b[0m \u001b[0;97m$\u001b[0m ls .\r\n\u001b[?2004l\r","\u001b[0m\u001b[01;34m2022\u001b[0m         debug        index.html     \u001b[01;34mrandom\u001b[0m         tantra-training.html\r\nREADME.md    gemini.json  install.sh     settings.json  \u001b[01;34mtmp\u001b[0m\r\ncollab.html  git.html     prompt         ssh.js\r\n\u001b[01;34mcop\u001b[0m          git.js       property.html  \u001b[01;34msurviving\u001b[0m\r\n","\u001b[?2004h\u001b[0;32m~/marknadal\u001b[0m \u001b[0;97m$\u001b[0m "];
 

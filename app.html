@@ -84,6 +84,12 @@ function bootVM() {
         vga_bios: { url: "https://cdn.jsdelivr.net/gh/aethiop/v86@master/bios/vgabios.bin" },
         bzimage: { url: "https://cdn.jsdelivr.net/gh/aethiop/v86@master/images/buildroot-bzimage68.bin" },
         cmdline: "tsc=reliable mitigations=off random.trust_cpu=on console=ttyS0",
+        // Route guest HTTP(S) through the browser fetch backend.
+        // This is limited by CORS and only helps HTTP-based git remotes.
+        net_device: {
+            type: "virtio",
+            relay_url: "fetch",
+        },
         autostart: true,
         disable_keyboard: true,
         disable_mouse: true,
