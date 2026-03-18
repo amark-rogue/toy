@@ -8,7 +8,8 @@
 
 
   <div class="kit">
-    
+
+    <div class="tin"></div>
   </div>
 
   
@@ -116,28 +117,55 @@ textarea {
   margin-right: 0.5em;
   background: transparent;
   z-index: 101;
-  overflow-y: scroll;
+  overflow-y: auto;
   overflow-x: visible;
   scrollbar-width: none;
   position: fixed;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
+  
   right: 0;
   bottom: 0;
-  height: 7em;
+  hei-ght: 7em;
 
   width: max-content;
 
-  border-radius: 9% 0 0 0;
+  
 
-  transition: all 1.2s cubic-bezier(0.1, 0.9, 0.2, 1);
-   transition-delay: 2s;
-  animation: enable-snap 3.2s forwards;
+  trans-ition: all 1.2s cubic-bezier(0.1, 0.9, 0.2, 1);
+   trans-ition-delay: 2s;
+  anim-ation: enable-snap 3.2s forwards;
 
+  
+  
+            
+            height: 100vh;
+
+            
+           
+            pointer-events: none; 
+            
+           
+            scrollbar-width: none; 
+            -ms-overflow-style: none;
+  
+  
   }
 
-  .kit.open {   padding: 50vh 0;
+ .kit::before {
+content: " ";
+            height: calc(100vh - 7.5em);
+            width: 100%;
+
+
+        }
+.kit .tin {
+  pointer-events: auto; 
+  
+display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  } 
+  
+  .kit.op-en {   padding: 50vh 0;
    height: 100vh;
    border-radius: 0; 
    overflow-x: visible; 
@@ -236,7 +264,7 @@ input:focus::placeholder { opacity: 0.5; }
 var prompt;
 var shell = B.all('#shell')[0];
 var help = B.all('#help')[0];
-var belt = B.all('.kit')[0];
+var belt = B.all('.kit .tin')[0];
 var mod = {};
 (prompt = B.all('#prompt')[0]).focus();
 
