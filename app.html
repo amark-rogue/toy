@@ -75,15 +75,26 @@ function bootVM() {
   s.crossOrigin = "anonymous";
   s.onload = function() {
     kit.say("Initializing VM...\n", 'chat');
+    var autoBootCommands = [
+        "printf '\\n[vm] checking fetch relay and apk...\\n'",
+        "udhcpc -i eth0 || true",
+        "wget -qO- https://dl-cdn.alpinelinux.org/alpine/ >/dev/null && echo '[vm] fetch-ok' || echo '[vm] fetch-fail'",
+        "apk update && apk add git && echo '[vm] git-installed' || echo '[vm] git-install-failed'",
+        "command -v git && git --version || true"
+    ];
     
     var emulator = window.emulator = new V86({
         wasm_path: "https://cdn.jsdelivr.net/gh/aethiop/v86@master/build/v86.wasm",
-        memory_size: 64 * 1024 * 1024,
-        vga_memory_size: 2 * 1024 * 1024,
+        memory_size: 256 * 1024 * 1024,
+        vga_memory_size: 8 * 1024 * 1024,
         bios: { url: "https://cdn.jsdelivr.net/gh/aethiop/v86@master/bios/seabios.bin" },
         vga_bios: { url: "https://cdn.jsdelivr.net/gh/aethiop/v86@master/bios/vgabios.bin" },
-        bzimage: { url: "https://cdn.jsdelivr.net/gh/aethiop/v86@master/images/buildroot-bzimage68.bin" },
-        cmdline: "tsc=reliable mitigations=off random.trust_cpu=on console=ttyS0",
+        filesystem: {
+            baseurl: "https://cdn.jsdelivr.net/gh/aethiop/v86@master/images/alpine-rootfs-flat",
+            basefs: "https://cdn.jsdelivr.net/gh/aethiop/v86@master/images/alpine-fs.json",
+        },
+        bzimage_initrd_from_filesystem: true,
+        cmdline: "rw root=host9p rootfstype=9p rootflags=trans=virtio,cache=loose modules=virtio_pci tsc=reliable mitigations=off random.trust_cpu=on console=ttyS0",
         // Route guest HTTP(S) through the browser fetch backend.
         // This is limited by CORS and only helps HTTP-based git remotes.
         net_device: {
@@ -148,16 +159,19 @@ function bootVM() {
 
     emulator.add_listener("emulator-started", function() {
         kit.say("Emulator started.\n", 'chat');
-        // Wait a bit for the OS to actually boot to the login prompt
+        // Wait for Alpine to reach a serial login prompt, then try package install.
         setTimeout(function() {
-           emulator.serial0_send("root\n"); // Auto-login as root for buildroot
+           emulator.serial0_send("\nroot\n");
            setTimeout(function() {
                emulatorReady = true;
+               autoBootCommands.forEach(function(cmd) {
+                   emulator.serial0_send(cmd + "\n");
+               });
                while(commandQueue.length > 0) {
                    emulator.serial0_send(commandQueue.shift());
                }
-           }, 1000);
-        }, 5000);
+           }, 2500);
+        }, 8000);
     });
 
     location.path = 'chat.html';
