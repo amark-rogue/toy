@@ -76,11 +76,7 @@ function bootVM() {
   s.onload = function() {
     kit.say("Initializing VM...\n", 'chat');
     var autoBootCommands = [
-        "printf '\\n[vm] checking fetch relay and apk...\\n'",
-        "udhcpc -i eth0 || true",
-        "wget -qO- https://dl-cdn.alpinelinux.org/alpine/ >/dev/null && echo '[vm] fetch-ok' || echo '[vm] fetch-fail'",
-        "apk update && apk add git && echo '[vm] git-installed' || echo '[vm] git-install-failed'",
-        "command -v git && git --version || true"
+        "printf '\\n[vm] browser linux ready\\n'"
     ];
     
     var emulator = window.emulator = new V86({
@@ -115,6 +111,13 @@ function bootVM() {
             // Ensure commands end with a newline so the shell processes them
             if (cmd && !cmd.endsWith('\n') && !cmd.endsWith('\r')) {
                cmd += '\n';
+            }
+            // Intercept git clone — route through browser fetch (CORS)
+            var trimmed = (cmd || '').replace(/[\r\n]+$/, '').trim();
+            var m = trimmed.match(/^git\s+clone\s+(?:-b\s+(\S+)\s+)?(?:https?:\/\/)?github\.com\/([^\/\s]+)\/([^\s]+?)(?:\s+(\S+))?\s*$/);
+            if (m && emulatorReady) {
+                browserGitClone(m[2], m[3].replace(/\.git$/, ''), m[1] || '', m[4] || '');
+                return;
             }
             if (!emulatorReady) {
                commandQueue.push(cmd);
@@ -159,7 +162,7 @@ function bootVM() {
 
     emulator.add_listener("emulator-started", function() {
         kit.say("Emulator started.\n", 'chat');
-        // Wait for Alpine to reach a serial login prompt, then try package install.
+        // Wait for Alpine to reach a serial login prompt.
         setTimeout(function() {
            emulator.serial0_send("\nroot\n");
            setTimeout(function() {
@@ -177,6 +180,88 @@ function bootVM() {
     location.path = 'chat.html';
   };
   document.head.appendChild(s);
+}
+
+// --- Browser-side git clone via GitHub REST API (CORS-safe) ---
+
+function ensureDir(emu, path) {
+    var parts = path.split('/').filter(Boolean);
+    var current = '';
+    for (var i = 0; i < parts.length; i++) {
+        current += '/' + parts[i];
+        var info = emu.fs9p.SearchPath(current);
+        if (info.id === -1) {
+            var parentPath = '/' + parts.slice(0, i).join('/');
+            if (!parentPath) parentPath = '/';
+            var parentInfo = emu.fs9p.SearchPath(parentPath);
+            if (parentInfo.id !== -1) {
+                emu.fs9p.CreateDirectory(parts[i], parentInfo.id);
+            }
+        }
+    }
+}
+
+async function browserGitClone(owner, repo, branch, dest) {
+    var emu = window.emulator;
+    dest = dest || '/root/' + repo;
+    if (dest.charAt(0) !== '/') dest = '/root/' + dest;
+
+    var say = function(msg) { kit.say(msg, 'chat'); };
+
+    say("Cloning into '" + (dest.split('/').pop()) + "'...\n");
+
+    try {
+        // Try the requested branch, then main, then master
+        var branches = branch ? [branch, 'main', 'master'] : ['main', 'master'];
+        var tree, usedBranch;
+        for (var bi = 0; bi < branches.length; bi++) {
+            var res = await fetch('https://api.github.com/repos/' + owner + '/' + repo + '/git/trees/' + branches[bi] + '?recursive=1');
+            if (res.ok) {
+                tree = await res.json();
+                usedBranch = branches[bi];
+                break;
+            }
+            if (res.status === 403) throw new Error('API rate limit exceeded (60/hr unauthenticated)');
+        }
+        if (!tree) throw new Error('repository \'' + owner + '/' + repo + '\' not found');
+        if (tree.truncated) say("warning: tree truncated (large repo), some files may be missing\n");
+
+        var files = tree.tree.filter(function(t) { return t.type === 'blob'; });
+        var dirs = tree.tree.filter(function(t) { return t.type === 'tree'; });
+        var total = files.length;
+
+        say("remote: Enumerating objects: " + tree.tree.length + ", done.\n");
+
+        // Create directory structure in 9P
+        ensureDir(emu, dest);
+        dirs.forEach(function(d) { ensureDir(emu, dest + '/' + d.path); });
+
+        // Download files in parallel batches of 8
+        var done = 0;
+        for (var i = 0; i < files.length; i += 8) {
+            var batch = files.slice(i, i + 8);
+            await Promise.all(batch.map(async function(f) {
+                var url = 'https://raw.githubusercontent.com/' + owner + '/' + repo + '/' + usedBranch + '/' + f.path;
+                var r = await fetch(url);
+                if (!r.ok) { say("warning: skipped " + f.path + " (" + r.status + ")\n"); return; }
+                var data = new Uint8Array(await r.arrayBuffer());
+                await emu.create_file(dest + '/' + f.path, data);
+                done++;
+                if (done % 25 === 0 || done === total) {
+                    say("\rReceiving objects: " + Math.round(done / total * 100) + "% (" + done + "/" + total + ")");
+                }
+            }));
+        }
+
+        say("\nReceiving objects: 100% (" + total + "/" + total + "), done.\n");
+        // Trigger a real ls in the VM so the shell prompt returns naturally
+        emu.serial0_send("ls " + dest + "\n");
+
+    } catch(e) {
+        say("fatal: " + e.message + "\n");
+        // Send empty command so shell prompt comes back
+        emu.serial0_send("\n");
+    }
 }
 
 (pass.value = localStorage.pass||'') && cop.sign();
