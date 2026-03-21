@@ -130,9 +130,9 @@ textarea {
 
   
 
-  trans-ition: all 1.2s cubic-bezier(0.1, 0.9, 0.2, 1);
-   trans-ition-delay: 2s;
-  anim-ation: enable-snap 3.2s forwards;
+
+
+  animation: none !important;
 
   
   
@@ -163,16 +163,10 @@ content: " ";
 display: flex;
   flex-direction: column;
   align-items: flex-end;
+  animation: none !important;
   } 
   
-  .kit.op-en {   padding: 50vh 0;
-   height: 100vh;
-   border-radius: 0; 
-   overflow-x: visible; 
-  scroll-snap-type: none;
-  animation: none;
-   transition: 0.2s all;  transition-delay: 0s;
-  }
+
 .kit::-webkit-scrollbar { display: none; }
 .kit button {
   scroll-snap-align: start;
@@ -180,8 +174,10 @@ display: flex;
   text-align: right;
 
   background: rgba(0,0,0,0.2);
+  -webkit-back-drop-filter: blur(var(--blur));
   backdrop-filter: blur(var(--blur));
   border: 1px solid var(--pop);
+  animation: none !important;
 
   padding: 0.5em 1em;
   border-radius: 0.5em;
@@ -191,11 +187,12 @@ display: flex;
   cursor: pointer;
   white-space: nowrap;
   text-shadow: 0 0 5px var(--pop);
-  box-shadow: 0 0 10px rgba(191,0,255,0.2);
-  transition: transform 0.2s, background 0.2s, color 0.2s, text-shadow 0.2s;
+  box-shadow: 0 0 10px rgba(11,0,255,0.2);
+  transition: all var(--time);
 }
 .kit button:active {
   background: var(--pop);
+
   color: var(--mood);
   transform: scale(0.92);
   text-shadow: none;
