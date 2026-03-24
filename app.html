@@ -73,7 +73,6 @@ function bootVM() {
   var s = document.createElement('script');
   s.src = "https://cdn.jsdelivr.net/gh/abenezermario/v86-alpine@main/build/libv86.js";
   s.onload = function() {
-    var vmBoot = document.getElementById('vmBoot');
     vmBoot.style.display = 'block';
     vmBoot.textContent = 'Downloading VM...';
     var autoBootCommands = [];

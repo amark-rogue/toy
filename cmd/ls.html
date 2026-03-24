@@ -152,6 +152,8 @@ kit.ear('ls',function hear(eve){
   hear.off();
 });
   
+// ls.html is always the first cmd loaded (auto-fired by chat.html),
+// so it registers all belt shortcuts for cmd/*.html handlers.
 kit.say(['ls','ls .'], 'belt');
 kit.say(['cat','cat '], 'belt');
 kit.say(['cd','cd '], 'belt');
