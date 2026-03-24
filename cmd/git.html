@@ -84,14 +84,18 @@ kit.ear('git', function hear(eve) {
   var fullCmd = cmdMatch ? cmdMatch[1] : cmdLine;
   
   var isDiff = fullCmd.indexOf(' diff') >= 0 || raw.indexOf('diff --git') >= 0;
-  
+  var isStatus = /git\s+status/.test(fullCmd) || raw.indexOf('Changes ') >= 0 || raw.indexOf('nothing to commit') >= 0 || raw.indexOf('Untracked files') >= 0;
+
   if (isDiff && raw.indexOf('@@@DIFF@@@') === -1) {
       renderStandaloneDiff(raw);
   } else if (raw.indexOf('@@@DIFF@@@') >= 0) {
       var parts = raw.split('@@@DIFF@@@');
       renderCombined(parts[0], parts[1]);
-  } else {
+  } else if (isStatus) {
       renderStatus(raw);
+  } else {
+      // Non-status, non-diff git commands (git -v, git log, git branch, etc.)
+      renderRaw(raw);
   }
   hear.off();
 });
@@ -309,6 +313,14 @@ function createEditor(file, initialDiff) {
     });
     
     return { wrapper: wrap, code: code };
+}
+
+function renderRaw(raw) {
+    var lines = raw.split(/\r?\n/);
+    // Skip the command echo line (first line with prompt)
+    var output = lines.slice(1).join('\n').trim();
+    if (!output) output = raw.trim();
+    app.innerHTML = '<pre style="padding:1em;margin:0;white-space:pre-wrap;word-break:break-all;color:#ccc;">' + output.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</pre>';
 }
 
 function renderStandaloneDiff(raw) {
