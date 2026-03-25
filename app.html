@@ -18,6 +18,7 @@
     <button onclick="vmDialog.close('yes')" style="background: var(--pop, lime); color: var(--mood, #000); border: none; padding: 0.5em 1em; border-radius: 0.5em; cursor: pointer; font-weight: bold;">Yes</button>
   </div>
 </dialog>
+<div id="vmBoot" style="display:none; position:fixed; bottom:4em; left:0; right:0; z-index:999; text-align:center; font-family:monospace; color:var(--pop, lime); font-size:0.9em; opacity:0.8;"></div>
 <style>
 :root { --fill: var(--mood); }
 body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; back-ground-image: url('https://picsum.photos/1200/900'); }
@@ -70,24 +71,21 @@ cop.sign = async ()=>{ if(cop.ws){ return }
 
 function bootVM() {
   var s = document.createElement('script');
-  s.src = "https://cdn.jsdelivr.net/gh/aethiop/v86@master/build/libv86.js";
-  s.integrity = "sha384-N7pi8KdWeRRzvfrReDLK0zblsYHqhgWX2RHIQ/qFkZtZKCZsU6rZzUMEvDgQC9/R";
-  s.crossOrigin = "anonymous";
+  s.src = "https://cdn.jsdelivr.net/gh/abenezermario/v86-alpine@main/build/libv86.js";
   s.onload = function() {
-    kit.say("Initializing VM...\n", 'chat');
-    var autoBootCommands = [
-        "printf '\\n[vm] browser linux ready\\n'"
-    ];
+    vmBoot.style.display = 'block';
+    vmBoot.textContent = 'Downloading VM...';
+    var autoBootCommands = [];
     
     var emulator = window.emulator = new V86({
-        wasm_path: "https://cdn.jsdelivr.net/gh/aethiop/v86@master/build/v86.wasm",
+        wasm_path: "https://cdn.jsdelivr.net/gh/abenezermario/v86-alpine@main/build/v86.wasm",
         memory_size: 256 * 1024 * 1024,
         vga_memory_size: 8 * 1024 * 1024,
-        bios: { url: "https://cdn.jsdelivr.net/gh/aethiop/v86@master/bios/seabios.bin" },
-        vga_bios: { url: "https://cdn.jsdelivr.net/gh/aethiop/v86@master/bios/vgabios.bin" },
+        bios: { url: "https://cdn.jsdelivr.net/gh/abenezermario/v86-alpine@main/bios/seabios.bin" },
+        vga_bios: { url: "https://cdn.jsdelivr.net/gh/abenezermario/v86-alpine@main/bios/vgabios.bin" },
         filesystem: {
-            baseurl: "https://cdn.jsdelivr.net/gh/aethiop/v86@master/images/alpine-rootfs-flat",
-            basefs: "https://cdn.jsdelivr.net/gh/aethiop/v86@master/images/alpine-fs.json",
+            baseurl: "https://cdn.jsdelivr.net/gh/abenezermario/v86-alpine@main/images/alpine-rootfs-flat",
+            basefs: "https://cdn.jsdelivr.net/gh/abenezermario/v86-alpine@main/images/alpine-fs.json",
         },
         bzimage_initrd_from_filesystem: true,
         cmdline: "rw root=host9p rootfstype=9p rootflags=trans=virtio,cache=loose modules=virtio_pci tsc=reliable mitigations=off random.trust_cpu=on console=ttyS0",
@@ -132,49 +130,61 @@ function bootVM() {
     }
     
     var buf = "";
+    var bootPhase = 0; // 0=booting, 1=login sent, 2=prompt seen, 3=ready
     emulator.add_listener("serial0-output-byte", function(byte) {
         var char = String.fromCharCode(byte);
         buf += char;
+
+        // Event-driven boot detection (no hardcoded timeouts)
+        if (bootPhase === 0) {
+            vmBoot.textContent = 'Booting Linux...';
+            if (buf.includes("login:")) {
+                console.log("VM: login prompt detected");
+                vmBoot.textContent = 'Logging in...';
+                bootPhase = 1;
+                emulator.serial0_send("root\n");
+                buf = "";
+                return;
+            }
+            return; // don't forward boot noise
+        }
+        if (bootPhase === 1 && buf.includes("~#")) {
+            console.log("VM: shell prompt detected");
+            vmBoot.textContent = 'Configuring shell...';
+            bootPhase = 2;
+            emulator.serial0_send("export PS1='$ '\n");
+            buf = "";
+            return;
+        }
+        if (bootPhase === 2 && /\n\$ /.test(buf)) {
+            console.log("VM: ready");
+            vmBoot.textContent = '';
+            vmBoot.style.display = 'none';
+            bootPhase = 3;
+            buf = "";
+            emulatorReady = true;
+            while(commandQueue.length > 0) {
+                emulator.serial0_send(commandQueue.shift());
+            }
+            return;
+        }
+
         if (window.serialTimeout) clearTimeout(window.serialTimeout);
         window.serialTimeout = setTimeout(function() {
-            console.log("VM output:", JSON.stringify(buf));
-            kit.say(buf, 'chat');
+            if (emulatorReady) {
+                // Strip terminal queries (DSR cursor-position) — meaningless for chat
+                var out = buf.replace(/\x1b\[6n/g, '');
+                if (out) {
+                    console.log("VM output:", JSON.stringify(out));
+                    kit.say(out, 'chat');
+                }
+            }
             buf = "";
-        }, 50); // slight debounce buffer
-    });
-
-    var progressEls = {};
-    emulator.add_listener("download-progress", function(e) {
-        // Only log once per file to avoid spamming the chat
-        if (!progressEls[e.file_name] && e.file_name) {
-            progressEls[e.file_name] = true;
-            kit.say("Downloading " + e.file_name + "...\n", 'chat');
-        }
+        }, 50);
     });
 
     emulator.add_listener("download-error", function(e) {
-        kit.say("Download error: " + (e.message || JSON.stringify(e) || e) + "\n", 'chat');
-    });
-
-    emulator.add_listener("emulator-ready", function() {
-        kit.say("Emulator ready! Booting OS...\n", 'chat');
-    });
-
-    emulator.add_listener("emulator-started", function() {
-        kit.say("Emulator started.\n", 'chat');
-        // Wait for Alpine to reach a serial login prompt.
-        setTimeout(function() {
-           emulator.serial0_send("\nroot\n");
-           setTimeout(function() {
-               emulatorReady = true;
-               autoBootCommands.forEach(function(cmd) {
-                   emulator.serial0_send(cmd + "\n");
-               });
-               while(commandQueue.length > 0) {
-                   emulator.serial0_send(commandQueue.shift());
-               }
-           }, 2500);
-        }, 8000);
+        console.error("Download error:", e);
     });
 
     location.path = 'chat.html';
@@ -248,7 +258,7 @@ async function browserGitClone(owner, repo, branch, dest) {
                 await emu.create_file(dest + '/' + f.path, data);
                 done++;
                 if (done % 25 === 0 || done === total) {
-                    say("\rReceiving objects: " + Math.round(done / total * 100) + "% (" + done + "/" + total + ")");
+                    say("\nReceiving objects: " + Math.round(done / total * 100) + "% (" + done + "/" + total + ")");
                 }
             }));
         }
