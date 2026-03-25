@@ -15,6 +15,7 @@ html, body /*, main, .page*/ {
   gap: 0.5em;
   line-height: 1.5;
   min-height: 100vh;
+  min-height: 100dvh;
   color: black;
   color: var(--pop);
 	position: relative;
@@ -36,7 +37,7 @@ html, body /*, main, .page*/ {
 } /*.page { dis-play:none } .page:target { display:grid; }*/
 main, .page {
   position: absolute; inset: 0;
-  width: 100%; min-height: 100vh;
+  width: 100%; min-height: 100vh; min-height: 100dvh;
 }
 frame, iframe, body, html {
   overflow-x: hidden;
@@ -137,6 +138,7 @@ p + p {
 .full {
   width: 100%;
   min-height: 100vh;
+  min-height: 100dvh;
 }
 .max {
   max-width: 48em;
