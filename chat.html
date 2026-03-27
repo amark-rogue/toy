@@ -455,9 +455,15 @@ var stream = function(t){
     shell.append(card);
     return card;
   }()));
-  stream.live.raw += t;
-  stream.live.pre.textContent = ((window.shellReply || {}).clean ? window.shellReply.clean(stream.live.raw) : stream.live.raw).flat();
-  stream.last = (window.shellReply || {}).clean ? window.shellReply.clean((stream.last||'')+t) : ((stream.last||'')+t);
+  var isRefresh = t.includes('\x1b[H') || t.includes('\x1b[2J') || t.includes('\x1b[J');
+  if(isRefresh){
+    stream.live.raw = t;
+  } else {
+    stream.live.raw += t;
+  }
+  var cleaned = (window.shellReply || {}).clean ? window.shellReply.clean(stream.live.raw) : stream.live.raw;
+  stream.live.pre.textContent = cleaned.flat();
+  stream.last = (window.shellReply || {}).clean ? window.shellReply.clean((isRefresh ? '' : (stream.last||''))+t) : ((isRefresh ? '' : (stream.last||''))+t);
   var atBottom = (B.scrollHeight - B.scrollTop - B.clientHeight < 50) && (shell.scrollHeight - shell.scrollTop - shell.clientHeight < 50);
   if(atBottom) { B.scrollTop = B.scrollHeight; shell.scrollTop = shell.scrollHeight; }
   else { var btn = B.all('#scroll')[0]; if(btn) btn.style.display = 'flex'; }
