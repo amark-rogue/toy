@@ -6,28 +6,56 @@
   body, html {
     margin: 0;
     padding: 0;
+
+    color: white;
     overflow-x: hidden;
     overflow-y: hidden;
   }
   pre {
+    margin: 0;
     white-space: pre-wrap;
     word-break: break-all;
     font-family: 'Courier New', Courier, monospace;
-    line-height: 2em;
+
+    line-height: 2.2em;
+    counter-reset: line;
   }
   code {
     outline: none;
+    display: block;
   }
   body, div, code, pre, span {
       display: unset;
   }
-  /* Override hljs background if any */
+  /* Restore hljs background override */
   .hljs {
     background: transparent !important;
+
+  }
+  /* Line number styles - slim gutter */
+  .line {
+    display: block !important;
+    counter-increment: line;
+    position: relative;
+    padding-left: 0em;
+  }
+  .line::before {
+    content: counter(line);
+    position: absolute;
+    left: -0.1em;
+    margin-top: -1.2em;
+
+
+
+    color: var(--pop);
+    user-select: none;
+
+    font-size: 0.5em;
+    opacity: 0.8;
   }
 </style>
 
-  <pre><code id="content" contenteditable="true"></code></pre>
+<pre><code id="content" contenteditable="true"></code></pre>
 
 <script src="../util.js"></script>
 <script>
@@ -45,7 +73,6 @@ kit.ear('cat', function hear(eve) {
   text = text.replace(/[\r\n]+.*(?:\$|#|>|PS>)\s*$/, '').trim();
   
   var codeEl = document.getElementById('content');
-  codeEl.textContent = text;
   
   // Map common extensions to highlight.js language classes
   var langMap = {
@@ -60,23 +87,38 @@ kit.ear('cat', function hear(eve) {
     'yml': 'yaml'
   };
   
+  var lang = null;
   var fnameMatch = cmdLine.match(/cat\s+(.+)/);
   if (fnameMatch) {
     var fname = fnameMatch[1].replace(/["']/g, '');
     var ext = fname.split('.').pop().toLowerCase();
-    if (langMap[ext]) {
-      codeEl.className = 'language-' + langMap[ext];
-    }
+    lang = langMap[ext];
   }
-  
-  // Apply highlight
+
+  var highlighted;
   try {
-    hljs.highlightElement(codeEl);
+    if (lang) {
+      highlighted = hljs.highlight(text, {language: lang}).value;
+    } else {
+      highlighted = hljs.highlightAuto(text).value;
+    }
   } catch(e) {
-    console.error("Highlight error:", e);
+    highlighted = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
+
+  // Split highlighted HTML into lines and wrap them for line numbers
+  var hLines = highlighted.split('\n');
+  var html = hLines.map(function(line) {
+    return '<span class="line">' + (line || ' ') + '</span>';
+  }).join('');
+  
+  codeEl.innerHTML = html;
   
   hear.off();
   
+  // Ensure the iframe fits the content height
+  setTimeout(() => {
+    //kit.say({height: document.body.scrollHeight}, 'resize');
+  }, 100);
 });
 </script>
