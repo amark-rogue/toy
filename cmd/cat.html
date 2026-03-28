@@ -6,36 +6,28 @@
   body, html {
     margin: 0;
     padding: 0;
-    background: #000 !important;
-    color: #f8f8f2;
     overflow-x: hidden;
-  }
-  .cat-container {
-    padding: 1em 0.5em;
-    background: #000;
+    overflow-y: hidden;
   }
   pre {
-    margin: 0;
     white-space: pre-wrap;
     word-break: break-all;
     font-family: 'Courier New', Courier, monospace;
-    font-size: 1.1em;
-    line-height: 1.5;
+    line-height: 2em;
   }
   code {
-    background: transparent !important;
-    padding: 0 !important;
+    outline: none;
+  }
+  body, div, code, pre, span {
+      display: unset;
   }
   /* Override hljs background if any */
   .hljs {
     background: transparent !important;
-    padding: 0 !important;
   }
 </style>
 
-<div class="cat-container">
-  <pre><code id="content"></code></pre>
-</div>
+  <pre><code id="content" contenteditable="true"></code></pre>
 
 <script src="../util.js"></script>
 <script>
@@ -86,9 +78,5 @@ kit.ear('cat', function hear(eve) {
   
   hear.off();
   
-  // Ensure the iframe fits the content height
-  setTimeout(() => {
-    kit.say({height: document.body.scrollHeight}, 'resize');
-  }, 100);
 });
 </script>

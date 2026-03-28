@@ -1,30 +1,16 @@
 <link rel="stylesheet" href="./gun/kit/web.css"><script src="./gun/kit/web.js"></script>
-<script src="./gun/fix.js"></script>
-
-
 
 <div id="shell">
-
 </div>
 
-
-  <div class="kit"><div class="tin"></div></div>
-
-
-
-
+<div class="kit"><div class="tin"></div></div>
   
-  <form onsubmit="kit.say('','prompt'); return false;">
+<form onsubmit="kit.say('','prompt'); return false;">
     <div id="help"></div>
-    
-     
-      <textarea id="prompt" name="cmd" placeholder="$" autokomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" rows="1"></textarea>
-
-  </form>
+    <textarea id="prompt" name="cmd" place-holder="$" autokomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" rows="1"></textarea>
+</form>
 
 <button id="scroll" onclick="B.scrollTop = B.scrollHeight; shell.scrollTop = shell.scrollHeight; this.style.display='none';" style="display:none; position:fixed; bottom:2em; right:40%; z-index:101; background:var(--pop); color:var(--mood, black); border:none; border-radius:50%; width:2em; height:2em; font-size:2em; cursor:pointer; align-items:center; justify-content:center; text-align:center;opacity:0.6;">↓</button>
-
-
 
 <style>
 :root { --fill: var(--mood); }
@@ -105,13 +91,12 @@ textarea {
 }
 #help {
   color: lime;
-  min-height: 1.2em;
   margin-bottom: 0.4em;
   opacity: 1;
   transition: opacity 2.4s linear;
 }
-#help.off {
-  opacity: 0;
+#help:empty {
+  display: none;
 }
 .kit {
   padding: 0;
@@ -126,46 +111,27 @@ textarea {
   right: 0;
   bottom: 0;
   hei-ght: 7em;
-
   width: max-content;
-
-  
-
-
-
   animation: none !important;
-
-  
-  
-            
-            height: 100vh;
-
-            
-           
-            pointer-events: none; 
-            
-           
-            scrollbar-width: none; 
-            -ms-overflow-style: none;
-  
-  
+    
+    height: 100vh;
+    pointer-events: none; 
+    scrollbar-width: none; 
+    -ms-overflow-style: none;
   }
 
  .kit::before {
-content: " ";
-            height: calc(100vh - 2.5em);
-            width: 100%;
-
-
-        }
+    content: " ";
+    height: calc(100vh - 2.5em);
+    width: 100%;
+}
 .kit .tin {
   pointer-events: auto; 
-  
-display: flex;
+  display: flex;
   flex-direction: column;
   align-items: flex-end;
   animation: none !important;
-  } 
+} 
   
 
 .kit::-webkit-scrollbar { display: none; }
@@ -627,6 +593,4 @@ window.AI = {
 
 }));
 </script>
-
-
 <script src="/gun/fix.js"></script>
