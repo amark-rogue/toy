@@ -37,19 +37,14 @@
     display: block !important;
     counter-increment: line;
     position: relative;
-    padding-left: 0em;
   }
   .line::before {
     content: counter(line);
-    position: absolute;
+    vertical-align: middle;
     left: -0.1em;
-    margin-top: -1.2em;
-
-
-
+    padding-right: 0.2em;
     color: var(--pop);
     user-select: none;
-
     font-size: 0.5em;
     opacity: 0.8;
   }
