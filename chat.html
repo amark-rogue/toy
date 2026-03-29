@@ -3,12 +3,23 @@
 <div id="shell">
 </div>
 
-<div class="kit"><div class="tin"></div></div>
+
+
+
+
+
   
-<form onsubmit="kit.say('','prompt'); return false;">
+  <form onsubmit="kit.say('','prompt'); return false;">
+    <div id="shortcuts"></div>
     <div id="help"></div>
-    <textarea id="prompt" name="cmd" place-holder="$" autokomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" rows="1"></textarea>
-</form>
+    <div class="inp">
+      <span class="sym">$</span>
+      <textarea id="prompt" name="cmd" placeholder="" autokomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" rows="1"></textarea>
+    </div>
+  </form>
+
+<button id="scroll">↓ scroll down</button>
+
 
 <button id="scroll" onclick="B.scrollTop = B.scrollHeight; shell.scrollTop = shell.scrollHeight; this.style.display='none';" style="display:none; position:fixed; bottom:2em; right:40%; z-index:101; background:var(--pop); color:var(--mood, black); border:none; border-radius:50%; width:2em; height:2em; font-size:2em; cursor:pointer; align-items:center; justify-content:center; text-align:center;opacity:0.6;">↓</button>
 
@@ -27,9 +38,6 @@ body {
   background: var(--fill);
   display: block; /* Removed flex so it can just flow and scroll naturally */
 }
-textarea {
-  height: 100%;
-}
 #shell {
   width: 100%;
   box-sizing: border-box;
@@ -37,36 +45,31 @@ textarea {
   display: block;
   padding-bottom: 8em; /* Ensure content isn't hidden behind the fixed form */
 }
+body.tui-mode {
+  overflow: hidden;
+  --barh: 4.4em;
+}
+body.tui-mode #shell {
+  padding-bottom: 0;
+}
+body.tui-mode #shell > div:not(.tui-live) {
+  display: none;
+}
 #shell > div {
-  white-space: pre-wrap;
-  word-break: break-all;
   width: 100%;
   display: block;
-  fl-oat: left;
-  te-xt-align: left;
+  text-align: left;
   margin-bottom: 0.5em;
-  border: none;
   border-bottom: 1px solid var(--pop);
   border-radius: 1em;
   background: transparent;
-  backdrop-filter: blur(var(--blur));
-  animation: animate-in-and-out linear both;
-  animation-timeline: view();
+  animation: animate-in 0.25s ease-out both;
+  overflow: hidden;
 }
-  
-  @keyframes ani-mate-in-and-out {
-  entry 0%  {
-    opacity: 0; transform: scale(0.5);
-  }
-  entry 100%  {
-    opacity: 1; transform: scale(1);
-  }
-  exit 0% {
-    opacity: 1; transform: scale(1);
-  }
-  exit 100% {
-    opacity: 0; transform: scale(0.5);
-  }
+
+@keyframes animate-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1); }
 }
 
 @keyframes spring {
@@ -80,120 +83,233 @@ textarea {
 
   
 #shell > div > pre {
+  display: block;
   white-space: pre-wrap;
-  word-break: break-all;
+  word-break: break-word;
   margin: 0;
+  padding: 0.5em 0.8em;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85em;
+  text-align: left;
+  opacity: 0.7;
+}
+#shell > div.tui {
+  border: none;
+  border-radius: 0;
+  margin-bottom: 0;
+  overflow: visible;
+}
+#shell > div.tui-live {
+  position: fixed;
+  inset: 0;
+  z-index: 180;
+  margin: 0;
+  border: none;
+  border-radius: 0;
+  background: var(--fill);
+  overflow: hidden;
+  animation: none;
+}
+#shell > div.tui-live iframe {
+  height: calc(100dvh - var(--barh, 0px)) !important;
+}
+#shell > div.tui.done iframe {
+  pointer-events: none;
+}
+#shell > div.tui.done {
+  opacity: 0.96;
+}
+#shell > div.done > p.tui-note {
+  display: block;
+  text-align: left;
+  font-family: 'Courier New', monospace;
+  font-size: 0.7em;
+  opacity: 0.5;
+  padding: 0.2em 0.8em 0.6em;
+}
+#shell > div.tui > p {
+  display: none;
 }
 #shell > div > p {
   display: block;
-  fl-oat: left;
   text-align: left;
+  font-family: 'Courier New', monospace;
+  padding: 0.15em 0.8em;
+  word-break: break-all;
+}
+#shell > div > p:first-child {
+  font-size: 0.7em;
+  opacity: 0.4;
+  padding-top: 0.5em;
+}
+#shell > div > p:nth-child(2) {
+  font-weight: bold;
+  color: var(--pop);
+  text-shadow: 0 0 4px var(--pop);
+  opacity: 0.9;
+  padding-bottom: 0.4em;
 }
 #help {
+  display: block;
+  text-align: left;
   color: lime;
-  margin-bottom: 0.4em;
+  font-family: 'Courier New', monospace;
+  font-size: 0.8em;
+  min-height: 1em;
+  margin-bottom: 0.3em;
   opacity: 1;
   transition: opacity 2.4s linear;
 }
 #help:empty {
   display: none;
 }
-.kit {
-  padding: 0;
-  margin-right: 0.5em;
-  background: transparent;
-  z-index: 101;
-  overflow-y: auto;
-  overflow-x: visible;
-  scrollbar-width: none;
+#scroll {
+  display: none;
   position: fixed;
-  
-  right: 0;
-  bottom: 0;
-  hei-ght: 7em;
-  width: max-content;
-  animation: none !important;
-    
-    height: 100vh;
-    pointer-events: none; 
-    scrollbar-width: none; 
-    -ms-overflow-style: none;
-  }
-
- .kit::before {
-    content: " ";
-    height: calc(100vh - 2.5em);
-    width: 100%;
-}
-.kit .tin {
-  pointer-events: auto; 
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  animation: none !important;
-} 
-  
-
-.kit::-webkit-scrollbar { display: none; }
-.kit button {
-  scroll-snap-align: start;
-  flex: 0 0 auto;
-  text-align: right;
-
-  background: rgba(0,0,0,0.2);
-  -webkit-back-drop-filter: blur(var(--blur));
-  backdrop-filter: blur(var(--blur));
-  border: 1px solid var(--pop);
-  animation: none !important;
-
-  padding: 0.5em 1em;
-  border-radius: 0.5em;
+  bottom: 5.5em;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 101;
+  background: var(--pop);
+  color: var(--mood,black);
+  border: none;
+  border-radius: 2em;
+  padding: 0.3em 1em;
+  font-size: 0.8em;
   font-family: 'Courier New', monospace;
-  font-size: 1.1em;
-  font-weight: 900;
   cursor: pointer;
-  white-space: nowrap;
-  text-shadow: 0 0 5px var(--pop);
-  box-shadow: 0 0 10px rgba(11,0,255,0.2);
-  transition: all var(--time);
+  opacity: 0.7;
 }
-.kit button:active {
-  background: var(--pop);
-
-  color: var(--mood);
-  transform: scale(0.92);
-  text-shadow: none;
+#scroll.show {
+  display: block;
 }
-.kit button.live {
-  background: var(--pop);
-  color: var(--mood);
-  text-shadow: none;
+body.tui-mode #scroll {
+  display: none !important;
 }
 
 form {
   position: fixed;
-  bottom: 0em;
+  bottom: 0;
   left: 0;
   right: 0;
   z-index: 100;
-  background: transparent;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15em;
+  padding: 0.2em 0.8em 0.45em;
+  background: linear-gradient(to top, rgba(0,0,0,0.96), rgba(0,0,0,0.76) 52%, rgba(0,0,0,0));
+  backdrop-filter: blur(12px);
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+body.tui-mode form {
+  z-index: 220;
+  opacity: 1;
+  pointer-events: auto;
+  transform: none;
+  padding: 0;
+  background: none;
+  backdrop-filter: none;
+}
+body.tui-mode #help,
+body.tui-mode .inp {
+  display: none;
+}
+body.tui-mode #shortcuts {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 221;
+  gap: 0.35em;
+  padding: 0.45em 0.8em calc(0.6em + env(safe-area-inset-bottom));
+  background: linear-gradient(to top, rgba(0,0,0,0.96), rgba(0,0,0,0.82) 60%, rgba(0,0,0,0));
+  border-top: 1px solid rgba(191,0,255,0.2);
+  pointer-events: auto;
+}
+#shortcuts {
+  display: flex;
+  gap: 0.3em;
+  overflow-x: auto;
+  padding: 0.15em 0 0.35em;
   border: none;
-  border-bottom: 1px solid var(--pop);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+#shortcuts.chain {
+  border: none;
+  box-shadow: none;
+}
+#shortcuts::-webkit-scrollbar { display: none; }
+#shortcuts button {
+  flex: 0 0 auto;
+  background: rgba(191,0,255,0.08);
+  border: 1px solid rgba(191,0,255,0.28);
+  border-radius: 1.2em;
+  color: var(--pop);
+  font-family: 'Courier New', monospace;
+  font-size: 0.72em;
+  font-weight: bold;
+  padding: 0.28em 0.75em;
+  cursor: pointer;
+  white-space: nowrap;
+  animation: none !important;
+  user-select: none;
+}
+#shortcuts button.branch {
+  border-color: var(--pop);
+  box-shadow: 0 0 10px rgba(191,0,255,0.35);
+}
+#shortcuts button.live {
+  background: var(--pop);
+  color: var(--mood,black);
+  border-color: var(--pop);
+  box-shadow: 0 0 12px rgba(191,0,255,0.45);
+}
+#shortcuts button:active { background: var(--pop); color: var(--mood,black); }
+.crumb {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.7em;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  background: rgba(191,0,255,0.12);
+  border: 1px dashed rgba(191,0,255,0.6);
   border-radius: 1em;
-  backdrop-filter: blur(var(--blur));
+  padding: 0.25em 0.8em;
+  color: var(--pop);
+  text-shadow: none;
 }
 
+.inp {
+  align-items: center;
+  gap: 0.45em;
+  padding: 0.05em 0 0;
+}
+.sym {
+  font-size: 1.05em;
+  line-height: 1.2;
+  opacity: 0.92;
+  text-shadow: 0 0 6px var(--pop);
+}
 textarea {
   flex: 1;
+  width: 100%;
+  display: block;
+  text-align: left;
   background: transparent;
   border: none;
   color: white;
   font-family: 'Courier New', monospace;
-  font-size: 1.2em;
-  padding: 0.2em 0;
+  font-size: 1.05em;
+  padding: 0;
   outline: none;
   resize: none;
   overflow-y: hidden;
+  caret-color: transparent;
+  line-height: 1.2;
 }
 textarea:focus::placeholder { opacity: 0.3; }
   
@@ -229,26 +345,166 @@ input:focus::placeholder { opacity: 0.5; }
 var prompt;
 var shell = B.all('#shell')[0];
 var help = B.all('#help')[0];
-var belt = B.all('.kit .tin')[0];
+var scrollBtn = B.all('#scroll')[0];
 var mod = {};
 (prompt = B.all('#prompt')[0]).focus();
 
+var keyClr = function(){
+  mod.ctrl = 0;
+  mod.alt = 0;
+  mod.shift = 0;
+  keyUi();
+};
 
+var tuiFocus = function(frame, win){
+  frame = frame || stream.tui_frame;
+  if(!frame){ return; }
+  if(frame.focus){ frame.focus(); }
+  win = frame.contentWindow;
+  if(win && win.focus){ win.focus(); }
+};
+
+var setTuiMode = function(on, card){
+  card = card || stream.tui_card;
+  B.classList[on ? 'add' : 'remove']('tui-mode');
+  if(card){ card.classList[on ? 'add' : 'remove']('tui-live'); }
+  if(!on && scrollBtn){ scrollBtn.classList.remove('show'); }
+  if(!on){ keyClr(); }
+  setTimeout(function(){
+    var w = stream.tui_frame && stream.tui_frame.contentWindow;
+    if(w){ w.dispatchEvent(new Event('resize')); }
+  }, 30);
+  setTimeout(function(){
+    var w = stream.tui_frame && stream.tui_frame.contentWindow;
+    if(w){ w.dispatchEvent(new Event('resize')); }
+  }, 180);
+};
+
+var finishTuiExit = function(){
+  var queue = stream.exitQueue || [];
+  stream.exitingTui = 0;
+  stream.exitQueue = [];
+  stream.exitBuf = '';
+  clearTimeout(exitTui.wait);
+  clearTimeout(exitTui.confirmWait);
+  queue.forEach(function(cmd){
+    kit.say(cmd, 'prompt');
+  });
+};
+
+var deactivateTuiCard = function(card, frame){
+  card = card || stream.tui_card;
+  frame = frame || stream.tui_frame;
+  setTuiMode(0, card);
+  if(card){
+    card.classList.remove('tui-live');
+    card.classList.remove('tui');
+    card.classList.add('done');
+    if(!card.querySelector('.tui-note')){
+      var note = B.new('p');
+      note.className = 'tui-note';
+      note.textContent = 'session ended';
+      card.append(note);
+    }
+  }
+  if(frame){
+    frame.dataset.closed = '1';
+    frame.style.pointerEvents = 'none';
+    frame.setAttribute('tabindex', '-1');
+    if(frame.remove){ frame.remove(); }
+  }
+  if(stream.tui_card === card){ stream.tui_card = null; }
+  if(stream.tui_frame === frame){ stream.tui_frame = null; }
+  stream.tui_line = '';
+};
+
+
+
+var low = function(){
+  var gap = 50;
+  return (B.scrollHeight - B.scrollTop - B.clientHeight < gap) && (shell.scrollHeight - shell.scrollTop - shell.clientHeight < gap);
+};
+window.go = function(){
+  B.scrollTop = B.scrollHeight;
+  shell.scrollTop = shell.scrollHeight;
+};
+var tip = function(){
+  if(low()){
+    go();
+    if(scrollBtn){ scrollBtn.classList.remove('show'); }
+  }
+  else if(scrollBtn) { scrollBtn.classList.add('show'); }
+};
+
+kit.ear('style',()=>{ tip(); });
 
 kit.ear('chat',(eve)=>{
   stream(eve.detail || eve.data);
 });
+kit.ear('host',(eve)=>{
+  if(eve.target === window){ return; }
+  kit.say(eve.detail || eve.data, 'host');
+});
 kit.ear('prompt',(eve)=>{
   var cmd = eve.detail||eve.data;
-  if(cmd){ prompt.value = cmd }
+  if(cmd){
+    prompt.value = cmd;
+    autoGrow(prompt);
+  }
   var val = prompt.value.trim();
-  kit.say(prompt.value+'\r','host');
+  if(!val){
+    prompt.value = '';
+    autoGrow(prompt);
+    return;
+  }
+  if(stream.exitingTui){
+    (stream.exitQueue = stream.exitQueue || []).push(val);
+    prompt.value = '';
+    autoGrow(prompt);
+    return;
+  }
+  var word = val.split(/\s+/)[0];
+  var isTui = (kit.tui||[]).indexOf(word) >= 0;
+  var isKnown = (kit.cmd.known||[]).indexOf(word) >= 0;
+  stream.tui = (isTui || !isKnown) ? 1 : 0;
+  if(stream.tui){
+    var card = B.new('div'); card.className = 'reply-card tui';
+    var hp = B.new('p'); hp.textContent = (stream.F||'bash').flat().replace(/[$#>%]\s*$/,'').trim()||'bash'; card.append(hp);
+    var hc = B.new('p'); hc.textContent = '$ '+val; card.append(hc);
+    shell.append(card);
+    stream.tui_card = card;
+    stream.tui_frame = null;
+    stream.tui_line = '';
+    setTuiMode(1, card);
+    if(prompt.blur){ prompt.blur(); }
+    chainPick = null;
+    renderShortcuts();
+    stream.tui_buf = [];
+    kit.cmd.load(card, 'trm', '', function(){
+      var frame = card.querySelector('iframe');
+      if(frame){
+        stream.tui_frame = frame;
+        frame.dataset.closed = '';
+        setTimeout(function(){ tuiFocus(frame); }, 60);
+      }
+      var buf = (stream.tui_buf||[]).join('');
+      stream.tui_buf = null;
+      if(buf){ kit.say(buf, 'trm'); }
+      go();
+    });
+    if(stream.live){ stream.live.remove(); stream.live = null; }
+    stream.last = '';
+  }
+  kit.say(val+'\r','host');
   prompt.value = "";
+  autoGrow(prompt);
   window.buzz();
+  go();
 });
 
 kit.ear('prompt.try',(eve)=>{
   prompt.value = eve.detail||eve.data;
+  autoGrow(prompt);
 });
 
 var put = function(txt, a, z, s){
@@ -288,11 +544,62 @@ var ctrl = function(key, code){
 };
 
 var keyUi = function(){
-  var on = B.all('#ctrl')[0];
-  if(on){ on.classList[mod.ctrl ? 'add' : 'remove']('live'); }
+  ['ctrl','alt','shift'].forEach(function(name){
+    var on = shortcutsEl && shortcutsEl.querySelector('[data-mod="'+name+'"]');
+    if(on){ on.classList[mod[name] ? 'add' : 'remove']('live'); }
+  });
+};
+
+var tapTui = function(name, out){
+  if(name === 'exit'){ exitTui(); return; }
+  if(name === 'ctrl' || name === 'alt' || name === 'shift'){
+    mod[name] = !mod[name];
+    keyUi();
+    return;
+  }
+  if(name === 'mode'){ out = '\u001b[Z'; }
+  if(name === 'esc'){ out = '\u001b'; }
+  if(name === 'tab'){ out = mod.shift ? '\u001b[Z' : '\t'; }
+  if(name === 'up'){ out = '\u001b[A'; }
+  if(name === 'down'){ out = '\u001b[B'; }
+  if(name === 'left'){ out = '\u001b[D'; }
+  if(name === 'right'){ out = '\u001b[C'; }
+  if(name === 'enter'){
+    out = '\r';
+    stream.tui_line = '';
+  }
+  if(name === 'bs'){
+    out = '\x7f';
+    stream.tui_line = (stream.tui_line||'').slice(0, -1);
+  }
+  if(name === 'cc'){
+    out = '\x03';
+    stream.tui_line = '';
+  }
+  if(name === 'cd'){
+    out = '\x04';
+    stream.tui_line = '';
+  }
+  if(name === 'slash'){
+    out = mod.ctrl ? String.fromCharCode(31) : '/';
+    if(mod.ctrl){ stream.tui_line = ''; }
+    else { stream.tui_line = (stream.tui_line || '') + '/'; }
+  }
+  if(name === 'space'){
+    out = ' ';
+    stream.tui_line = (stream.tui_line || '') + ' ';
+  }
+  if(!out){ return; }
+  kit.say(out,'host');
+  keyClr();
+  tuiFocus();
 };
 
 var tapKey = function(name){
+  if(stream.tui){
+    tapTui(name);
+    return;
+  }
   if(name === 'esc'){ put('\u001b'); return; }
   if(name === 'tab'){ put('\t'); return; }
   if(name === 'alt'){ put('\u001b'); return; }
@@ -301,6 +608,44 @@ var tapKey = function(name){
     mod.ctrl = !mod.ctrl;
     keyUi();
   }
+};
+
+var tuiDown = function(eve, tkey){
+  if(!stream.tui){ return; }
+  if(eve.key === 'Enter'){
+    if((stream.tui_line||'').trim() === 'exit'){
+      eve.preventDefault();
+      exitTui();
+      return 1;
+    }
+    tkey = '\r';
+    stream.tui_line = '';
+  }
+  else if(eve.key === 'Escape'){ tkey = '\u001b'; }
+  else if(eve.key === 'ArrowUp'){ tkey = '\u001b[A'; }
+  else if(eve.key === 'ArrowDown'){ tkey = '\u001b[B'; }
+  else if(eve.key === 'ArrowLeft'){ tkey = '\u001b[D'; }
+  else if(eve.key === 'ArrowRight'){ tkey = '\u001b[C'; }
+  else if(eve.key === 'Tab'){ tkey = eve.shiftKey ? '\u001b[Z' : '\t'; }
+  else if(eve.key === 'Backspace'){
+    tkey = '\x7f';
+    stream.tui_line = (stream.tui_line||'').slice(0, -1);
+  }
+  else if(eve.ctrlKey && eve.key === 'c'){ eve.preventDefault(); exitTui(); return 1; }
+  else if(eve.ctrlKey && eve.key.length === 1){
+    tkey = ctrl(eve.key);
+    stream.tui_line = '';
+  }
+  else if(eve.key.length === 1){
+    tkey = eve.key;
+    stream.tui_line = (stream.tui_line || '') + eve.key;
+  }
+  if(!tkey){ return; }
+  eve.preventDefault();
+  kit.say(tkey, 'host');
+  prompt.value = '';
+  autoGrow(prompt);
+  return 1;
 };
 
 var history = [], hi=1;
@@ -316,69 +661,55 @@ prompt.onkeydown = function(eve){
       return;
     }
   }
+  if(stream.tui){
+    tuiDown(eve);
+    return;
+  }
   if (eve.key === 'Enter' && !eve.shiftKey) {
     eve.preventDefault();
     kit.say('', 'prompt');
     return;
   }
   if(eve.key === 'ArrowUp') {
-    if(hi > 0) { hi--; prompt.value = history[hi]; }
+    if(hi > 0) { hi--; prompt.value = history[hi]; autoGrow(prompt); }
     eve.preventDefault();
   } else if (eve.key === 'ArrowDown') {
     if(hi < history.length - 1) { hi++; prompt.value = history[hi]; }
     else { hi = history.length; prompt.value = ''; }
+    autoGrow(prompt);
     eve.preventDefault();
   }
 };
             
-kit.ear('belt', function(eve, data, b){
-  data = eve.detail || eve.data;
-  var name = data.name||data[0];
-  if(B.all('#'+name)[0]){return}
-  b = B.new('button');
-
-  b.id = b.textContent = name;
-
-  b.onclick = function(){
-    if(data.key){ tapKey(name); return; }
-    kit.say(data.prompt||data[1], 'prompt');
-  };
-  belt.append(b);
-});
-kit.ear('pointerdown',(eve)=>{
-   belt.tag('open',1);
-}, belt);
-window.addEventListener('pointerup',(eve)=>{
-   belt.tag('open',-1);
-});
-window.addEventListener('touchend',(eve)=>{
-   belt.tag('open',-1);
-});
-                         setTimeout(()=>{
-[
-  {name: 'esc', key: 1},
-  {name: 'ctrl', key: 1},
-  {name: 'tab', key: 1},
-  {name: 'alt', key: 1},
-  {name: 'cmd', key: 1}
-].forEach(function(v){
-  kit.say(v, 'belt');
-});
-},999);
+kit.ear('key', function(eve){ tapKey(eve.detail||eve.data); });
+window.addEventListener('keydown', function(eve){
+  if(!stream.tui){ return; }
+  if(eve.target === prompt){ return; }
+  if((eve.target.closest||function(){}).call(eve.target, '#shortcuts')){ return; }
+  tuiDown(eve);
+}, true);
+// TUI: outside the belt, clicks should return focus to the terminal frame.
+window.addEventListener('pointerdown', function(eve) {
+  if(!stream.tui) return;
+  if((eve.target.closest||function(){}).call(eve.target, '#shortcuts')){ return; }
+  tuiFocus();
+}, true);
                          
 prompt.oninput = function(eve){
+  if(stream.tui){
+    prompt.value = '';
+    autoGrow(prompt);
+    return;
+  }
   autoGrow(prompt);
-  //console.log("oninput?", prompt.value, eve);
   if(prompt.wait){ clearTimeout(prompt.wait) }
   prompt.wait = setTimeout(async function(){
     var answer = await AI.shell("1 sentence reply for terminal shell or code help:" + prompt.value);
     var doc = new DOMParser().parseFromString(answer, 'text/html');
     var v = doc.querySelector('.a') || doc.body;
-    var atBottom = (B.scrollHeight - B.scrollTop - B.clientHeight < 50) && (shell.scrollHeight - shell.scrollTop - shell.clientHeight < 50);
     helpSay(v.textContent || '');
     prompt.try = ((v.querySelector('code') || v.querySelector('b')) || {}).textContent||'';
-    if(atBottom) { B.scrollTop = B.scrollHeight; shell.scrollTop = shell.scrollHeight; }
-    else { var btn = B.all('#scroll')[0]; if(btn) btn.style.display = 'flex'; }
+    tip();
   },333);
 }
 const autoGrow = (textarea) => {
@@ -397,12 +728,14 @@ prompt.onfocus = function(eve){
 autoGrow(prompt);
 
 window.addEventListener('scroll', function() {
-  var atBottom = (B.scrollHeight - B.scrollTop - B.clientHeight < 50) && (shell.scrollHeight - shell.scrollTop - shell.clientHeight < 50);
-  var btn = B.all('#scroll')[0];
-  if(atBottom && btn) {
-    btn.style.display = 'none';
-  }
+  if(low() && scrollBtn){ scrollBtn.classList.remove('show'); }
 }, true);
+if(scrollBtn){
+  scrollBtn.onclick = function(){
+    go();
+    scrollBtn.classList.remove('show');
+  };
+}
 
 B.all('#help')[0].ear('pointerdown',function(eve){
   if(!prompt.try){ return }
@@ -410,6 +743,25 @@ B.all('#help')[0].ear('pointerdown',function(eve){
   kit.say(prompt.try, 'prompt.try');
 });
 var stream = function(t){
+  if(stream.tui){
+    if(Array.isArray(stream.tui_buf)){
+      stream.tui_buf.push(t);
+    } else {
+      kit.say(t, 'trm');
+    }
+    tip();
+    return;
+  }
+  if(stream.exitingTui){
+    stream.exitBuf = ((stream.exitBuf || '') + (t||'').flat()).slice(-400);
+    if(/Enter\s+to confirm\s+\u00b7\s+Esc\s+to cancel|Enter\s+to confirm/.test(stream.exitBuf)){
+      clearTimeout(exitTui.confirmWait);
+      exitTui.confirmWait = setTimeout(function(){ kit.say('\r','host'); }, 40);
+    }
+    if(/(?:^|\r?\n)[^\r\n]*[$#>%]\s*$/.test(stream.exitBuf)){
+      finishTuiExit();
+    }
+  }
   (window.shellReply || {}).maybeContinue && window.shellReply.maybeContinue(t, {state: stream, send: function(c){ kit.say(c, 'host') }});
   stream.live || (stream.live = (function(card, pre){
     card = B.new('div');
@@ -436,26 +788,63 @@ var stream = function(t){
   (stream.eat || CMD.bash)(stream.last);
 }, CMD = {};
 
+var bootPrompt = function(cmds){
+  if(bootPrompt.done){ return }
+  bootPrompt.queue = bootPrompt.queue || (cmds || ['whoami', 'ls .']).slice();
+  if(bootPrompt.active || !(bootPrompt.queue||[]).length){ return }
+  bootPrompt.started = 1;
+  bootPrompt.active = bootPrompt.queue.shift();
+  kit.say(bootPrompt.active, 'prompt');
+};
+bootPrompt.finish = function(parsed){
+  if(!parsed || !bootPrompt.active){ return }
+  bootPrompt.active = null;
+  if((bootPrompt.queue||[]).length){
+    setTimeout(function(){ bootPrompt(); }, 90);
+    return;
+  }
+  bootPrompt.done = 1;
+};
+bootPrompt.nudge = function(){
+  if(bootPrompt.done || stream.F){
+    if(bootPrompt.wait){ clearInterval(bootPrompt.wait); bootPrompt.wait = null; }
+    return;
+  }
+  bootPrompt.tries = (bootPrompt.tries || 0) + 1;
+  if(bootPrompt.tries > 6){
+    if(bootPrompt.wait){ clearInterval(bootPrompt.wait); bootPrompt.wait = null; }
+    return;
+  }
+  kit.say('\r', 'host');
+};
+setTimeout(bootPrompt.nudge, 220);
+bootPrompt.wait = setInterval(bootPrompt.nudge, 700);
+
 ;(function(){
-var F = ['$','#','>','C:\\>','PS>','>>>','...','(venv)','>>','%','~%'];
+var F = ['$','#','C:\\>','PS>','(venv)','~%'];
+var QE = {"'":'','"':''};
 stream.eat = function(s){
-  var f = s.cut(F,ESC);
-  if(!f[1]){ setTimeout(t=>{if(F.forEach){shell.append("cannot find prompt. custom shell being used?")}}); return }
+  var f = s.cut(F,QE);
+  if(!f[1]){ return }
   F = f[1];
   f = f[0].split('\r\n').slice(-1)[0]; // make more unique?
-  F = f+F;
-  //console.log("prompt:", [F]);
-  (stream.eat = CMD.bash)(s);
-}
+	F = f+F;
+	stream.F = F;
+	if(!bootPrompt.started){
+	  setTimeout(function(){ bootPrompt(); }, 0);
+	}
+	(stream.eat = CMD.bash)(s);
+	}
 CMD.bash = function(S, cmdl, cmd, tmp){
-  var arr = S.split(F);
-  var usedF = F;
+	  var arr = S.split(F);
+	  var usedF = F;
+	  var parsed = 0;
 
   if(arr[arr.length-1].flat().trim()){ 
-    var P = ['$','#','>','C:\\>','PS>','>>>','...','(venv)','>>','%','~%'];
+    var P = ['$','#','C:\\>','PS>','(venv)','~%'];
     if(P.some(c => S.flat().replace(/\s+$/, '').endsWith(c))){
       var lines = S.split('\n'), lastL = lines[lines.length-1];
-      var newF = lastL.cut(P, ESC);
+      var newF = lastL.cut(P, QE);
       if(newF[1]){
         var nextF = newF[0].split('\r').slice(-1)[0] + newF[1];
         S = S.split(F).join(nextF);
@@ -470,29 +859,31 @@ CMD.bash = function(S, cmdl, cmd, tmp){
     stream.live.remove();
     stream.live = null;
   }
-  var atBottom = (B.scrollHeight - B.scrollTop - B.clientHeight < 50) && (shell.scrollHeight - shell.scrollTop - shell.clientHeight < 50);
   var oldF = usedF;
   var firstChunk = true;
   S.forEach(function(s,i){
-    var v,t,p;
+    var v,t,p,rawCmd;
     if(!(t = s.flat()).trim()){ return }
     (p = B.new('pre')).textContent = t;
     (v = B.new('div')).className = 'reply-card ready-upgrade';
     v.raw = s;
+    rawCmd = t.cut(['\r\n','\n','\r'],ESC)[0].trim();
+    rawCmd = rawCmd.replace(/^.*(?:\$|#|>|PS>)\s*/, '');
+    if(rawCmd){ parsed = 1; }
     v.append(p);
     setTimeout(function(eve){
       if(v.upgraded || v.upgrading){ return }
-      var cmd = t.cut(['\r\n','\n','\r'],ESC)[0].trim();
-      cmd = cmd.replace(/^.*(?:\$|#|>|PS>)\s*/, '');
+      var cmd = rawCmd;
       var p = B.new('p');
 
       var promptToUse = firstChunk ? oldF : F;
       firstChunk = false;
       var promptText = (Array.isArray(promptToUse) ? '$' : (promptToUse.flat ? promptToUse.flat() : promptToUse)).trim();
+      var symPart = '$';
       var match = promptText.match(/^(.*?)([\$#>\%]\s*|\~%\s*)$/s);
       if (match) {
          var pathPart = match[1].trim();
-         var symPart = match[2].trim();
+         symPart = match[2].trim();
          var colonIdx = pathPart.lastIndexOf(':');
          var pathOnly = colonIdx !== -1 ? pathPart.substring(colonIdx + 1) : pathPart;
          var prefix = colonIdx !== -1 ? pathPart.substring(0, colonIdx + 1) : "";
@@ -504,45 +895,196 @@ CMD.bash = function(S, cmdl, cmd, tmp){
       }
       
       
-      p.innerText = promptText;
+      p.textContent = promptText;
       v.append(p);
       p = B.new('p');
-      p.innerText = symPart+' '+cmd;
-      v.append(p);
-      cmd = cmd.trim().split(/\s+/)[0].trim();
-      if(!cmd){ return }
-      //if(cmd === 'clear'){ kit.say(s, 'clear'); return; }
-      var i = B.new('iframe');
-      i.src = './cmd/'+cmd+'.html';
-      i.setAttribute('scrolling','no');
-      v.upgrading = 1;
-      v.append(i);
-      kit.ear('load', function(eve){
-        if(eve.detail === undefined) return; // Ignore native iframe load (e.g. 404)
-        if(eve.target !== i) return;
-        kit.say(s,cmd, i);
-        v.upgraded = 1;
-        v.upgrading = 0;
-        v.classList.remove('ready-upgrade');
-        v.all('pre')[0].remove();
-      }, i);
-      setTimeout(function(){
-        if(v.upgraded || !v.upgrading){ return }
-        v.upgrading = 0;
-        i.remove();
-      },900);
+	      p.textContent = symPart+' '+cmd;
+	      v.append(p);
+	      cmd = cmd.trim().split(/\s+/)[0].trim();
+	      if(!cmd){ return }
+	      //if(cmd === 'clear'){ kit.say(s, 'clear'); return; }
+	      var isTui = (kit.tui||[]).indexOf(cmd) >= 0;
+	      var isKnown = (kit.cmd.known||[]).indexOf(cmd) >= 0;
+      var load = (isTui || !isKnown) ? 'trm' : cmd;
+      if(load === 'trm'){ stream.tui = 1; v.classList.add('tui'); }
+      kit.cmd.load(v, load, s, go);
     },99);
-    shell.append(v);
-  });
-  if(atBottom) { B.scrollTop = B.scrollHeight; shell.scrollTop = shell.scrollHeight; }
-  else { var btn = B.all('#scroll')[0]; if(btn) btn.style.display = 'flex'; }
-}
+	    shell.append(v);
+	  });
+	  bootPrompt.finish(parsed);
+	  go();
+	}
 }());
-kit.ear('clear',eve=>{return;shell.innerHTML = ""; });
+var shortcutsEl = B.all('#shortcuts')[0];
+var shellCmds = [
+  {text:'ls', send:'ls .'},
+  {text:'cd', send:'cd '},
+  {text:'cd ..', send:'cd ..'},
+  {text:'cat', send:'cat '},
+  {text:'pwd', send:'pwd'},
+  {text:'git', send:'git', chain:[
+    {text:'status', send:'status'},
+    {text:'pull', send:'pull'},
+    {text:'fetch', send:'fetch'},
+    {text:'push', send:'push'},
+    {text:'clone', send:'clone ', fill:0},
+    {text:'checkout', send:'checkout ', fill:0},
+    {text:'add .', send:'add .'},
+    {text:'commit', send:'commit -m ""', fill:-1},
+    {text:'log', send:'log --oneline'}
+  ]},
+  {text:'grep', send:'grep '},
+  {text:'npm', send:'npm', chain:[
+    {text:'install', send:'install'},
+    {text:'run dev', send:'run dev'},
+    {text:'run build', send:'run build'},
+    {text:'test', send:'run test'},
+    {text:'publish', send:'publish'}
+  ]},
+  {text:'ps', send:'ps aux'},
+  {text:'clear', send:'clear'},
+  {text:'whoami', send:'whoami'}
+];
+var tuiKeys = [
+  {text:'Esc', key:'esc'},
+  {text:'Ctrl', key:'ctrl', mod:1},
+  {text:'Alt', key:'alt', mod:1},
+  {text:'Shift', key:'shift', mod:1},
+  {text:'Mode', key:'mode'},
+  {text:'↑', key:'up'},
+  {text:'↓', key:'down'},
+  {text:'←', key:'left'},
+  {text:'→', key:'right'},
+  {text:'Tab', key:'tab'},
+  {text:'⌫', key:'bs'},
+  {text:'Enter', key:'enter'},
+  {text:'Ctrl+C', key:'cc'},
+  {text:'Ctrl+D', key:'cd'},
+  {text:'Exit', key:'exit'}
+];
+var chainPick;
+var joinCmd = function(main, part){
+  var left = (main||'').trim();
+  if(!part){ return left; }
+  return left ? left + ' ' + part : part;
+};
+var exitTui = function(cmd){
+  if(cmd && cmd.preventDefault){ cmd.preventDefault(); cmd = ''; }
+  stream.exitingTui = 1;
+  stream.exitQueue = stream.exitQueue || [];
+  stream.exitBuf = '';
+  if(cmd){
+    kit.say(cmd,'host');
+  } else {
+    kit.say('\x03','host');
+    setTimeout(function(){ kit.say('\x03','host'); }, 120);
+  }
+  stream.tui = 0;
+  deactivateTuiCard();
+  prompt.value = '';
+  autoGrow(prompt);
+  prompt.focus();
+  chainPick = null;
+  renderShortcuts();
+  clearTimeout(exitTui.wait);
+  exitTui.wait = setTimeout(finishTuiExit, 2200);
+};
+var renderShortcuts = function(){
+  shortcutsEl.textContent = '';
+  if(stream.tui){
+    shortcutsEl.classList.remove('chain');
+    tuiKeys.forEach(function(v){
+      var b = B.new('button');
+      b.type = 'button';
+      b.textContent = v.text;
+      if(v.mod){ b.setAttribute('data-mod', v.key); }
+      b.onclick = function(){ tapKey(v.key); };
+      shortcutsEl.append(b);
+    });
+    keyUi();
+    return;
+  }
+  if(chainPick){
+    shortcutsEl.classList.add('chain');
+    var crumb = B.new('span'); crumb.className = 'crumb'; crumb.textContent = (chainPick.text||'') + ' chain';
+    shortcutsEl.append(crumb);
+    var back = B.new('button'); back.type = 'button'; back.textContent = '← back';
+    back.onclick = function(){ chainPick = null; renderShortcuts(); };
+    shortcutsEl.append(back);
+    var baseBtn = B.new('button'); baseBtn.type = 'button'; baseBtn.textContent = chainPick.text;
+    baseBtn.onclick = function(){
+      kit.say(chainPick.send, 'prompt');
+      chainPick = null;
+      renderShortcuts();
+    };
+    shortcutsEl.append(baseBtn);
+    (chainPick.chain||[]).forEach(function(step){
+      var btn = B.new('button'); btn.type = 'button'; btn.textContent = step.text;
+      btn.onclick = function(){
+        var combo = joinCmd(chainPick.send, step.send);
+        if(step.fill !== undefined){
+          prompt.value = combo;
+          autoGrow(prompt);
+          prompt.focus();
+          var move = step.fill || 0;
+          var place = combo.length + move;
+          if(place < 0){ place = 0; }
+          prompt.setSelectionRange(place, place);
+          helpSay('Ready: '+step.text);
+        } else {
+          kit.say(combo.trim(), 'prompt');
+        }
+        chainPick = null;
+        renderShortcuts();
+      };
+      shortcutsEl.append(btn);
+    });
+    return;
+  }
+  shortcutsEl.classList.remove('chain');
+  shellCmds.forEach(function(item){
+    var btn = B.new('button'); btn.type = 'button'; btn.textContent = item.text;
+    if(item.chain && item.chain.length){
+      btn.classList.add('branch');
+      btn.onclick = function(){
+        chainPick = item;
+        helpSay((item.text||'') + ' commands');
+        renderShortcuts();
+      };
+    } else {
+      btn.onclick = function(){ kit.say(item.send, 'prompt'); };
+    }
+    shortcutsEl.append(btn);
+  });
+};
+renderShortcuts();
+
+kit.ear('tui', (eve)=>{
+  var on = (eve.detail||eve.data) ? 1 : 0;
+  var frame = eve.target && eve.target.tagName === 'IFRAME' ? eve.target : null;
+  if(on && frame && frame.dataset.closed === '1'){ return; }
+  if(on && frame && stream.tui_frame && frame !== stream.tui_frame){ return; }
+  stream.tui = on;
+  if(stream.tui){
+    stream.tui_line = '';
+    setTuiMode(1, stream.tui_card);
+    if(prompt.blur){ prompt.blur(); }
+    tuiFocus();
+  }
+  else {
+    deactivateTuiCard(stream.tui_card, frame || stream.tui_frame);
+    prompt.value = '';
+    autoGrow(prompt);
+    prompt.focus();
+  }
+  chainPick = null;
+  renderShortcuts();
+});
+kit.ear('clear', function(){
+  shell.replaceChildren();
+});
 
 //kit.say('clear', 'prompt');
-kit.say('whoami', 'prompt');
-kit.say('ls .', 'prompt');
                          
                          
 var f = "\u001b[0;32m~/marknadal\u001b[0m \u001b[0;97m$";
@@ -593,4 +1135,3 @@ window.AI = {
 
 }));
 </script>
-<script src="/gun/fix.js"></script>

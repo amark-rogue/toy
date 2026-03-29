@@ -17,46 +17,34 @@
 </dialog>
 
 <style>
-.ls { 
-  width: 100%; 
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 15px;
+body { display: block; }
+.ls {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2em;
   padding: 10px;
-display: block;
-  float: left;
-  column-width: 6em;
-
-  
-}
-  /* Global box-sizing fix */
-
-*, *::before, *::after {
-
-  box-sizing: border-box;
-
+  align-content: flex-start;
 }
 .ls a {
-display: block;
-  float: left;
-  margin: 0.1em; width: 100%;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-h-eight: 1em;
-  padding: 1em 0.5em;
+  display: block;
+  flex: 0 0 auto;
+  min-width: 4em;
+  max-width: 10em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0.7em 0.6em;
   text-align: center;
-  background: linear-gradient(135deg, rgba(191, 0, 255, 0.1), rgba(0,0,0,0.6));
+  background: linear-gradient(135deg, color-mix(in srgb, var(--pop) 10%, transparent), rgba(0,0,0,0.6));
   border: 2px solid var(--pop);
   border-radius: 16px;
-  backdrop-filter: blur(var(--blur));
-  
   font-family: 'Courier New', monospace;
   font-weight: 900;
   text-shadow: 0 0 5px var(--pop);
-  box-shadow: 0 5px 15px rgba(191, 0, 255, 0.2), inset 0 0 10px rgba(191, 0, 255, 0.1);
-  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--pop) 15%, transparent);
+  transition: transform 0.15s, box-shadow 0.15s;
   cursor: pointer;
-  word-break: break-word;
   user-select: none;
 }
 .ls a:active {
@@ -73,7 +61,6 @@ display: block;
 }
 .folder-icon { color: #f1c40f; filter: drop-shadow(0 0 10px rgba(241,196,15,0.8)); text-shadow: none; }
 .file-icon { color: #00ffc8; filter: drop-shadow(0 0 10px rgba(0,255,200,0.8)); text-shadow: none; }
-  .file, .agh { border-color: white; background: pink; } 
 .header-cmd {
 display: block; width: 100%;
   color: var(--pop);
@@ -135,8 +122,8 @@ float: right;
   background: rgba(255,255,255,0.08);
 }
 .ls-act-hot {
-  color: #ff6b6b;
-  border-color: rgba(255,107,107,0.35);
+  color: var(--err);
+  border-color: color-mix(in srgb, var(--err) 35%, transparent);
 }
 .ls-act-dim {
   color: rgba(255,255,255,0.6);
@@ -260,10 +247,8 @@ CMD.ls = function(s,v,f,cmd){
 	      }
 	      
 	      if(val.includes('.') && val !== '..') {
-	        kit.say('', 'prompt');
 	        kit.say('cat ' + quoteArg(val), 'prompt');
 	      } else {
-	        kit.say('', 'prompt');
 	        if(val === '..') {
 	          kit.say('cd ..', 'prompt');
 	          kit.say('ls .', 'prompt');
@@ -302,7 +287,7 @@ CMD.ls = function(s,v,f,cmd){
     function showActionDialog(anchor, val) {
         var kind = anchor.dataset.kind || 'file';
         var q = quoteArg(val);
-        dialogTargetFile.innerText = val + (kind === 'folder' ? '/' : '');
+        dialogTargetFile.textContent = val + (kind === 'folder' ? '/' : '');
         placeActionDialog(anchor);
         
         

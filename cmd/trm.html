@@ -1,0 +1,585 @@
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<link rel="stylesheet" href="../gun/kit/web.css">
+<link rel="stylesheet" href="../gun/xterm/xterm.min.css">
+<script src="../gun/kit/web.js"></script>
+<script src="../gun/xterm/xterm.min.js"></script>
+<script src="../gun/xterm/addon-fit.min.js"></script>
+<div id="trm"></div>
+<style>
+html, body { display: block !important; place-items: initial !important; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+body { margin: 0; background: transparent; font-size: 14px; }
+#trm {
+  width: 100%;
+  height: var(--trm-h, 400px);
+  box-sizing: border-box;
+  cursor: text;
+  display: block;
+  overflow: hidden;
+  background: var(--trm-bg, transparent);
+  font-family: var(--trm-ff, 'Courier New', monospace);
+}
+.xterm-viewport {
+  scrollbar-width: thin;
+  scrollbar-color: var(--pop) transparent;
+  background-color: var(--trm-bg, transparent) !important;
+}
+#trm .xterm,
+#trm .xterm .xterm-rows,
+#trm .xterm .xterm-rows > div,
+#trm .xterm .xterm-rows span,
+#trm .xterm-char-measure-element,
+#trm .xterm .xterm-helper-textarea {
+  font-family: var(--trm-ff, 'Courier New', monospace) !important;
+  font-size: var(--trm-fs, 14px) !important;
+}
+.touch-scroll-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 9; }
+#trm .xterm {
+  display: block !important;
+  position: relative !important;
+  place-items: initial !important;
+  gap: 0 !important;
+  max-width: none !important;
+  text-align: left !important;
+  background: var(--trm-bg, transparent) !important;
+}
+#trm .xterm .xterm-viewport,
+#trm .xterm .xterm-screen,
+#trm .xterm .xterm-rows,
+#trm .xterm .xterm-scroll-area,
+#trm .xterm .xterm-selection,
+#trm .xterm .xterm-accessibility-tree,
+#trm .xterm .xterm-decoration-container,
+#trm .xterm .xterm-message,
+#trm .xterm .live-region {
+  display: block !important;
+  place-items: initial !important;
+  gap: 0 !important;
+  max-width: none !important;
+  text-align: left !important;
+}
+#trm .xterm .xterm-screen {
+  background: var(--trm-bg, transparent) !important;
+}
+#trm .xterm .xterm-helpers,
+#trm .xterm .xterm-accessibility:not(.debug) {
+  display: block !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  place-items: initial !important;
+  gap: 0 !important;
+  max-width: none !important;
+}
+#trm .xterm .xterm-selection {
+  position: absolute !important;
+  inset: 0 !important;
+  pointer-events: none !important;
+}
+#trm .xterm .xterm-selection div {
+  display: block !important;
+  position: absolute !important;
+}
+#trm .xterm .composition-view {
+  display: none !important;
+  position: absolute !important;
+}
+#trm .xterm .composition-view.active {
+  display: block !important;
+}
+#trm .xterm .xterm-screen canvas {
+  display: block !important;
+  position: absolute !important;
+  left: 0 !important;
+  top: 0 !important;
+}
+#trm .xterm .xterm-helper-textarea {
+  display: block !important;
+  position: absolute !important;
+  left: -9999em !important;
+  top: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  opacity: 0 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  resize: none !important;
+}
+#trm .xterm-char-measure-element {
+  display: inline-block !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: -9999em !important;
+  visibility: hidden !important;
+  line-height: normal !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  gap: 0 !important;
+  max-width: none !important;
+}
+#trm .xterm div,
+#trm .xterm span,
+#trm .xterm textarea,
+#trm .xterm canvas {
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  gap: 0 !important;
+  max-width: none !important;
+  text-align: left !important;
+}
+#trm .xterm div,
+#trm .xterm textarea,
+#trm .xterm canvas {
+  display: block;
+}
+#trm .xterm span {
+  display: inline;
+}
+</style>
+<script src="../util.js"></script>
+<script>
+console.off = 0;
+var Trm = {};
+
+Trm.bg = 'rgb(0, 0, 0)';
+Trm.fg = '#BF00FF';
+
+Trm.isFullscreen = function() {
+  try {
+    return !!(window.frameElement && window.frameElement.parentElement && window.frameElement.parentElement.classList.contains('tui-live'));
+  } catch (e) {}
+  return false;
+};
+
+Trm.maxViewportHeight = function() {
+  var ph = window.innerHeight || 500;
+  if (!Trm.isFullscreen() && window.parent !== window) {
+    try {
+      ph = Math.min(ph, window.parent.innerHeight || ph);
+    } catch (e) {}
+  }
+  if (Trm.isFullscreen()) { return Math.max(220, ph); }
+  return Math.max(220, ph - 88);
+};
+
+Trm.box = function(el, rect) {
+  el = el || D.getElementById('trm');
+  if (!el || !el.getBoundingClientRect) { return { w: window.innerWidth || 0, h: window.innerHeight || 0 }; }
+  rect = el.getBoundingClientRect();
+  return { w: Math.round(rect.width || 0), h: Math.round(rect.height || 0) };
+};
+
+Trm.viewportHeight = function() {
+  var max = Trm.maxViewportHeight();
+  var pad = 16;
+  var cell = Trm.cellHeight();
+  var rows = 12;
+  if (Trm.isFullscreen()) { return max; }
+  if (Trm.T && Trm.T.buffer && Trm.T.buffer.active) {
+    if (Trm.T.buffer.active.type === 'alternate') { return max; }
+    rows = Trm.contentRows();
+  }
+  return Math.min(max, Math.max(160, Math.ceil((rows * cell) + pad)));
+};
+
+Trm.cardWidth = function(el) {
+  return (el && el.clientWidth) || window.innerWidth || 375;
+};
+
+Trm.font = function() {
+  return "'Courier New', monospace";
+};
+
+Trm.line = function() {
+  return 1;
+};
+
+Trm.size = function() {
+  var w = window.innerWidth || 0;
+  if (w && w < 420) { return 12; }
+  if (w && w < 960) { return 13; }
+  if (w && w > 1440) { return 15; }
+  return 14;
+};
+
+Trm.rootFont = function() {
+  var root, view, size;
+  try {
+    if (window.parent !== window && window.parent.document && window.parent.getComputedStyle) {
+      root = window.parent.document.documentElement;
+      view = window.parent;
+    }
+  } catch (e) {}
+  root = root || D.documentElement;
+  view = view || window;
+  size = parseFloat(view.getComputedStyle(root).fontSize);
+  return size || 16;
+};
+
+Trm.textMetrics = function() {
+  var sample, view, style, size;
+  try {
+    if (window.parent !== window && window.parent.document && window.parent.getComputedStyle) {
+      sample = window.parent.document.querySelector('#shell > div > pre');
+      view = window.parent;
+    }
+  } catch (e) {}
+  view = view || window;
+  size = Trm.rootFont() * 0.85;
+  if (sample) {
+    style = view.getComputedStyle(sample);
+    return {
+      fontFamily: style.fontFamily || Trm.font(),
+      fontSize: parseFloat(style.fontSize) || size,
+      lineHeight: Trm.line()
+    };
+  }
+  return {
+    fontFamily: Trm.font(),
+    fontSize: Trm.size(),
+    lineHeight: Trm.line()
+  };
+};
+
+Trm.fontSize = function() {
+  return Math.round(Trm.textMetrics().fontSize);
+};
+
+Trm.cellHeight = function() {
+  var canvas, rect, m = Trm.textMetrics();
+  if (Trm.T && Trm.T.element && Trm.T.rows) {
+    canvas = Trm.T.element.querySelector('.xterm-screen canvas');
+    if (canvas) {
+      rect = canvas.getBoundingClientRect();
+      if (rect.height && Trm.T.rows) {
+        return Math.max(1, rect.height / Trm.T.rows);
+      }
+    }
+  }
+  return Math.ceil(m.fontSize * m.lineHeight);
+};
+
+Trm.contentRows = function() {
+  var buf = Trm.T && Trm.T.buffer && Trm.T.buffer.active;
+  var y, line, text;
+  if (!buf) { return 12; }
+  if (buf.type === 'alternate') { return Trm.T.rows || 12; }
+  for (y = buf.length - 1; y >= 0; y--) {
+    line = buf.getLine(y);
+    if (!line) { continue; }
+    text = line.translateToString(true);
+    if (text || line.isWrapped) {
+      return Math.max(8, y + 2);
+    }
+  }
+  return 12;
+};
+
+Trm.resolveBackground = function(node, view, bg) {
+  view = view || window;
+  while (node) {
+    try {
+      bg = view.getComputedStyle(node).backgroundColor;
+      if (bg && bg !== 'transparent' && bg !== 'rgba(0, 0, 0, 0)') { return bg; }
+    } catch (e) {}
+    node = node.parentElement;
+  }
+  return Trm.bg;
+};
+
+Trm.resolveTheme = function() {
+  var view = window;
+  var doc = D;
+  var host, root, pop, bg;
+  try {
+    if (window.parent !== window && window.parent.document && window.parent.getComputedStyle) {
+      view = window.parent;
+      doc = window.parent.document;
+      host = (window.frameElement || {}).parentElement;
+    }
+  } catch (e) {}
+  root = doc.documentElement;
+  pop = (view.getComputedStyle(root).getPropertyValue('--pop') || '').trim();
+  bg = Trm.resolveBackground(host || doc.body, view);
+  return {
+    background: bg || Trm.bg,
+    foreground: pop || Trm.fg,
+    cursor: pop || Trm.fg,
+    cursorAccent: '#0a0a0a',
+    selectionBackground: 'rgba(191,0,255,0.12)',
+    selectionInactiveBackground: 'rgba(191,0,255,0.08)',
+    black: '#1a1a1a',   red: '#ff5555',   green: '#50fa7b', yellow: '#f1fa8c',
+    blue: '#bd93f9',    magenta: '#ff79c6', cyan: '#8be9fd', white: '#f8f8f2',
+    brightBlack: '#555',brightRed: '#ff6e6e',brightGreen: '#69ff94',brightYellow: '#ffffa5',
+    brightBlue: '#d6acff',brightMagenta: '#ff92df',brightCyan: '#a4ffff',brightWhite: '#ffffff'
+  };
+};
+
+Trm.applyFrame = function(el) {
+  var theme = Trm.resolveTheme(), metrics = Trm.textMetrics();
+  el = el || D.getElementById('trm');
+  Trm.bg = theme.background;
+  Trm.fg = theme.foreground;
+  D.documentElement.style.setProperty('--trm-h', Trm.viewportHeight() + 'px');
+  D.documentElement.style.setProperty('--trm-bg', Trm.bg);
+  D.documentElement.style.setProperty('--trm-ff', metrics.fontFamily);
+  D.documentElement.style.setProperty('--trm-fs', Math.round(metrics.fontSize) + 'px');
+  if (el) {
+    el.style.setProperty('--trm-bg', Trm.bg);
+  }
+  if (kit.watch && kit.watch.resize) {
+    kit.watch.resize();
+  }
+};
+
+Trm.bind = function(el, vv, p) {
+  if (Trm.bind.ok) { return; }
+  Trm.bind.ok = 1;
+  if (typeof ResizeObserver !== 'undefined') {
+    Trm.obs = new ResizeObserver(Trm.resize);
+    if (el) { Trm.obs.observe(el); }
+    if (D.documentElement) { Trm.obs.observe(D.documentElement); }
+    if (D.body) { Trm.obs.observe(D.body); }
+  }
+  window.addEventListener('resize', Trm.resize);
+  window.addEventListener('orientationchange', Trm.resize);
+  window.addEventListener('pageshow', Trm.resize);
+  if ((vv = window.visualViewport)) {
+    vv.addEventListener('resize', Trm.resize);
+    vv.addEventListener('scroll', Trm.resize);
+  }
+  try {
+    p = window.parent;
+    if (p && p !== window) { p.addEventListener('resize', Trm.resize); }
+  } catch (e) {}
+  window.addEventListener('focus', Trm.focus);
+};
+
+Trm.focus = function() {
+  if (!Trm.T || !Trm.T.focus) { return; }
+  Trm.T.focus();
+};
+
+Trm.send = function(data) {
+  data = (data || '').replace(/\x1b\[\[?[IO]/g, '');
+  if (!data) { return; }
+  kit.say(data, 'host');
+};
+
+Trm.syncOptions = function() {
+  var metrics = Trm.textMetrics();
+  var theme = Trm.resolveTheme();
+  var size = Math.round(metrics.fontSize);
+  if (!Trm.T) { return size; }
+  if (Trm.T.options.fontFamily !== metrics.fontFamily) {
+    Trm.T.options.fontFamily = metrics.fontFamily;
+  }
+  if (Trm.T.options.fontSize !== size) {
+    Trm.T.options.fontSize = size;
+  }
+  if (Trm.T.options.lineHeight !== metrics.lineHeight) {
+    Trm.T.options.lineHeight = metrics.lineHeight;
+  }
+  if ((Trm.T.options.theme || {}).background !== theme.background || (Trm.T.options.theme || {}).foreground !== theme.foreground) {
+    Trm.T.options.theme = theme;
+  }
+  return size;
+};
+
+Trm.applyFrame();
+
+function TouchScrollManager(terminal, container) {
+  var self = this;
+  this.terminal = terminal;
+  this.LINE_HEIGHT = 17;
+  this.TAP_THRESHOLD = 10;
+  this.TAP_DURATION = 300;
+  this.TIME_CONSTANT = 325;
+  this.VELOCITY_THRESHOLD = 10;
+  this.tracking = false;
+  this.animating = false;
+  this.velocity = 0;
+
+  var isTouch = window.matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+  if (!isTouch) return;
+
+  this.overlay = D.createElement('div');
+  this.overlay.className = 'touch-scroll-overlay';
+  container.style.position = 'relative';
+  container.appendChild(this.overlay);
+
+  this.overlay.addEventListener('touchstart', function(e){ self.onStart(e); }, { passive: false });
+  this.overlay.addEventListener('touchmove',  function(e){ self.onMove(e);  }, { passive: false });
+  this.overlay.addEventListener('touchend',   function(e){ self.onEnd(e);   }, { passive: true });
+  this.overlay.addEventListener('touchcancel',function(){ self.tracking = false; });
+}
+TouchScrollManager.prototype.onStart = function(e) {
+  Trm.focus();
+  this.animating = false;
+  if (e.touches.length !== 1) return;
+  this.tracking = true;
+  this.velocity = this.accumulatedScroll = this.totalMovement = 0;
+  this.startY = this.lastY = e.touches[0].clientY;
+  this.lastTime = this.startTime = Date.now();
+};
+TouchScrollManager.prototype.onMove = function(e) {
+  if (!this.tracking || e.touches.length !== 1) return;
+  var y = e.touches[0].clientY, now = Date.now();
+  var dy = this.lastY - y, dt = now - this.lastTime;
+  this.totalMovement += Math.abs(dy);
+  if (this.totalMovement >= this.TAP_THRESHOLD) e.preventDefault();
+  if (dt > 0) this.velocity = 0.8 * (dy / dt * 1000) + 0.2 * this.velocity;
+  this.accumulatedScroll += dy;
+  var lines = Math.trunc(this.accumulatedScroll / this.LINE_HEIGHT);
+  if (lines) { this.terminal.scrollLines(lines); this.accumulatedScroll -= lines * this.LINE_HEIGHT; }
+  this.lastY = y; this.lastTime = now;
+};
+TouchScrollManager.prototype.onEnd = function() {
+  if (!this.tracking) return;
+  this.tracking = false;
+  if (this.totalMovement < this.TAP_THRESHOLD && Date.now() - this.startTime < this.TAP_DURATION) return;
+  if (Math.abs(this.velocity) > this.VELOCITY_THRESHOLD) this.startMomentum();
+};
+TouchScrollManager.prototype.startMomentum = function() {
+  var self = this, t0 = Date.now(), v0 = this.velocity, scrolled = 0;
+  this.animating = true;
+  (function tick() {
+    if (!self.animating) return;
+    var el = Date.now() - t0;
+    if (Math.abs(v0 * Math.exp(-el / self.TIME_CONSTANT)) < self.VELOCITY_THRESHOLD) { self.animating = false; return; }
+    var total = Math.trunc(v0 * self.TIME_CONSTANT * (1 - Math.exp(-el / self.TIME_CONSTANT)) / 1000 / self.LINE_HEIGHT);
+    var delta = total - scrolled;
+    if (delta) { self.terminal.scrollLines(delta); scrolled = total; }
+    requestAnimationFrame(tick);
+  }());
+};
+
+Trm.tap = function() {
+  Trm.focus();
+  kit.say(1, 'tui');
+};
+
+Trm.init = function() {
+  if (Trm.mode) return;
+  Trm.mode = 'xterm';
+  var el = D.getElementById('trm');
+  var metrics = Trm.textMetrics();
+  var theme = Trm.resolveTheme();
+  var fontFamily = metrics.fontFamily;
+  var fontSize = Math.round(metrics.fontSize);
+  var priorOffscreenCanvas = window.OffscreenCanvas;
+  var forcedDomCharMeasure = false;
+
+  Trm.applyFrame(el);
+
+  // The bundled xterm build uses OffscreenCanvas for char metrics when available,
+  // but this UI ends up with DOM width-cache metrics that disagree with canvas ones.
+  // For the DOM renderer that shows up as huge computed row letter-spacing.
+  try {
+    if (priorOffscreenCanvas) {
+      window.OffscreenCanvas = void 0;
+      forcedDomCharMeasure = true;
+    }
+  } catch (e) {}
+
+  try {
+    Trm.T = new Terminal({
+      fontFamily: fontFamily,
+      fontSize: fontSize,
+      fontWeight: '400',
+      fontWeightBold: '700',
+      lineHeight: metrics.lineHeight,
+      letterSpacing: 0,
+      cursorStyle: 'block',
+      cursorBlink: true,
+      convertEol: true,
+      scrollback: 5000,
+      theme: theme,
+      allowTransparency: true,
+      windowOptions: { reportFocus: false }
+    });
+
+    Trm.fit = new FitAddon.FitAddon();
+    Trm.T.loadAddon(Trm.fit);
+    Trm.T.open(el);
+    Trm.T.onData(Trm.send);
+    if (Trm.T.onBinary) { Trm.T.onBinary(Trm.send); }
+    Trm.followBottom = 1;
+    Trm.T.onScroll(function() {
+      var buf = Trm.T && Trm.T.buffer && Trm.T.buffer.active;
+      if (!buf) { return }
+      Trm.followBottom = buf.viewportY >= buf.baseY;
+    });
+    if (kit.watch && kit.watch.resize) {
+      kit.watch.resize();
+    }
+  } finally {
+    if (forcedDomCharMeasure) {
+      try {
+        window.OffscreenCanvas = priorOffscreenCanvas;
+      } catch (e) {}
+    }
+  }
+  new TouchScrollManager(Trm.T, el);
+  Trm.bind(el);
+  el.addEventListener('click', Trm.tap);
+  Trm.resize();
+  Trm.fit.fit();
+  Trm.focus();
+  setTimeout(Trm.resize, 50);
+  setTimeout(Trm.resize, 300);
+  Trm.flush();
+};
+
+Trm.resize = function() {
+  if (Trm.resize.r) return;
+  Trm.resize.r = requestAnimationFrame(function(){
+    var box;
+    Trm.resize.r = 0;
+    Trm.applyFrame();
+    Trm.syncOptions();
+    if (!Trm.fit) return;
+    Trm.fit.fit();
+    box = Trm.box();
+    if (box.w && box.h && Trm.last && Trm.last.w === box.w && Trm.last.h === box.h && Trm.last.c === Trm.T.cols && Trm.last.r === Trm.T.rows) { return; }
+    Trm.last = { w: box.w, h: box.h, c: Trm.T.cols, r: Trm.T.rows };
+    kit.watch && kit.watch.resize && kit.watch.resize();
+    if (!Trm.T) return;
+    if (Trm.followBottom !== false) {
+      Trm.T.scrollToBottom();
+    }
+    kit.say({ type: 'resize', cols: Trm.T.cols, rows: Trm.T.rows }, 'host');
+  });
+};
+
+Trm.write = function(data) {
+  if (!Trm.T) return;
+  Trm.T.write(data, function() {
+    if (Trm.followBottom !== false) {
+      Trm.T.scrollToBottom();
+    }
+    Trm.resize();
+  });
+  if (data.indexOf('\x1b[?1049l') >= 0) setTimeout(function(){ kit.say(0, 'tui'); }, 300);
+};
+
+Trm.flush = function() {
+  (Trm.q || []).forEach(Trm.write);
+  Trm.q = [];
+};
+
+kit.ear('trm', function(eve) {
+  var data = eve.detail || eve.data;
+  if (data == null) data = '';
+  if (!Trm.mode) {
+    (Trm.q = Trm.q || []).push(data);
+    if (!Trm.loading) { Trm.loading = 1; Trm.init(); }
+    return;
+  }
+  Trm.write(data);
+});
+</script>
