@@ -13,14 +13,20 @@ String.prototype.cut = function(f, e, c){ e = e||{}, c = c||'\\';
 };
 
 String.prototype.flat = function(){
-  return this.replace(/\x1B(?:\[[0-?]*[ -/]*[@-~]|\][^\x07]+\x07)/g, '');
+  return this
+    .replace(/\x1B\[(\d*)C/g, function(m,n){ return ' '.repeat(+n||1) })
+    .replace(/\x1B(?:\[[0-?]*[ -/]*[@-~]|\][^\x07]+\x07)/g, '');
 }
 
 ESC = {"'":'','"':'','#':'\n'};
 var D = document, B = D.body;
 
 window.buzz = function(ms) {
-  try { if (navigator.vibrate) navigator.vibrate(ms || 9); } catch(e) {}
+  try {
+    var ua = navigator.userActivation;
+    if (ua && !ua.hasBeenActive && !ua.isActive) { return }
+    if (navigator.vibrate) { navigator.vibrate(ms || 9) }
+  } catch(e) {}
 };
 window.shellReply = window.shellReply || {
   clean: function(s){
@@ -42,9 +48,3 @@ window.shellReply = window.shellReply || {
     return true;
   }
 };
-document.addEventListener('pointerdown', function(e) { return;
-  var t = e.target;
-  if (t.tagName === 'BUTTON' || t.closest('button') || t.tagName === 'A' || t.closest('a') || t.closest('[class$="-box"]')) {
-    buzz(15);
-  }
-});

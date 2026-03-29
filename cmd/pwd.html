@@ -32,7 +32,7 @@ kit.ear('pwd', function hear(eve) {
     content.replaceChildren();
     
     if (path.startsWith('/')) {
-      var root = B.new('div'); root.className = 'crumb'; root.innerText = '/';
+      var root = B.new('div'); root.className = 'crumb'; root.textContent = '/';
       root.onclick = ()=>{ kit.say('cd /', 'prompt.try'); };
       content.appendChild(root);
     }
@@ -43,12 +43,12 @@ kit.ear('pwd', function hear(eve) {
       var targetPath = currentPath;
       var crumb = B.new('div');
       crumb.className = 'crumb';
-      crumb.innerText = p;
+      crumb.textContent = p;
       crumb.onclick = ()=>{ kit.say('cd ' + targetPath, 'prompt.try'); };
       content.appendChild(crumb);
     });
   } else {
-    content.innerText = "UNKNOWN PATH";
+    content.textContent = "UNKNOWN PATH";
   }
   hear.off();
 });

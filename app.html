@@ -1,5 +1,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-content">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
@@ -10,15 +11,15 @@
   <input id="pass" name="pass" type="password" placeholder="pass:" class="fog sap lip">
   <button type="submit"></button>
 </form>
-<dialog id="vmDialog" class="fog sap lip" style="background: var(--mood, #000); color: var(--pop, lime); border: 1px solid var(--pop, lime); border-radius: 1em; padding: 2em; z-index: 1000;">
-  <p style="margin-top: 0; font-family: monospace;">Host failed to connect.</p>
-  <p style="font-family: monospace;">Do you want to boot a Linux VM in the browser?</p>
-  <div style="display: flex; justify-content: flex-end; gap: 1em; margin-top: 2em; font-family: monospace;">
-    <button onclick="vmDialog.close('no')" style="background: transparent; color: inherit; border: 1px solid var(--pop, lime); padding: 0.5em 1em; border-radius: 0.5em; cursor: pointer;">No</button>
-    <button onclick="vmDialog.close('yes')" style="background: var(--pop, lime); color: var(--mood, #000); border: none; padding: 0.5em 1em; border-radius: 0.5em; cursor: pointer; font-weight: bold;">Yes</button>
+<dialog id="vmDialog" class="fog sap lip dlg">
+  <p class="dlgcopy dlgtop">Host failed to connect.</p>
+  <p class="dlgcopy">Do you want to boot a Linux VM in the browser?</p>
+  <div class="dlgrow">
+    <button id="vmNo" class="dlgbtn dlgno">No</button>
+    <button id="vmYes" class="dlgbtn dlgyes">Yes</button>
   </div>
 </dialog>
-<div id="vmBoot" style="display:none; position:fixed; bottom:4em; left:0; right:0; z-index:999; text-align:center; font-family:monospace; color:var(--pop, lime); font-size:0.9em; opacity:0.8;"></div>
+<div id="vmBoot"></div>
 <style>
 :root { --fill: var(--mood); }
 body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; back-ground-image: url('https://picsum.photos/1200/900'); }
@@ -26,11 +27,22 @@ body { display: flex; flex-direction: column; }
 #sign { flex-shrink: 0; }
 iframe { width: 100%; flex: 1; min-height: 0; height: 0 !important; border: none; display: block; }
 input::placeholder { opacity: 1; }
+.dlg { background: var(--mood, #000); color: var(--pop, lime); border: 1px solid var(--pop, lime); border-radius: 1em; padding: 2em; z-index: 1000; }
+.dlgcopy { font-family: monospace; }
+.dlgtop { margin-top: 0; }
+.dlgrow { display: flex; justify-content: flex-end; gap: 1em; margin-top: 2em; font-family: monospace; }
+.dlgbtn { padding: 0.5em 1em; border-radius: 0.5em; cursor: pointer; }
+.dlgno { background: transparent; color: inherit; border: 1px solid var(--pop, lime); }
+.dlgyes { background: var(--pop, lime); color: var(--mood, #000); border: none; font-weight: bold; }
+#vmBoot { display: none; position: fixed; bottom: 4em; left: 0; right: 0; z-index: 999; text-align: center; font-family: monospace; color: var(--pop, lime); font-size: 0.9em; opacity: 0.8; }
+#vmBoot.on { display: block; }
 </style>
 <script>
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js').catch(console.error);
 }
+vmNo.onclick = function(){ vmDialog.close('no') };
+vmYes.onclick = function(){ vmDialog.close('yes') };
 </script>
 <script>;(function(cop){
 host.focus();
@@ -40,14 +52,12 @@ cop.sign = async ()=>{ if(cop.ws){ return }
   cop.ws = new WebSocket((localStorage.host=host.value).replace(/^http/,'ws')||'ws://localhost:8022');
   cop.ws.onopen = ()=>{
     opened = true;
-    console.log('ws open');
     cop.ws.send(localStorage.pass=pass.value);
 
     location.path = 'chat.html';
   };
 
   cop.ws.onmessage = (eve) => {
-    //console.log('app ws msg');//, eve.data);
     kit.say(eve.data,'chat');
   };
 
@@ -73,7 +83,7 @@ function bootVM() {
   var s = document.createElement('script');
   s.src = "https://cdn.jsdelivr.net/gh/abenezermario/v86-alpine@main/build/libv86.js";
   s.onload = function() {
-    vmBoot.style.display = 'block';
+    vmBoot.classList.add('on');
     vmBoot.textContent = 'Downloading VM...';
     var autoBootCommands = [];
     
@@ -106,10 +116,6 @@ function bootVM() {
     cop.ws = {
         send: function(cmd) {
             console.log("Sending to VM:", JSON.stringify(cmd));
-            // Ensure commands end with a newline so the shell processes them
-            if (cmd && !cmd.endsWith('\n') && !cmd.endsWith('\r')) {
-               cmd += '\n';
-            }
             // Intercept git clone — route through browser fetch (CORS)
             var trimmed = (cmd || '').replace(/[\r\n]+$/, '').trim();
             var m = trimmed.match(/^git\s+clone\s+(?:-b\s+(\S+)\s+)?(?:https?:\/\/)?github\.com\/([^\/\s]+)\/([^\s]+?)(?:\s+(\S+))?\s*$/);
@@ -159,7 +165,7 @@ function bootVM() {
         if (bootPhase === 2 && /\n\$ /.test(buf)) {
             console.log("VM: ready");
             vmBoot.textContent = '';
-            vmBoot.style.display = 'none';
+            vmBoot.classList.remove('on');
             bootPhase = 3;
             buf = "";
             emulatorReady = true;
@@ -279,10 +285,16 @@ async function browserGitClone(owner, repo, branch, dest) {
 var preBootQueue = [];
 kit.ear('host',(eve)=>{
   var cmd = eve.detail||eve.data;
+  if(!cmd){ return }
+  if('object' == typeof cmd){
+    if(!cop.ws){ return }
+    cop.ws.send(JSON.stringify(cmd));
+    return;
+  }
   if('string' != typeof cmd){ return }
-  if(!cop.ws){ 
+  if(!cop.ws){
       preBootQueue.push(cmd);
-      return; 
+      return;
   }
   cop.ws.send(cmd);
 });

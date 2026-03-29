@@ -187,6 +187,47 @@ kit.ear('style',function(eve,i){
   // Allow width to remain responsive (e.g. 100%) rather than locking it to fixed pixels
   // var w = (eve.detail||'').width; if(w) eve.target.style.width = isNaN(w) ? w : w+'px';
 },document);
+kit.cmd = {};
+kit.cmd.dir = './cmd/';
+kit.cmd.load = function(v, name, s, cb, i, pre) {
+  (i = D[HI]('iframe')).src = kit.cmd.dir + name + '.html';
+  i.setAttribute('scrolling', 'no');
+  v.upgrading = 1;
+  v.append(i);
+  kit.ear('load', function hear(eve) {
+    if(eve.detail === undefined) { return }
+    if(eve.target !== i) { return }
+    kit.say(s, name, i);
+    v.upgraded = 1; v.upgrading = 0;
+    v.classList.remove('ready-upgrade');
+    pre = v.querySelector('pre'); if(pre) { pre.remove() }
+    if(cb) { cb() }
+    hear.off();
+  }, i);
+  setTimeout(function() {
+    if(v.upgraded || !v.upgrading) { return }
+    v.upgrading = 0; i.remove();
+  }, 900);
+};
+kit.belt = {};
+kit.ear('belt', function(eve, data, name, b) {
+  if(!kit.belt.el) { return }
+  data = eve.detail || eve.data;
+  name = data.name || data[0];
+  if(D[ID](name)) { return }
+  (b = D[HI]('button')).id = b.textContent = name;
+  b.onclick = function() {
+    if(data.key) { kit.say(name, 'key'); return }
+    kit.say(data.prompt || data[1], 'prompt');
+  };
+  kit.belt.el.appendChild(b);
+});
+setTimeout(function() {
+  [{name:'esc',key:1},{name:'ctrl',key:1},{name:'tab',key:1},{name:'alt',key:1},{name:'cmd',key:1}]
+  .forEach(function(v){ kit.say(v,'belt') });
+}, 999);
+kit.tui = 'vim vi nvim nano less more man htop top watch tmux screen'.split(' ');
+kit.cmd.known = 'cat cd cp echo grep ls mkdir mv npm ping ps rm touch whoami git pwd clear'.split(' ');
 kit.http = {createServer: function(h){
   h.listen = function(port,ip,cb){cb&&cb()};
   return kit.server = h;
