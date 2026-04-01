@@ -29,7 +29,7 @@ kit.ear('cd', function hear(eve) {
     container.querySelector('.icon').innerText = '🚫';
   } else {
     // If it's a silent success, just show the folder name we cd'd into
-    if (txt === "MOVED") {
+    if (text === "MOVED") {
       var match = lines[0].match(/cd\s+(.+)/);
       text = match ? '' : "DIRECTORY CHANGED";
     }

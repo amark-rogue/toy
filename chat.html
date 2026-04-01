@@ -230,6 +230,55 @@ var prompt;
 var shell = B.all('#shell')[0];
 var help = B.all('#help')[0];
 var belt = B.all('.kit .tin')[0];
+var cldSid = null;
+var cldIframe = null; // active claude iframe
+var cldMode = 0;
+
+var cldEnter = function(iframe){
+  cldIframe = iframe;
+  cldMode = 1;
+  help.textContent = 'claude session \u2014 type exit to return to shell';
+  help.style.opacity = '1';
+  prompt.placeholder = 'claude>';
+};
+var cldExit = function(){
+  cldMode = 0;
+  cldIframe = null;
+  help.textContent = '';
+  help.style.opacity = '';
+  prompt.placeholder = '$';
+};
+
+kit.ear('claude-session', function(eve){ cldSid = eve.detail || eve.data || null; });
+kit.ear('claude-ready', function(eve){
+  // claude finished responding, stay in claude mode
+  help.textContent = 'claude session \u2014 type exit to return to shell';
+});
+
+var card = function(val){
+  var v = B.new('div'), p = B.new('pre'), i = B.new('iframe');
+  v.className = 'reply-card claude-card';
+  p.textContent = '$ '+val;
+  v.append(p);
+  i.src = './cmd/claude.html';
+  v.cldIframe = i;
+  shell.append(v);
+  kit.ear('load', function(eve){
+    if(eve.detail === undefined) return;
+    if(eve.target !== i) return;
+    kit.say({prompt:val, session:cldSid}, 'claude', i);
+    cldEnter(i);
+  }, i);
+  v.append(i);
+  // click card header to resume this session
+  p.style.cursor = 'pointer';
+  p.onclick = function(){
+    if(cldMode && cldIframe === i) return; // already active
+    cldEnter(i);
+    B.scrollTop = B.scrollHeight; shell.scrollTop = shell.scrollHeight;
+  };
+  B.scrollTop = B.scrollHeight; shell.scrollTop = shell.scrollHeight;
+};
 var mod = {};
 (prompt = B.all('#prompt')[0]).focus();
 
@@ -242,6 +291,33 @@ kit.ear('prompt',(eve)=>{
   var cmd = eve.detail||eve.data;
   if(cmd){ prompt.value = cmd }
   var val = prompt.value.trim();
+
+  // exit claude mode
+  if(cldMode && /^exit$/i.test(val)){
+    cldExit();
+    prompt.value = "";
+    window.buzz();
+    return;
+  }
+
+  // in claude mode, send follow-up to active iframe
+  if(cldMode && cldIframe && val){
+    kit.say({prompt:val, session:cldSid}, 'claude', cldIframe);
+    prompt.value = "";
+    window.buzz();
+    B.scrollTop = B.scrollHeight; shell.scrollTop = shell.scrollHeight;
+    return;
+  }
+
+  // start new claude session
+  if(/^claude(\s|$)/.test(val)){
+    card(val);
+    prompt.value = "";
+    window.buzz();
+    return;
+  }
+
+  // resume: just typing "claude" with no args resumes last session
   kit.say(prompt.value+'\r','host');
   prompt.value = "";
   window.buzz();
@@ -364,6 +440,8 @@ window.addEventListener('touchend',(eve)=>{
 ].forEach(function(v){
   kit.say(v, 'belt');
 });
+kit.say(['claude','claude '], 'belt');
+kit.say(['exit','exit'], 'belt');
 },999);
                          
 prompt.oninput = function(eve){
