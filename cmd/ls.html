@@ -171,8 +171,24 @@ kit.say(['touch','touch '], 'belt');
 kit.say(['clear','clear'], 'belt');
 kit.say(['npm','npm '], 'belt');
 kit.say(['git','git status'], 'belt');
+;(function(){
+  var ws = new WebSocket('ws://'+(location.hostname||'localhost')+':8022');
+  ws.onopen = function(){
+    var p = window.parent;
+    try{ ws.send(p.localStorage.pass || '') }catch(e){ ws.send('') }
+    setTimeout(function(){ ws.send(JSON.stringify({type:'claude-check'})) }, 100);
+  };
+  ws.onmessage = function(e){
+    try{
+      var m = JSON.parse(e.data);
+      if(m.type === 'claude-auth' && m.ok) kit.say(['claude','claude '], 'belt');
+    }catch(x){}
+    ws.close();
+  };
+  ws.onerror = function(){ ws.close() };
+}());
 
-  
+
 CMD = {};
 CMD.ls = function(s,v,f,cmd){ 
   v.tag('ls',+1).textContent = '';
