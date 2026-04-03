@@ -18,7 +18,7 @@
     <button onclick="vmDialog.close('yes')" style="background: var(--pop, lime); color: var(--mood, #000); border: none; padding: 0.5em 1em; border-radius: 0.5em; cursor: pointer; font-weight: bold;">Yes</button>
   </div>
 </dialog>
-<div id="vmBoot" style="display:none; position:fixed; bottom:4em; left:0; right:0; z-index:999; text-align:center; font-family:monospace; color:var(--pop, lime); font-size:0.9em; opacity:0.8;"></div>
+<div id="vmBoot" style="display:none; position:fixed; bottom:4em; left:1em; right:1em; z-index:999; font-family:monospace; color:var(--pop, lime); font-size:0.8em; opacity:0.7; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></div>
 <style>
 :root { --fill: var(--mood); }
 body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; back-ground-image: url('https://picsum.photos/1200/900'); }
@@ -135,16 +135,18 @@ function bootVM() {
       var commandQueue = [];
       var boot = state ? 3 : 0;
 
-      // Snapshot restore — already booted, skip phases
+      // Snapshot restore — wait for chat.html to load before flushing
       if (state) {
         emulator.add_listener("emulator-ready", () => {
-          vmBoot.textContent = '';
-          vmBoot.style.display = 'none';
-          emulatorReady = true;
-          emulator.serial0_send("\n");
-          while(commandQueue.length > 0) {
-            emulator.serial0_send(commandQueue.shift());
-          }
+          setTimeout(() => {
+            vmBoot.textContent = '';
+            vmBoot.style.display = 'none';
+            emulatorReady = true;
+            emulator.serial0_send("\n");
+            while(commandQueue.length > 0) {
+              emulator.serial0_send(commandQueue.shift());
+            }
+          }, 1500);
         });
       }
 
@@ -180,19 +182,19 @@ function bootVM() {
         var c = String.fromCharCode(byte);
         buf += c;
 
-        if (boot === 0) {
-            vmBoot.textContent = 'Booting Linux...';
-            if (buf.includes("login:")) {
-                vmBoot.textContent = 'Logging in...';
-                boot = 1;
-                emulator.serial0_send("root\n");
-                buf = "";
-                return;
-            }
+        if (boot < 3) {
+            // Show live boot logs in vmBoot div (outside chat — no parser impact)
+            var lines = buf.replace(/\x1b\[[^m]*m/g, '').split('\n');
+            var last = lines[lines.length - 1] || lines[lines.length - 2] || '';
+            if (last.trim()) vmBoot.textContent = last.trim().slice(0, 80);
+        }
+        if (boot === 0 && buf.includes("login:")) {
+            boot = 1;
+            emulator.serial0_send("root\n");
+            buf = "";
             return;
         }
         if (boot === 1 && buf.includes("~#")) {
-            vmBoot.textContent = 'Configuring shell...';
             boot = 2;
             emulator.serial0_send("export PS1='$ '\n");
             buf = "";
@@ -225,8 +227,17 @@ function bootVM() {
         }, 50);
     });
 
+    // Visual boot progress (vmBoot div — outside chat, no parser impact)
+    var dl = {};
+    emulator.add_listener("download-progress", (e) => {
+      if (!e.file_name || dl[e.file_name]) return;
+      dl[e.file_name] = 1;
+      var short = e.file_name.split('/').pop();
+      vmBoot.textContent = 'Loading ' + short;
+    });
     emulator.add_listener("download-error", (e) => {
-        console.error("Download error:", e);
+      vmBoot.textContent = 'Error: ' + (e.file_name || e.message || e);
+      console.error("Download error:", e);
     });
 
     location.path = 'chat.html';
@@ -330,85 +341,72 @@ pkg.run = function(cmd, emu) {
   if (m = cmd.match(/^apk\s+add\s+(.+)/)) { pkg.apk(m[1].trim().split(/\s+/), emu); return 1; }
 };
 
-// Walk jsdelivr tree, flatten to [{path, size}]
-pkg.flat = function(tree, pre) {
-  var out = [];
-  tree.forEach((f) => {
-    var p = pre + '/' + f.name;
-    if (f.type === 'directory') { out = out.concat(pkg.flat(f.files || [], p)); }
-    else { out.push({path: p, size: f.size || 0}); }
-  });
-  return out;
-};
-
-// npm install — jsdelivr mirrors all npm packages (CORS *)
+// npm install — resolve via registry (CORS *), download files via jsdelivr
 pkg.got = {};
-
-// Resolve version — jsdelivr rejects @latest, must fetch tags first
-pkg.ver = async function(name, ver) {
-  if (ver && ver !== 'latest') return ver;
-  var res = await fetch("https://data.jsdelivr.com/v1/packages/npm/" + name);
-  if (!res.ok) throw new Error(name + " not found");
-  var d = await res.json();
-  return (d.tags || {}).latest || (d.versions || [{}])[0].version;
-};
 
 pkg.one = async function(name, ver, emu, depth, base) {
   if (pkg.got[name]) return;
   pkg.got[name] = 1;
 
   var pad = '  '.repeat(depth || 0);
-  try {
-    ver = await pkg.ver(name, ver);
-  } catch(e) { console.log('[pkg]', pad + 'skip', name, e.message); return; }
 
-  console.log('[pkg]', pad + 'fetch', name + '@' + ver);
+  // Resolve version via npm registry (supports 'latest' properly)
+  try {
+    var res = await fetch("https://registry.npmjs.org/" + name + "/latest");
+    if (!res.ok) res = await fetch("https://registry.npmjs.org/" + name);
+    if (!res.ok) { console.log('[pkg]', pad + 'skip', name); return; }
+    var meta = await res.json();
+    ver = meta.version || (meta['dist-tags'] || {}).latest;
+    if (!ver) { console.log('[pkg]', pad + 'skip', name, 'no ver'); return; }
+  } catch(e) { console.log('[pkg]', pad + 'err', name, e.message); return; }
+
+  console.log('[pkg]', pad + name + '@' + ver);
   say(pad + "+ " + name + "@" + ver + "\n");
 
-  var res = await fetch("https://data.jsdelivr.com/v1/packages/npm/" + name + "@" + ver);
-  if (!res.ok) throw new Error(name + "@" + ver + " not found");
-  var meta = await res.json();
-  var files = pkg.flat(meta.files || [], '');
-  var total = files.length, done = 0;
-  var dest = base + '/node_modules/' + name;
+  // Get file tree from jsdelivr (CORS *)
+  var tree = await fetch("https://data.jsdelivr.com/v1/packages/npm/" + name + "@" + ver);
+  if (!tree.ok) { console.log('[pkg]', pad + 'tree fail', name); return; }
+  var files = [];
+  var flat = (arr, pre) => {
+    (arr || []).forEach((f) => {
+      var p = pre + '/' + f.name;
+      if (f.type === 'directory') flat(f.files, p);
+      else if (/\.(js|json|md)$/.test(f.name)) files.push(p);
+    });
+  };
+  flat((await tree.json()).files, '');
 
-  console.log('[pkg]', pad + name + '@' + ver, total, 'files ->', dest);
+  var dest = base + '/node_modules/' + name;
   ensureDir(emu, dest);
 
-  for (var j = 0; j < files.length; j += 8) {
-    var batch = files.slice(j, j + 8);
+  // Download files in batches of 12
+  for (var j = 0; j < files.length; j += 12) {
+    var batch = files.slice(j, j + 12);
     await Promise.all(batch.map(async (f) => {
-      var url = "https://cdn.jsdelivr.net/npm/" + name + "@" + ver + f.path;
-      var r = await fetch(url);
-      if (!r.ok) { console.log('[pkg] skip', f.path, r.status); return; }
-      var data = new Uint8Array(await r.arrayBuffer());
-      var full = dest + f.path;
-      ensureDir(emu, full.slice(0, full.lastIndexOf('/')));
-      await emu.create_file(full, data);
-      done++;
+      try {
+        var r = await fetch("https://cdn.jsdelivr.net/npm/" + name + "@" + ver + f);
+        if (!r.ok) return;
+        var data = new Uint8Array(await r.arrayBuffer());
+        var full = dest + f;
+        ensureDir(emu, full.slice(0, full.lastIndexOf('/')));
+        await emu.create_file(full, data);
+      } catch(e) {}
     }));
   }
-  console.log('[pkg]', pad + name, done + '/' + total, 'written');
 
-  // Read deps from package.json and recurse
-  try {
-    var pj = await fetch("https://cdn.jsdelivr.net/npm/" + name + "@" + ver + "/package.json");
-    if (pj.ok) {
-      var deps = (await pj.json()).dependencies || {};
-      var next = Object.keys(deps);
-      if (next.length) console.log('[pkg]', pad + name, 'deps:', next.join(', '));
-      for (var k = 0; k < next.length; k++) {
-        await pkg.one(next[k], 'latest', emu, (depth || 0) + 1, base);
-      }
-    }
-  } catch(e) { console.log('[pkg] deps error:', e.message); }
+  // Recurse into deps
+  var deps = Object.keys(meta.dependencies || {});
+  for (var k = 0; k < deps.length; k++) {
+    await pkg.one(deps[k], 'latest', emu, (depth || 0) + 1, base);
+  }
 };
 
 pkg.npm = async function(names, emu) {
   pkg.got = {};
   var base = '/root';
-  console.log('[pkg] npm install', names.join(' '), 'in', base);
+  var t = Date.now();
   say("npm install " + names.join(' ') + "\n");
+
   for (var i = 0; i < names.length; i++) {
     var raw = names[i].replace(/^--.*/, '');
     if (!raw) continue;
@@ -417,15 +415,13 @@ pkg.npm = async function(names, emu) {
     var ver = at > 0 ? raw.slice(at + 1) : 'latest';
     try {
       await pkg.one(name, ver, emu, 0, base);
-      say(name + " done\n");
     } catch(e) {
-      console.log('[pkg] ERR', e.message);
       say("ERR " + e.message + "\n");
     }
   }
   var count = Object.keys(pkg.got).length;
-  console.log('[pkg] total:', count, 'packages installed');
-  say("installed " + count + " packages\n");
+  var sec = ((Date.now() - t) / 1000).toFixed(1);
+  say("added " + count + " packages in " + sec + "s\n");
   emu.serial0_send("echo done\n");
 };
 
