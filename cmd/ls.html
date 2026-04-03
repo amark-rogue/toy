@@ -249,7 +249,7 @@ CMD.ls = function(s,v,f,cmd){
         };
         
         btnRm.onclick = function() {
-            kit.say((kind === 'folder' ? 'rm -r ' : 'rm ') + q, 'prompt');
+            kit.say((kind === 'folder' ? 'rm -rf ' : 'rm ') + q, 'prompt');
             actionDialog.close();
         };
 
