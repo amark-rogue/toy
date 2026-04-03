@@ -1,0 +1,178 @@
+<link rel="stylesheet" href="../gun/kit/web.css">
+<script src="../gun/kit/web.js"></script>
+
+<div class="box">
+  <div class="bar">
+    <span class="tag">codex</span>
+    <span id="hd" class="val"></span>
+  </div>
+  <div id="bod" class="bod"></div>
+</div>
+
+<!-- templates -->
+<div class="model">
+  <pre class="tpl txt blk"></pre>
+  <div class="tpl thk"><p class="tog">&#9654; thinking</p><pre class="inn blk"></pre></div>
+  <div class="tpl tol"><p class="top"></p><pre class="tou blk"></pre></div>
+  <pre class="tpl fail blk"></pre>
+</div>
+
+<style>
+body { display: block; min-height: 0; overflow: hidden; }
+.bod { padding: 0.6em; display: block; }
+.bod > * { display: block; margin-bottom: 0.6em; }
+.blk { white-space: pre-wrap; word-break: break-word; margin: 0; font-family: 'Courier New', monospace; font-size: 0.85em; text-align: left; }
+.thk { border-left: 2px solid var(--pop); padding-left: 0.6em; opacity: 0.55; display: block; }
+.thk .inn { display: none; }
+.thk.open .inn { display: block; }
+.tog { font-size: 0.8em; opacity: 0.7; cursor: pointer; margin: 0; user-select: none; display: block; }
+.tol { border: 1px solid var(--pop); border-radius: 0.4em; overflow: hidden; display: block; }
+.top { padding: 0.3em 0.6em; font-size: 0.8em; opacity: 0.7; cursor: pointer; margin: 0; display: block; }
+.tou { padding: 0.5em 0.6em; display: none; opacity: 0.8; font-size: 0.9em; }
+.tol.open .tou { display: block; }
+.fail { color: var(--err); }
+.usr { opacity: 0.6; border-bottom: 1px solid var(--pop); padding-bottom: 0.3em; margin-bottom: 0.3em; display: block; }
+</style>
+
+<script src="../util.js"></script>
+<script>;(function(){
+
+var hd  = B.all('#hd')[0];
+var bod = B.all('#bod')[0];
+
+var CDX = {};
+CDX.tid = null;
+CDX.on  = 0;
+CDX.textEl = null;
+CDX.thinkEl = null;
+
+CDX.send = function(txt){
+  if(CDX.on){ return }
+  CDX.on = 1;
+  CDX.textEl = null; CDX.thinkEl = null;
+  var msg = {type: 'codex', prompt: txt};
+  if(CDX.tid){ msg.thread = CDX.tid }
+  if(CDX.cwd){ msg.cwd = CDX.cwd }
+  kit.up(msg, 'host');
+};
+
+CDX.got = function(m){
+  if(m.type === 'codex-event'){ CDX.evt(m.data); return }
+  if(m.type === 'codex-done'){
+    CDX.on = 0;
+    if(m.threadId){ CDX.tid = m.threadId }
+    kit.up(CDX.tid, 'codex-session');
+    kit.say({}, 'style');
+  }
+};
+
+CDX.evt = function(ev){
+  var t = ev.type || '';
+  var p = ev.params || {};
+
+  if(t === 'thread-init'){ CDX.tid = ev.threadId; return }
+
+  if(t === 'item/agentMessage/delta'){
+    if(!CDX.textEl){
+      CDX.textEl = B.all('.tpl.txt')[0].cloneNode(true);
+      CDX.textEl.classList.remove('tpl'); CDX.textEl.textContent = '';
+      CDX.textEl._buf = '';
+      bod.append(CDX.textEl);
+    }
+    CDX.textEl._buf += (p.delta || '');
+    CDX.textEl.textContent = CDX.textEl._buf;
+    kit.say({}, 'style');
+    return;
+  }
+
+  if(t === 'item/reasoning/textDelta' || t === 'codex/event/reasoning_content_delta'){
+    if(!CDX.thinkEl){
+      CDX.thinkEl = B.all('.tpl.thk')[0].cloneNode(true);
+      CDX.thinkEl.classList.remove('tpl');
+      CDX.thinkEl.querySelector('.tog').onclick = function(){ CDX.thinkEl.classList.toggle('open') };
+      CDX.thinkEl._buf = '';
+      bod.append(CDX.thinkEl);
+    }
+    CDX.thinkEl._buf += (p.delta || p.text || '');
+    CDX.thinkEl.querySelector('.inn').textContent = CDX.thinkEl._buf;
+    kit.say({}, 'style');
+    return;
+  }
+
+  if(t === 'item/started'){
+    var item = p.item || {};
+    if(item.type === 'commandExecution' || item.type === 'fileChange'){
+      var name = item.type === 'commandExecution' ? (item.command || 'exec') : (item.path || 'file');
+      CDX.toolEl = CDX.mkTool(name);
+      CDX.toolEl._buf = '';
+    }
+    if(item.type === 'agentMessage'){ CDX.textEl = null }
+    return;
+  }
+
+  if(t === 'item/commandExecution/outputDelta' || t === 'item/fileChange/outputDelta'){
+    if(!CDX.toolEl){ CDX.toolEl = CDX.mkTool('exec'); CDX.toolEl._buf = '' }
+    CDX.toolEl._buf += (p.delta || '');
+    CDX.toolEl.querySelector('.tou').textContent = CDX.toolEl._buf;
+    kit.say({}, 'style');
+    return;
+  }
+
+  if(t === 'item/completed'){
+    CDX.textEl = null; CDX.thinkEl = null; CDX.toolEl = null;
+    return;
+  }
+  if(t === 'error'){ CDX.fail(p.message || p.text || JSON.stringify(p)); return }
+};
+
+CDX.toolEl = null;
+
+CDX.mkTool = function(name){
+  var v = B.all('.tpl.tol')[0].cloneNode(true);
+  v.classList.remove('tpl');
+  v.classList.add('open');
+  var top = v.querySelector('.top');
+  top.textContent = name + ' \u25BC';
+  top.onclick = function(){
+    v.classList.toggle('open');
+    top.textContent = name + (v.classList.contains('open') ? ' \u25BC' : ' \u25B6');
+  };
+  bod.append(v);
+  kit.say({}, 'style');
+  return v;
+};
+
+CDX.fail = function(t){
+  var v = B.all('.tpl.fail')[0].cloneNode(true);
+  v.classList.remove('tpl'); v.textContent = t;
+  bod.append(v); kit.say({}, 'style');
+};
+
+// receive prompt from chat.html
+kit.ear('codex', function(eve){
+  var d = eve.detail || eve.data || {};
+
+  // response from server routed by chat.html
+  if(d.type && d.type.indexOf('codex') === 0){ CDX.got(d); return }
+
+  // prompt from chat.html
+  var raw = typeof d === 'string' ? d : (d.prompt || '');
+  var tid = typeof d === 'object' ? (d.thread || null) : null;
+  var cwd = typeof d === 'object' ? (d.cwd || '') : '';
+  var txt = raw.replace(/^codex\s*/i, '').trim();
+  if(!txt){ return }
+  if(cwd){ CDX.cwd = cwd }
+
+  if(CDX.tid){
+    var u = B.new('pre');
+    u.className = 'usr blk';
+    u.textContent = '> ' + txt;
+    bod.append(u);
+  }
+
+  hd.textContent = txt;
+  if(tid){ CDX.tid = tid }
+  CDX.send(txt);
+});
+
+}());</script>

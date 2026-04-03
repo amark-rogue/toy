@@ -1,67 +1,42 @@
 <link rel="stylesheet" href="../gun/kit/web.css"><script src="../gun/kit/web.js"></script>
-<div id="container" class="cat-box">
-  <div class="header">
-    <span class="dot red"></span>
-    <span class="dot yellow"></span>
-    <span class="dot green"></span>
-    <span id="filename" class="title">FILE VIEWER</span>
-  </div>
-  <pre id="content" class="file-content"></pre>
-</div>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/base16/monokai.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
 <style>
-.cat-box {
-  background: rgba(10, 10, 15, 0.95);
-  border: 2px solid #00ffea;
-  border-radius: 12px;
-  margin: 1em 0;
-  box-shadow: 0 0 20px rgba(0, 255, 234, 0.2);
-  display: flex; flex-direction: column;
-  overflow: hidden;
-}
-.header {
-  background: rgba(0, 255, 234, 0.1);
-  border-bottom: 2px solid #00ffea;
-  padding: 0.8em;
-  display: flex; align-items: center;
-}
-.dot { width: 15px; height: 15px; border-radius: 50%; margin-right: 8px; }
-.red { background: #ff4757; }
-.yellow { background: #ffa502; }
-.green { background: #2ed573; }
-.title { margin-left: auto; margin-right: auto; font-family: monospace; font-weight: bold; color: #00ffea; text-shadow: 0 0 5px #00ffea; letter-spacing: 2px; }
-.file-content {
-  margin: 0; padding: 1.5em;
-  font-family: 'Courier New', Courier, monospace;
-  font-size: 1.1em;
-  color: #e0e0e0;
-  overflow-x: auto;
-  max-height: 60vh;
-  overflow-y: auto;
-  white-space: pre-wrap;
-  word-wrap: break-word;
-  scrollbar-width: thin;
-  scrollbar-color: #00ffea transparent;
-}
-.file-content::-webkit-scrollbar { width: 8px; height: 8px; }
-.file-content::-webkit-scrollbar-thumb { background: #00ffea; border-radius: 4px; }
+body { display: block; min-height: 0; overflow: hidden; }
+pre { margin: 0; white-space: pre-wrap; word-break: break-all; font-family: 'Courier New', monospace; line-height: 2.2em; counter-reset: line; }
+code { outline: none; display: block; }
+body, div, code, pre, span { display: unset; }
+.hljs { background: transparent !important; }
+.line { display: block !important; counter-increment: line; position: relative; }
+.line::before { content: counter(line); vertical-align: middle; left: -0.1em; padding-right: 0.2em; color: var(--pop); user-select: none; font-size: 0.5em; opacity: 0.8; }
 </style>
+<pre><code id="content" contenteditable="true"></code></pre>
 <script src="../util.js"></script>
 <script>
-console.off = 1;
 kit.ear('cat', function hear(eve) {
   var s = eve.detail || eve.data || "";
   var raw = s.flat();
   var lines = raw.split('\n');
-  var cmdLine = lines[0].trim();
-  
-  var fnameMatch = cmdLine.match(/^cat\s+(.+)/);
-  if (fnameMatch) filename.innerText = fnameMatch[1].toUpperCase();
-  
+  var cmdLine = (lines[0] || "").trim();
   var text = lines.slice(1).join('\n');
-  // Trim trailing prompts if they leaked
-  text = text.replace(/[\r\n]+.*(?:\$|#|>)\s*$/, '');
-  
-  content.textContent = text;
+  text = text.replace(/[\r\n]+.*(?:\$|#|>|PS>)\s*$/, '').trim();
+  var codeEl = document.getElementById('content');
+  var langMap = {
+    js:'javascript', json:'json', html:'xml', css:'css',
+    md:'markdown', py:'python', sh:'bash', yaml:'yaml', yml:'yaml'
+  };
+  var lang = null;
+  var m = cmdLine.match(/cat\s+(.+)/);
+  if(m) { lang = langMap[m[1].replace(/["']/g,'').split('.').pop().toLowerCase()]; }
+  var highlighted;
+  try {
+    highlighted = lang ? hljs.highlight(text, {language: lang}).value : hljs.highlightAuto(text).value;
+  } catch(e) {
+    highlighted = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+  codeEl.innerHTML = highlighted.split('\n').map(function(l) {
+    return '<span class="line">' + (l || ' ') + '</span>';
+  }).join('');
   hear.off();
 });
 </script>

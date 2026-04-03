@@ -16,6 +16,47 @@ String.prototype.flat = function(){
   return this.replace(/\x1B(?:\[[0-?]*[ -/]*[@-~]|\][^\x07]+\x07)/g, '');
 }
 
+String.prototype.ansi = function() {
+  var colors = {
+    30: 'black', 31: 'red', 32: 'green', 33: 'yellow', 34: 'blue', 35: 'magenta', 36: 'cyan', 37: 'white',
+    90: 'gray', 91: '#f55', 92: '#5f5', 93: '#ff5', 94: '#55f', 95: '#f5f', 96: '#5ff', 97: 'white'
+  }, stack = [];
+  return this.replace(/\x1B\[([0-9;]*)m/g, function(m, p1) {
+    var out = '';
+    p1.split(';').forEach(function(c) {
+      c = parseInt(c) || 0;
+      if (c === 0) {
+        while (stack.length) { out += '</span>'; stack.pop(); }
+      } else if (colors[c]) {
+        out += '<span style="color:' + colors[c] + '">'; stack.push('</span>');
+      } else if (c === 1) {
+        out += '<span style="font-weight:bold">'; stack.push('</span>');
+      }
+    });
+    return out;
+  }) + (stack.join('') || '');
+};
+
+String.prototype.unansi = function() {
+  var colors = {
+    'black': 30, 'red': 31, 'green': 32, 'yellow': 33, 'blue': 34, 'magenta': 35, 'cyan': 36, 'white': 37,
+    'gray': 90, '#f55': 91, '#5f5': 92, '#ff5': 93, '#55f': 94, '#f5f': 95, '#5ff': 96
+  };
+  var html = this;
+  var res = html.replace(/<span style="(.*?)">/g, function(m, p1) {
+    var code = '';
+    if (p1.indexOf('color:') !== -1) {
+      var col = p1.match(/color:\s*([^;"'\s]+)/)[1];
+      if (colors[col]) code += colors[col];
+    }
+    if (p1.indexOf('font-weight:bold') !== -1) {
+      code += (code ? ';' : '') + '1';
+    }
+    return code ? '\x1B[' + code + 'm' : '';
+  });
+  return res.replace(/<\/span>/g, '\x1B[0m');
+};
+
 ESC = {"'":'','"':'','#':'\n'};
 var D = document, B = D.body;
 

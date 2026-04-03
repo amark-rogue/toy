@@ -8,6 +8,7 @@
   --time: 0.3s;
   --oval: 2em;
   --pop: #BF00FF;
+  --err: #ff4757;
 }
 html, body /*, main, .page*/ {
 	margin: 0;
@@ -15,6 +16,7 @@ html, body /*, main, .page*/ {
   gap: 0.5em;
   line-height: 1.5;
   min-height: 100vh;
+  min-height: 100dvh;
   color: black;
   color: var(--pop);
 	position: relative;
@@ -36,11 +38,12 @@ html, body /*, main, .page*/ {
 } /*.page { dis-play:none } .page:target { display:grid; }*/
 main, .page {
   position: absolute; inset: 0;
-  width: 100%; min-height: 100vh;
+  width: 100%; min-height: 100vh; min-height: 100dvh;
 }
 frame, iframe, body, html {
   overflow-x: hidden;
- } 
+ }
+*, *::before, *::after { box-sizing: border-box; }
 div, ul, ol, li, p, span, form, button, input, textarea, img, dialog[open], frame, iframe {
   border: 0;
   margin: 0;
@@ -58,10 +61,12 @@ div, ul, ol, li, p, span, form, button, input, textarea, img, dialog[open], fram
   box-sizing: border-box;
   max-width: 100%;
   font: inherit;
+}
+
+.ani {
   animation: stage linear both;
   animation-timeline: view();
 }
-  
 @keyframes stage {
   entry 0%  {
     opacity: 0; transform: scale(0.9);
@@ -76,7 +81,12 @@ div, ul, ol, li, p, span, form, button, input, textarea, img, dialog[open], fram
     opacity: 0; transform: scale(0.9);
   }
 }
-
+button {
+  user-select: none;
+  -webkit-user-select: none; /* For Safari */
+  -moz-user-select: none;    /* For Firefox */
+  -ms-user-select: none;     /* For IE/Edge */
+} 
 dialog {
   
   background: transparent;
@@ -119,7 +129,7 @@ p + p {
 }
 ::placeholder, .hint {
   color: inherit;
-  opacity: 0.3;
+  opacity: 0.5;
 }
 
 .model, .none { display: none }
@@ -132,6 +142,7 @@ p + p {
 .full {
   width: 100%;
   min-height: 100vh;
+  min-height: 100dvh;
 }
 .max {
   max-width: 48em;
@@ -265,3 +276,4 @@ p + p {
   50% {opacity: 0.5;}
   100% {opacity: 1;}
 }
+

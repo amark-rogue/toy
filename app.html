@@ -18,6 +18,7 @@
     <button onclick="vmDialog.close('yes')" style="background: var(--pop, lime); color: var(--mood, #000); border: none; padding: 0.5em 1em; border-radius: 0.5em; cursor: pointer; font-weight: bold;">Yes</button>
   </div>
 </dialog>
+<div id="vmBoot" style="display:none; position:fixed; bottom:4em; left:1em; right:1em; z-index:999; font-family:monospace; color:var(--pop, lime); font-size:0.8em; opacity:0.7; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></div>
 <style>
 :root { --fill: var(--mood); }
 body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; back-ground-image: url('https://picsum.photos/1200/900'); }
@@ -55,7 +56,6 @@ cop.sign = async ()=>{ if(cop.ws){ return }
   };
 
   cop.ws.onclose = (eve) => { cop.ws=0;
-    //chat.style.display = 'grid';
     console.log('ws close:', eve.code, 'Reason:', eve.reason);
     if(!opened) {
       vmDialog.showModal();
@@ -64,47 +64,94 @@ cop.sign = async ()=>{ if(cop.ws){ return }
           bootVM();
         }
       };
+    } else {
+      cop.wait = cop.wait || 1000;
+      kit.say('Reconnecting...\n', 'chat');
+      setTimeout(() => {
+        cop.wait = Math.min(cop.wait * 2, 30000);
+        cop.sign();
+      }, cop.wait);
     }
   };
+  cop.ws.onopen = ((fn) => () => { cop.wait = 1000; fn(); })(cop.ws.onopen);
 }
 
 function bootVM() {
+  var VER = 's1', CDN = "https://cdn.jsdelivr.net/gh/abenezermario/v86-alpine@main";
+
+  var db = {};
+  db.save = (buf, cb) => {
+    var r = indexedDB.open('cop', 1);
+    r.onupgradeneeded = (e) => { e.target.result.createObjectStore('vm'); };
+    r.onsuccess = (e) => {
+      var tx = e.target.result.transaction('vm', 'readwrite');
+      tx.objectStore('vm').put(buf, VER);
+      tx.oncomplete = () => { cb && cb(); };
+    };
+    r.onerror = () => { cb && cb(); };
+  };
+  db.load = (cb) => {
+    var r = indexedDB.open('cop', 1);
+    r.onupgradeneeded = (e) => { e.target.result.createObjectStore('vm'); };
+    r.onsuccess = (e) => {
+      var tx = e.target.result.transaction('vm', 'readonly');
+      var req = tx.objectStore('vm').get(VER);
+      req.onsuccess = () => { cb(req.result || null); };
+      req.onerror = () => { cb(null); };
+    };
+    r.onerror = () => { cb(null); };
+  };
+
+  vmBoot.style.display = 'block';
+  vmBoot.textContent = 'Loading VM...';
+
   var s = document.createElement('script');
-  s.src = "https://cdn.jsdelivr.net/gh/aethiop/v86@master/build/libv86.js";
-  s.integrity = "sha384-N7pi8KdWeRRzvfrReDLK0zblsYHqhgWX2RHIQ/qFkZtZKCZsU6rZzUMEvDgQC9/R";
-  s.crossOrigin = "anonymous";
-  s.onload = function() {
-    kit.say("Initializing VM...\n", 'chat');
-    var autoBootCommands = [
-        "printf '\\n[vm] browser linux ready\\n'"
-    ];
-    
-    var emulator = window.emulator = new V86({
-        wasm_path: "https://cdn.jsdelivr.net/gh/aethiop/v86@master/build/v86.wasm",
+  s.src = CDN + "/build/libv86.js";
+  s.onload = () => {
+    db.load((state) => {
+      vmBoot.textContent = state ? 'Restoring VM...' : 'Downloading VM...';
+
+      var cfg = {
+        wasm_path: CDN + "/build/v86.wasm",
         memory_size: 256 * 1024 * 1024,
         vga_memory_size: 8 * 1024 * 1024,
-        bios: { url: "https://cdn.jsdelivr.net/gh/aethiop/v86@master/bios/seabios.bin" },
-        vga_bios: { url: "https://cdn.jsdelivr.net/gh/aethiop/v86@master/bios/vgabios.bin" },
+        bios: { url: CDN + "/bios/seabios.bin" },
+        vga_bios: { url: CDN + "/bios/vgabios.bin" },
         filesystem: {
-            baseurl: "https://cdn.jsdelivr.net/gh/aethiop/v86@master/images/alpine-rootfs-flat",
-            basefs: "https://cdn.jsdelivr.net/gh/aethiop/v86@master/images/alpine-fs.json",
+            baseurl: CDN + "/images/alpine-rootfs-flat",
+            basefs: CDN + "/images/alpine-fs.json",
         },
         bzimage_initrd_from_filesystem: true,
         cmdline: "rw root=host9p rootfstype=9p rootflags=trans=virtio,cache=loose modules=virtio_pci tsc=reliable mitigations=off random.trust_cpu=on console=ttyS0",
-        // Route guest HTTP(S) through the browser fetch backend.
-        // This is limited by CORS and only helps HTTP-based git remotes.
-        net_device: {
-            type: "virtio",
-            relay_url: "fetch",
-        },
+        net_device: { type: "virtio", relay_url: "fetch" },
         autostart: true,
         disable_keyboard: true,
         disable_mouse: true,
-    });
-    
-    var emulatorReady = false;
-    var commandQueue = [];
-    
+      };
+      if (state) { cfg.initial_state = { buffer: state }; }
+
+      var emulator = window.emulator = new V86(cfg);
+      var emulatorReady = false;
+      var commandQueue = [];
+      var boot = state ? 3 : 0;
+
+      // Snapshot restore — set ready, wait for chat.html iframe to register
+      if (state) {
+        emulator.add_listener("emulator-ready", () => {
+          vmBoot.textContent = '';
+          vmBoot.style.display = 'none';
+          emulatorReady = true;
+          var flush = () => {
+            if (kit.views && kit.views.size > 0) {
+              while(commandQueue.length > 0) {
+                emulator.serial0_send(commandQueue.shift());
+              }
+            } else { requestAnimationFrame(flush); }
+          };
+          flush();
+        });
+      }
+
     cop.ws = {
         send: function(cmd) {
             console.log("Sending to VM:", JSON.stringify(cmd));
@@ -112,13 +159,14 @@ function bootVM() {
             if (cmd && !cmd.endsWith('\n') && !cmd.endsWith('\r')) {
                cmd += '\n';
             }
-            // Intercept git clone — route through browser fetch (CORS)
+            // Intercept commands that need network — route through browser fetch
             var trimmed = (cmd || '').replace(/[\r\n]+$/, '').trim();
             var m = trimmed.match(/^git\s+clone\s+(?:-b\s+(\S+)\s+)?(?:https?:\/\/)?github\.com\/([^\/\s]+)\/([^\s]+?)(?:\s+(\S+))?\s*$/);
             if (m && emulatorReady) {
                 browserGitClone(m[2], m[3].replace(/\.git$/, ''), m[1] || '', m[4] || '');
                 return;
             }
+            if (emulatorReady && pkg.run(trimmed, emulator)) return;
             if (!emulatorReady) {
                commandQueue.push(cmd);
             } else {
@@ -132,52 +180,70 @@ function bootVM() {
     }
     
     var buf = "";
-    emulator.add_listener("serial0-output-byte", function(byte) {
-        var char = String.fromCharCode(byte);
-        buf += char;
+    emulator.add_listener("serial0-output-byte", (byte) => {
+        var c = String.fromCharCode(byte);
+        buf += c;
+
+        if (boot < 3) {
+            // Show live boot logs in vmBoot div (outside chat — no parser impact)
+            var lines = buf.replace(/\x1b\[[^m]*m/g, '').split('\n');
+            var last = lines[lines.length - 1] || lines[lines.length - 2] || '';
+            if (last.trim()) vmBoot.textContent = last.trim().slice(0, 80);
+        }
+        if (boot === 0 && buf.includes("login:")) {
+            boot = 1;
+            emulator.serial0_send("root\n");
+            buf = "";
+            return;
+        }
+        if (boot === 1 && buf.includes("~#")) {
+            boot = 2;
+            emulator.serial0_send("export PS1='$ '\n");
+            buf = "";
+            return;
+        }
+        if (boot === 2 && /\n\$ /.test(buf)) {
+            vmBoot.textContent = '';
+            vmBoot.style.display = 'none';
+            boot = 3;
+            buf = "";
+            emulatorReady = true;
+            emulator.save_state().then((s) => { db.save(s); console.log('[snap] saved', s.byteLength, 'bytes'); });
+            while(commandQueue.length > 0) {
+                emulator.serial0_send(commandQueue.shift());
+            }
+            return;
+        }
+
         if (window.serialTimeout) clearTimeout(window.serialTimeout);
         window.serialTimeout = setTimeout(function() {
-            console.log("VM output:", JSON.stringify(buf));
-            kit.say(buf, 'chat');
+            if (emulatorReady) {
+                // Strip terminal queries (DSR cursor-position) — meaningless for chat
+                var out = buf.replace(/\x1b\[6n/g, '');
+                if (out) {
+                    console.log("VM output:", JSON.stringify(out));
+                    kit.say(out, 'chat');
+                }
+            }
             buf = "";
-        }, 50); // slight debounce buffer
+        }, 50);
     });
 
-    var progressEls = {};
-    emulator.add_listener("download-progress", function(e) {
-        // Only log once per file to avoid spamming the chat
-        if (!progressEls[e.file_name] && e.file_name) {
-            progressEls[e.file_name] = true;
-            kit.say("Downloading " + e.file_name + "...\n", 'chat');
-        }
+    // Visual boot progress (vmBoot div — outside chat, no parser impact)
+    var dl = {};
+    emulator.add_listener("download-progress", (e) => {
+      if (!e.file_name || dl[e.file_name]) return;
+      dl[e.file_name] = 1;
+      var short = e.file_name.split('/').pop();
+      vmBoot.textContent = 'Loading ' + short;
     });
-
-    emulator.add_listener("download-error", function(e) {
-        kit.say("Download error: " + (e.message || JSON.stringify(e) || e) + "\n", 'chat');
-    });
-
-    emulator.add_listener("emulator-ready", function() {
-        kit.say("Emulator ready! Booting OS...\n", 'chat');
-    });
-
-    emulator.add_listener("emulator-started", function() {
-        kit.say("Emulator started.\n", 'chat');
-        // Wait for Alpine to reach a serial login prompt.
-        setTimeout(function() {
-           emulator.serial0_send("\nroot\n");
-           setTimeout(function() {
-               emulatorReady = true;
-               autoBootCommands.forEach(function(cmd) {
-                   emulator.serial0_send(cmd + "\n");
-               });
-               while(commandQueue.length > 0) {
-                   emulator.serial0_send(commandQueue.shift());
-               }
-           }, 2500);
-        }, 8000);
+    emulator.add_listener("download-error", (e) => {
+      vmBoot.textContent = 'Error: ' + (e.file_name || e.message || e);
+      console.error("Download error:", e);
     });
 
     location.path = 'chat.html';
+    }); // db.load
   };
   document.head.appendChild(s);
 }
@@ -248,7 +314,7 @@ async function browserGitClone(owner, repo, branch, dest) {
                 await emu.create_file(dest + '/' + f.path, data);
                 done++;
                 if (done % 25 === 0 || done === total) {
-                    say("\rReceiving objects: " + Math.round(done / total * 100) + "% (" + done + "/" + total + ")");
+                    say("\nReceiving objects: " + Math.round(done / total * 100) + "% (" + done + "/" + total + ")");
                 }
             }));
         }
@@ -263,6 +329,113 @@ async function browserGitClone(owner, repo, branch, dest) {
         emu.serial0_send("\n");
     }
 }
+
+// --- Browser-side package install via CORS-friendly CDN ---
+
+;(function(){
+var say = (msg) => { kit.say(msg, 'chat'); };
+
+var pkg = window.pkg = {};
+
+pkg.run = function(cmd, emu) {
+  var m;
+  if (m = cmd.match(/^npm\s+install\s+(.+)/)) { pkg.npm(m[1].trim().split(/\s+/), emu); return 1; }
+  if (m = cmd.match(/^apk\s+add\s+(.+)/)) { pkg.apk(m[1].trim().split(/\s+/), emu); return 1; }
+};
+
+// npm install — resolve via registry (CORS *), download files via jsdelivr
+pkg.got = {};
+
+pkg.one = async function(name, ver, emu, depth, base) {
+  if (pkg.got[name]) return;
+  pkg.got[name] = 1;
+
+  var pad = '  '.repeat(depth || 0);
+
+  // Resolve version via npm registry (supports 'latest' properly)
+  try {
+    var res = await fetch("https://registry.npmjs.org/" + name + "/latest");
+    if (!res.ok) res = await fetch("https://registry.npmjs.org/" + name);
+    if (!res.ok) { console.log('[pkg]', pad + 'skip', name); return; }
+    var meta = await res.json();
+    ver = meta.version || (meta['dist-tags'] || {}).latest;
+    if (!ver) { console.log('[pkg]', pad + 'skip', name, 'no ver'); return; }
+  } catch(e) { console.log('[pkg]', pad + 'err', name, e.message); return; }
+
+  console.log('[pkg]', pad + name + '@' + ver);
+  say(pad + "+ " + name + "@" + ver + "\n");
+
+  // Get file tree from jsdelivr (CORS *)
+  var tree = await fetch("https://data.jsdelivr.com/v1/packages/npm/" + name + "@" + ver);
+  if (!tree.ok) { console.log('[pkg]', pad + 'tree fail', name); return; }
+  var files = [];
+  var flat = (arr, pre) => {
+    (arr || []).forEach((f) => {
+      var p = pre + '/' + f.name;
+      if (f.type === 'directory') flat(f.files, p);
+      else files.push(p);
+    });
+  };
+  flat((await tree.json()).files, '');
+
+  var dest = base + '/node_modules/' + name;
+  ensureDir(emu, dest);
+
+  // Download files in batches of 12
+  for (var j = 0; j < files.length; j += 12) {
+    var batch = files.slice(j, j + 12);
+    await Promise.all(batch.map(async (f) => {
+      try {
+        var r = await fetch("https://cdn.jsdelivr.net/npm/" + name + "@" + ver + f);
+        if (!r.ok) return;
+        var data = new Uint8Array(await r.arrayBuffer());
+        var full = dest + f;
+        ensureDir(emu, full.slice(0, full.lastIndexOf('/')));
+        await emu.create_file(full, data);
+      } catch(e) {}
+    }));
+  }
+
+  // Recurse into deps
+  var deps = Object.keys(meta.dependencies || {});
+  for (var k = 0; k < deps.length; k++) {
+    await pkg.one(deps[k], 'latest', emu, (depth || 0) + 1, base);
+  }
+};
+
+pkg.npm = async function(names, emu) {
+  pkg.got = {};
+  var base = '/root';
+  var t = Date.now();
+  say("npm install " + names.join(' ') + "\n");
+
+  for (var i = 0; i < names.length; i++) {
+    var raw = names[i].replace(/^--.*/, '');
+    if (!raw) continue;
+    var at = raw.lastIndexOf('@');
+    var name = at > 0 ? raw.slice(0, at) : raw;
+    var ver = at > 0 ? raw.slice(at + 1) : 'latest';
+    try {
+      await pkg.one(name, ver, emu, 0, base);
+    } catch(e) {
+      say("ERR " + e.message + "\n");
+    }
+  }
+  var count = Object.keys(pkg.got).length;
+  var sec = ((Date.now() - t) / 1000).toFixed(1);
+  say("added " + count + " packages in " + sec + "s\n");
+  emu.serial0_send("echo done\n");
+};
+
+// apk add — needs a CORS mirror (future: abenezermario/apk repo)
+pkg.apk = async function(names, emu) {
+  say("apk add " + names.join(' ') + "\n");
+  say("note: runtime apk is not yet wired to a CORS mirror\n");
+  say("to add packages, edit cop-vm/Dockerfile and rebuild\n");
+  emu.serial0_send("\n");
+};
+
+}());
 
 (pass.value = localStorage.pass||'') && cop.sign();
 
