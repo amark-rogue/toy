@@ -373,7 +373,7 @@ pkg.one = async function(name, ver, emu, depth, base) {
     (arr || []).forEach((f) => {
       var p = pre + '/' + f.name;
       if (f.type === 'directory') flat(f.files, p);
-      else if (/\.(js|json|md)$/.test(f.name)) files.push(p);
+      else files.push(p);
     });
   };
   flat((await tree.json()).files, '');
