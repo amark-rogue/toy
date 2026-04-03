@@ -29,11 +29,19 @@ body, html {
 body {
   background: var(--fill);
   display: block;
-  mask-image: linear-gradient(
-    to bottom,
-    transparent 0%,
-    #000 7em
-  );
+
+body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 7em;
+  background: var(--fill);
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 0%, transparent 100%);
+  z-index: 99;
+  pointer-events: none;
 }
 #shell {
   width: 100%;
@@ -194,8 +202,17 @@ form {
   flex-direction: column;
   gap: 0.15em;
   padding: 0.2em 0.8em 0.45em;
-  background: linear-gradient(to top, rgba(0,0,0,0.96), rgba(0,0,0,0.76) 52%, rgba(0,0,0,0));
+}
+form::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--fill);
+  -webkit-mask-image: linear-gradient(to top, #000 52%, transparent);
+  mask-image: linear-gradient(to top, #000 52%, transparent);
   backdrop-filter: blur(12px);
+  pointer-events: none;
 }
 
 .inp {
@@ -713,7 +730,7 @@ CMD.bash = function(S, cmdl, cmd, tmp){
 }
 }());
 kit.ear('clear',eve=>{console.log('???clear???');shell.innerHTML = ""; });
-console.log("WAT");
+//console.log("WAT");
 
 //kit.say('clear', 'prompt');
 kit.say('whoami', 'prompt');
