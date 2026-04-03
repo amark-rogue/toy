@@ -276,7 +276,6 @@ var scrollBtn = B.all('#scroll')[0];
 var belt = B.all('.kit .tin')[0];
 // --- agent mode (claude / codex) ---
 var agent = {mode:'', iframe:null, sid:null, kind:''};
-var shellCwd = localStorage.cwd || '';
 
 var agentEnter = function(iframe, kind){
   agent.iframe = iframe;
@@ -308,7 +307,7 @@ var card = function(val, kind){
   kit.ear('load', function(eve){
     if(eve.detail === undefined) return;
     if(eve.target !== i) return;
-    var msg = {prompt:val, cwd:shellCwd};
+    var msg = {prompt:val, cwd:(localStorage.cwd || '')};
     if(kind === 'claude') msg.session = agent.sid;
     if(kind === 'codex') msg.thread = agent.sid;
     kit.say(msg, kind, i);
@@ -385,7 +384,7 @@ kit.ear('prompt',(eve)=>{
 
   // in agent mode, send follow-up
   if(agent.mode && agent.iframe && val){
-    var msg = {prompt:val, cwd:shellCwd};
+    var msg = {prompt:val, cwd:(localStorage.cwd || '')};
     if(agent.kind === 'claude') msg.session = agent.sid;
     if(agent.kind === 'codex') msg.thread = agent.sid;
     kit.say(msg, agent.kind, agent.iframe);
@@ -661,16 +660,8 @@ CMD.bash = function(S, cmdl, cmd, tmp){
       // pwd output is the last non-empty line before prompt
       for(var li = lines.length-1; li >= 1; li--){
         var ln = lines[li].trim();
-        if(ln && ln.charAt(0) === '/'){ shellCwd = ln; break; }
+        if(ln && ln.charAt(0) === '/'){ localStorage.cwd = ln; break; }
       }
-    }
-    if(/^cd\b/.test(cmdLine)){
-      // after cd, look for a path in output or resolve relative to current
-      var cdArg = cmdLine.replace(/^cd\s+/,'').replace(/['"]/g,'').trim();
-      if(cdArg === '~' || cdArg === '') shellCwd = '';
-      else if(cdArg === '..') shellCwd = shellCwd.replace(/\/[^\/]*$/,'') || '/';
-      else if(cdArg.charAt(0) === '/') shellCwd = cdArg;
-      else if(shellCwd) shellCwd = shellCwd + '/' + cdArg;
     }
     (p = B.new('pre')).textContent = t;
     (v = B.new('div')).className = 'reply-card ready-upgrade';

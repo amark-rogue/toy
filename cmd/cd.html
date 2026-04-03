@@ -8,7 +8,27 @@ kit.ear('cd', function hear(eve) { hear.off();
   var out = lines.slice(1).join('\n').trim();
   
   var bad = out.toLowerCase().includes('no such file') || out.toLowerCase().includes('not a directory') || out.toLowerCase().includes('permission denied');
-  if(!bad){ return }
+  if(!bad){
+    var cmdLine = lines[0] || '';
+    var match = cmdLine.match(/cd\s+['"]?(.*?)['"]?\s*$/);
+    if(match){
+      var dir = match[1].trim();
+      var cwd = localStorage.cwd || '';
+      if(dir === '~' || dir === '') cwd = '';
+      else if(dir.charAt(0) === '/') cwd = dir;
+      else {
+        var parts = cwd.split('/').filter(Boolean);
+        var dirs = dir.split('/').filter(Boolean);
+        dirs.forEach(function(d){
+          if(d === '..') parts.pop();
+          else if(d !== '.') parts.push(d);
+        });
+        cwd = (cwd.startsWith('/') || dir.startsWith('/') ? '/' : '') + parts.join('/');
+      }
+      localStorage.cwd = cwd;
+    }
+    return;
+  }
   err.textContent = out;
 });
 </script>
