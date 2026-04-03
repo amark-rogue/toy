@@ -1,24 +1,14 @@
 <link rel="stylesheet" href="../gun/kit/web.css"><script src="../gun/kit/web.js"></script>
-<div id="box" class="box">
-  <div class="bar">
-    <span class="tag"></span>
-    <span id="path" class="val"></span>
-  </div>
-</div>
-<style>
-body { display: block; min-height: 0; overflow: hidden; }
-.err .tag { color: var(--err); opacity: 1; }
-.err .val { color: var(--err); }
-</style>
+<span id="err" style="color: var(--err);"></span>
 <script src="../util.js"></script>
 <script>
 kit.ear('cd', function hear(eve) { hear.off();
-  return; // no need to do anything!
-  var s = (eve.detail || eve.data || '').flat().trim().split('\n');
-  var text = s.slice(1).join('\n').trim() || s[0].replace(/^cd\s+/,'').trim() || '';
-  if(text.toLowerCase().includes('no such file') || text.toLowerCase().includes('not a directory')) {
-    box.tag('err', 1);
-  }
-  B.all('#path')[0].textContent = text;
+  var raw = (eve.detail || eve.data || '').flat();
+  var lines = raw.trim().split('\n');
+  var out = lines.slice(1).join('\n').trim();
+  
+  var bad = out.toLowerCase().includes('no such file') || out.toLowerCase().includes('not a directory') || out.toLowerCase().includes('permission denied');
+  if(!bad){ return }
+  err.textContent = out;
 });
 </script>

@@ -81,10 +81,9 @@ body { display: block; min-height: 0; overflow: hidden; }
 <script>
 
 
-kit.ear('ls',function hear(eve){
-
+kit.ear('ls',function hear(eve){ hear.off();
+  kit.up('', 'scroll');
   CMD.ls(eve.detail || eve.data, list);
-  hear.off();
 });
   
 // ls.html is always the first cmd loaded (auto-fired by chat.html),
@@ -142,7 +141,7 @@ CMD.ls = function(s,v,f,cmd){
     a.textContent = item + fold;
     v.append(a);
   });
-  
+
   CMD.ls.on = CMD.ls.on || (function(){ 
     var longPressTimer;
 
