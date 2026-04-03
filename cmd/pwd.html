@@ -13,8 +13,7 @@ body { display: block; min-height: 0; overflow: hidden; }
 </style>
 <script src="../util.js"></script>
 <script>
-console.off = 1;
-kit.ear('pwd', function hear(eve) {
+kit.ear('pwd', function hear(eve) { hear.off();
   var s = eve.detail || eve.data || "";
   var lines = s.flat().trim().split('\n');
   var path = lines[lines.length - 1].trim(); // Last line is the path output usually
@@ -42,6 +41,5 @@ kit.ear('pwd', function hear(eve) {
   } else {
     content.textContent = "UNKNOWN PATH";
   }
-  hear.off();
 });
 </script>

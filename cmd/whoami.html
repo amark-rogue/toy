@@ -5,18 +5,21 @@
     <span id="user" class="val"></span>
   </div>
 </div>
-<style>
-body { display: block; min-height: 0; overflow: hidden; }
-#box { cursor: pointer; }
-</style>
 <script src="../util.js"></script>
+<style>
+/* panels */
+.bar { display: flex; align-items: center; gap: 0.5em; padding: 0.4em 0.8em; border-bottom: 1px solid var(--pop); flex-shrink: 0; }
+.tag { font-size: 0.72em; letter-spacing: 2px; font-family: 'Courier New', monospace; font-weight: bold; opacity: 0.6; flex-shrink: 0; text-transform: uppercase; }
+.val { display: block; text-align: left; font-family: 'Courier New', monospace; font-weight: 900; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+.out { display: block; padding: 0.6em 0.8em; font-family: 'Courier New', monospace; font-size: 0.85em; white-space: pre-wrap; word-break: break-word; text-align: left; }
+/* input row */
+.sym { display: flex; align-items: end; font-family: 'Courier New', monospace; font-weight: 900; color: var(--pop); text-shadow: 0 0 6px var(--pop); user-select: none; flex-shrink: 0; }
+.inp { display: flex; align-items: flex-start; gap: 0.3em; width: 100%; }
+</style>
 <script>
-console.off = 1;
-kit.ear('whoami', function hear(eve) {
+kit.ear('whoami', function hear(eve) { hear.off();
   var s = (eve.detail || eve.data || '').flat().trim().split('\n');
   var u = s.slice(1).join('\n').trim() || s[0].replace(/^whoami\s*/,'').trim() || 'unknown';
   B.all('#user')[0].textContent = u;
-  box.onclick = function(){ kit.say('id', 'prompt.try') };
-  hear.off();
 });
 </script>

@@ -1,20 +1,10 @@
 <link rel="stylesheet" href="../gun/kit/web.css"><script src="../gun/kit/web.js"></script>
-<div class="box">
-  <div class="bar">
-    <span class="tag">echo</span>
-  </div>
-  <pre id="out" class="out"></pre>
-</div>
-<style>
-body { display: block; min-height: 0; overflow: hidden; }
-</style>
+<pre id="out" class="out"></pre>
 <script src="../util.js"></script>
 <script>
-console.off = 1;
-kit.ear('echo', function hear(eve) {
+kit.ear('echo', function hear(eve) { hear.off();
   var s = (eve.detail || eve.data || '').flat().trim().split('\n');
   var text = s.slice(1).join('\n').trim();
   B.all('#out')[0].textContent = text || s[0].replace(/^echo\s+/,'') || ' ';
-  hear.off();
 });
 </script>

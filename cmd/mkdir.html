@@ -12,8 +12,7 @@ body { display: block; min-height: 0; overflow: hidden; }
 </style>
 <script src="../util.js"></script>
 <script>
-console.off = 1;
-kit.ear('mkdir', function hear(eve) {
+kit.ear('mkdir', function hear(eve) { hear.off();
   var s = (eve.detail || eve.data || '').flat().trim().split('\n');
   var out = s.slice(1).join('\n').trim();
   var name = s[0].replace(/^mkdir\s+(?:-p\s+)?/,'').trim();
@@ -24,7 +23,5 @@ kit.ear('mkdir', function hear(eve) {
   } else {
     B.all('#fname')[0].textContent = name;
   }
-  box.onclick = function(){ kit.say('ls .','prompt') };
-  hear.off();
 });
 </script>

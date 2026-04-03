@@ -1,7 +1,7 @@
 <link rel="stylesheet" href="../gun/kit/web.css"><script src="../gun/kit/web.js"></script>
 <div id="box" class="box">
   <div class="bar">
-    <span id="lbl" class="tag">rm</span>
+    <span id="lbl" class="tag"></span>
     <span id="fname" class="val"></span>
   </div>
 </div>
@@ -12,8 +12,8 @@ body { display: block; min-height: 0; overflow: hidden; }
 </style>
 <script src="../util.js"></script>
 <script>
-console.off = 1;
-kit.ear('rm', function hear(eve) {
+kit.ear('rm', function hear(eve) { hear.off();
+  return; // no need to do anything!
   var s = (eve.detail || eve.data || '').flat().trim().split('\n');
   var out = s.slice(1).join('\n').trim();
   var name = s[0].replace(/^rm\s+(?:-[rRfi]+\s+)?/,'').trim();
@@ -22,7 +22,5 @@ kit.ear('rm', function hear(eve) {
     B.all('#lbl')[0].textContent = 'not found';
   }
   B.all('#fname')[0].textContent = name;
-  box.onclick = function(){ kit.say('ls .','prompt') };
-  hear.off();
 });
 </script>

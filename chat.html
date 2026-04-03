@@ -8,15 +8,15 @@
 <form onsubmit="kit.say('','prompt'); return false;">
     <div id="help"></div>
     <div class="inp">
-      <span class="sym">$</span>
-      <textarea id="prompt" name="cmd" placeholder="" autokomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" rows="1"></textarea>
+        <span></span> <!-- for some reason without this the caret won't show when empty focused -->
+      <textarea id="prompt" name="cmd" placeholder="$" autokomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" rows="1"></textarea>
     </div>
 </form>
 
 <button id="scroll">↓ scroll down</button>
 
 <style>
-:root { --fill: var(--mood); }
+:root { --fill: var(--mood); --font: 'Courier New', monospace; }
 ::selection {
   background: var(--pop);
   color: var(--fill);
@@ -70,7 +70,6 @@ body {
   word-break: break-word;
   margin: 0;
   padding: 0.5em 0.8em;
-  font-family: 'Courier New', monospace;
   font-size: 0.85em;
   text-align: left;
   opacity: 0.7;
@@ -78,13 +77,12 @@ body {
 #shell > div > p {
   display: block;
   text-align: left;
-  font-family: 'Courier New', monospace;
   padding: 0.15em 0.8em;
   word-break: break-all;
 }
 #shell > div > p:first-child {
   font-size: 0.7em;
-  opacity: 0.4;
+  opacity: 0.8;
   padding-top: 0.5em;
 }
 #shell > div > p:nth-child(2) {
@@ -98,7 +96,6 @@ body {
   display: block;
   text-align: left;
   color: lime;
-  font-family: 'Courier New', monospace;
   font-size: 0.8em;
   min-height: 1em;
   margin-bottom: 0.3em;
@@ -121,7 +118,6 @@ body {
   border-radius: 2em;
   padding: 0.3em 1em;
   font-size: 0.8em;
-  font-family: 'Courier New', monospace;
   cursor: pointer;
   opacity: 0.7;
 }
@@ -163,18 +159,18 @@ body {
   scroll-snap-align: start;
   flex: 0 0 auto;
   text-align: right;
-  background: rgba(191,0,255,0.08);
-  border: 1px solid rgba(191,0,255,0.28);
+  backdrop-filter: blur(var(--blur));
+  background: rgba(0,0,0,0.8);
+  border: 1px solid var(--pop);
+  box-shadow: 0 0 0.1em var(--pop);
   animation: none !important;
   padding: 0.5em 1em;
   border-radius: 0.5em;
-  font-family: 'Courier New', monospace;
   font-size: 1.1em;
   font-weight: 900;
   cursor: pointer;
   white-space: nowrap;
   text-shadow: 0 0 5px var(--pop);
-  transition: all var(--time);
 }
 .kit button:active {
   background: var(--pop);
@@ -220,8 +216,6 @@ textarea {
   text-align: left;
   background: transparent;
   border: none;
-  color: white;
-  font-family: 'Courier New', monospace;
   font-size: 1.05em;
   padding: 0;
   outline: none;
@@ -231,7 +225,6 @@ textarea {
   caret-shape: block;
   line-height: 1.2;
 }
-textarea:focus::placeholder { opacity: 0.3; }
 
 iframe {
   display: block;
@@ -248,6 +241,13 @@ input::placeholder { opacity: 1; }
 input:focus::placeholder { opacity: 0.5; }
 
 
+/* panels */
+.bar { display: flex; align-items: center; gap: 0.5em; padding: 0.4em 0.8em; border-bottom: 1px solid var(--pop); flex-shrink: 0; }
+.val { display: block; text-align: left; font-family: 'Courier New', monospace; font-weight: 900; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+.out { display: block; padding: 0.6em 0.8em; font-family: 'Courier New', monospace; font-size: 0.85em; white-space: pre-wrap; word-break: break-word; text-align: left; }
+/* input row */
+.sym { display: flex; align-items: end; font-family: 'Courier New', monospace; font-weight: 900; color: var(--pop); text-shadow: 0 0 6px var(--pop); user-select: none; flex-shrink: 0; }
+.inp { display: flex; align-items: flex-start; gap: 0.3em; width: 100%; }
 </style>
 <script src="util.js"></script>
 <script>;(function(chat){ chat();
@@ -712,7 +712,8 @@ CMD.bash = function(S, cmdl, cmd, tmp){
   tip();
 }
 }());
-kit.ear('clear',eve=>{return;shell.innerHTML = ""; });
+kit.ear('clear',eve=>{console.log('???clear???');shell.innerHTML = ""; });
+console.log("WAT");
 
 //kit.say('clear', 'prompt');
 kit.say('whoami', 'prompt');
