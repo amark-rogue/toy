@@ -135,20 +135,6 @@ function bootVM() {
       var commandQueue = [];
       var boot = state ? 3 : 0;
 
-<<<<<<< HEAD
-      // Snapshot restore — wait for chat.html to load before flushing
-      if (state) {
-        emulator.add_listener("emulator-ready", () => {
-          setTimeout(() => {
-            vmBoot.textContent = '';
-            vmBoot.style.display = 'none';
-            emulatorReady = true;
-            emulator.serial0_send("\n");
-            while(commandQueue.length > 0) {
-              emulator.serial0_send(commandQueue.shift());
-            }
-          }, 1500);
-=======
       // Snapshot restore — set ready, wait for chat.html iframe to register
       if (state) {
         emulator.add_listener("emulator-ready", () => {
@@ -163,7 +149,6 @@ function bootVM() {
             } else { requestAnimationFrame(flush); }
           };
           flush();
->>>>>>> bb3900b (Live boot logs, snapshot restore delay, npm version fix)
         });
       }
 
