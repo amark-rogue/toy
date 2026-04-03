@@ -168,8 +168,10 @@ body::before {
   scroll-snap-align: start;
   flex: 0 0 auto;
   text-align: right;
+  -webkit-backdrop-filter: blur(var(--blur) );
   backdrop-filter: blur(var(--blur));
-  background: rgba(0,0,0,0.8);
+  background: rgba(0,0,0,0.2);
+
   border: 1px solid var(--pop);
   box-shadow: 0 0 0.1em var(--pop);
   animation: none !important;
@@ -180,6 +182,7 @@ body::before {
   cursor: pointer;
   white-space: nowrap;
   text-shadow: 0 0 5px var(--pop);
+
 }
 .kit button:active {
   background: var(--pop);
