@@ -1,57 +1,16 @@
-<link rel="stylesheet" href="../gun/kit/web.css">
-<script src="../gun/kit/web.js"></script>
+<link rel="stylesheet" href="../gun/kit/web.css"><script src="../gun/kit/web.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/base16/monokai.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
 <style>
-  body, html {
-    margin: 0;
-    padding: 0;
-
-    color: white;
-    overflow-x: hidden;
-    overflow-y: hidden;
-  }
-  pre {
-    margin: 0;
-    white-space: pre-wrap;
-    word-break: break-all;
-    font-family: 'Courier New', Courier, monospace;
-
-    line-height: 2.2em;
-    counter-reset: line;
-  }
-  code {
-    outline: none;
-    display: block;
-  }
-  body, div, code, pre, span {
-      display: unset;
-  }
-  /* Restore hljs background override */
-  .hljs {
-    background: transparent !important;
-
-  }
-  /* Line number styles - slim gutter */
-  .line {
-    display: block !important;
-    counter-increment: line;
-    position: relative;
-  }
-  .line::before {
-    content: counter(line);
-    vertical-align: middle;
-    left: -0.1em;
-    padding-right: 0.2em;
-    color: var(--pop);
-    user-select: none;
-    font-size: 0.5em;
-    opacity: 0.8;
-  }
+body { display: block; min-height: 0; overflow: hidden; }
+pre { margin: 0; white-space: pre-wrap; word-break: break-all; font-family: 'Courier New', monospace; line-height: 2.2em; counter-reset: line; }
+code { outline: none; display: block; }
+body, div, code, pre, span { display: unset; }
+.hljs { background: transparent !important; }
+.line { display: block !important; counter-increment: line; position: relative; }
+.line::before { content: counter(line); vertical-align: middle; left: -0.1em; padding-right: 0.2em; color: var(--pop); user-select: none; font-size: 0.5em; opacity: 0.8; }
 </style>
-
 <pre><code id="content" contenteditable="true"></code></pre>
-
 <script src="../util.js"></script>
 <script>
 console.off = 1;
@@ -60,60 +19,25 @@ kit.ear('cat', function hear(eve) {
   var raw = s.flat();
   var lines = raw.split('\n');
   var cmdLine = (lines[0] || "").trim();
-  
-  // Extract text and skip first line (the command)
   var text = lines.slice(1).join('\n');
-  
-  // Strip terminal prompts and trailing noise
   text = text.replace(/[\r\n]+.*(?:\$|#|>|PS>)\s*$/, '').trim();
-  
   var codeEl = document.getElementById('content');
-  
-  // Map common extensions to highlight.js language classes
   var langMap = {
-    'js': 'javascript',
-    'json': 'json',
-    'html': 'xml',
-    'css': 'css',
-    'md': 'markdown',
-    'py': 'python',
-    'sh': 'bash',
-    'yaml': 'yaml',
-    'yml': 'yaml'
+    js:'javascript', json:'json', html:'xml', css:'css',
+    md:'markdown', py:'python', sh:'bash', yaml:'yaml', yml:'yaml'
   };
-  
   var lang = null;
-  var fnameMatch = cmdLine.match(/cat\s+(.+)/);
-  if (fnameMatch) {
-    var fname = fnameMatch[1].replace(/["']/g, '');
-    var ext = fname.split('.').pop().toLowerCase();
-    lang = langMap[ext];
-  }
-
+  var m = cmdLine.match(/cat\s+(.+)/);
+  if(m) { lang = langMap[m[1].replace(/["']/g,'').split('.').pop().toLowerCase()]; }
   var highlighted;
   try {
-    if (lang) {
-      highlighted = hljs.highlight(text, {language: lang}).value;
-    } else {
-      highlighted = hljs.highlightAuto(text).value;
-    }
+    highlighted = lang ? hljs.highlight(text, {language: lang}).value : hljs.highlightAuto(text).value;
   } catch(e) {
     highlighted = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
-
-  // Split highlighted HTML into lines and wrap them for line numbers
-  var hLines = highlighted.split('\n');
-  var html = hLines.map(function(line) {
-    return '<span class="line">' + (line || ' ') + '</span>';
+  codeEl.innerHTML = highlighted.split('\n').map(function(l) {
+    return '<span class="line">' + (l || ' ') + '</span>';
   }).join('');
-  
-  codeEl.innerHTML = html;
-  
   hear.off();
-  
-  // Ensure the iframe fits the content height
-  setTimeout(() => {
-    //kit.say({height: document.body.scrollHeight}, 'resize');
-  }, 100);
 });
 </script>

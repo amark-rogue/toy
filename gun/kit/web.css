@@ -8,6 +8,7 @@
   --time: 0.3s;
   --oval: 2em;
   --pop: #BF00FF;
+  --err: #ff4757;
 }
 html, body /*, main, .page*/ {
 	margin: 0;
@@ -41,7 +42,8 @@ main, .page {
 }
 frame, iframe, body, html {
   overflow-x: hidden;
- } 
+ }
+*, *::before, *::after { box-sizing: border-box; }
 div, ul, ol, li, p, span, form, button, input, textarea, img, dialog[open], frame, iframe {
   border: 0;
   margin: 0;
@@ -50,19 +52,16 @@ div, ul, ol, li, p, span, form, button, input, textarea, img, dialog[open], fram
   position: relative;
   vertical-align: inherit;
   display: grid; place-items: var(--drip);
-  -webkit-transition: all var(--time);
-  transition: all 0.3s;
-  transition: all var(--time);
-  background-attachment: fixed;
-  background-position: center;
-  background-size: cover;
   box-sizing: border-box;
   max-width: 100%;
   font: inherit;
+}
+iframe { transition: none; }
+
+.ani {
   animation: stage linear both;
   animation-timeline: view();
 }
-  
 @keyframes stage {
   entry 0%  {
     opacity: 0; transform: scale(0.9);
@@ -272,3 +271,13 @@ p + p {
   50% {opacity: 0.5;}
   100% {opacity: 1;}
 }
+
+/* panels */
+.box { display: flex; flex-direction: column; overflow: hidden; width: 100%; }
+.bar { display: flex; align-items: center; gap: 0.5em; padding: 0.4em 0.8em; border-bottom: 1px solid var(--pop); flex-shrink: 0; }
+.tag { font-size: 0.72em; letter-spacing: 2px; font-family: 'Courier New', monospace; font-weight: bold; opacity: 0.6; flex-shrink: 0; text-transform: uppercase; }
+.val { display: block; text-align: left; font-family: 'Courier New', monospace; font-weight: 900; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+.out { display: block; padding: 0.6em 0.8em; font-family: 'Courier New', monospace; font-size: 0.85em; white-space: pre-wrap; word-break: break-word; text-align: left; }
+/* input row */
+.sym { display: flex; align-items: end; font-family: 'Courier New', monospace; font-weight: 900; color: var(--pop); text-shadow: 0 0 6px var(--pop); user-select: none; flex-shrink: 0; }
+.inp { display: flex; align-items: flex-start; gap: 0.3em; width: 100%; }

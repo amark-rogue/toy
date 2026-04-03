@@ -1,43 +1,25 @@
 <link rel="stylesheet" href="../gun/kit/web.css"><script src="../gun/kit/web.js"></script>
-<div id="container" class="cmd-box">
-
-  <div id="content" class="text"></div>
+<div id="box" class="box">
+  <div class="bar">
+    <span class="tag">cd</span>
+    <span id="path" class="val"></span>
+  </div>
 </div>
 <style>
-.cmd-box {
-  
-}
-.cmd-box:active {  }
-.cmd-box:active .text { }
-.icon {  }
-.text { }
-.error { border-color: #ff0055; box-shadow: 0 0 15px #ff0055, inset 0 0 10px rgba(255, 0, 85, 0.5); }
-.error .icon { filter: drop-shadow(0 0 10px #ff0055); }
-.error .text { color: #ff0055; text-shadow: 0 0 8px #ff0055; }
+body { display: block; min-height: 0; overflow: hidden; }
+.err .tag { color: var(--err); opacity: 1; }
+.err .val { color: var(--err); }
 </style>
 <script src="../util.js"></script>
 <script>
 console.off = 1;
 kit.ear('cd', function hear(eve) {
-  var s = eve.detail || eve.data || "";
-  var lines = s.flat().trim().split('\n');
-  var text = lines.slice(1).join('\n').trim(); // Ignore the echoed command line usually at [0]
-  if (!text) text = lines[0].trim().replace(/^cd\s+/,'') || "MOVED";
-  
-  if (text.toLowerCase().includes('no such file') || text.toLowerCase().includes('not a directory')) {
-    container.classList.add('error');
-    container.querySelector('.icon').innerText = '🚫';
-  } else {
-    // If it's a silent success, just show the folder name we cd'd into
-    if (text === "MOVED") {
-      var match = lines[0].match(/cd\s+(.+)/);
-      text = match ? '' : "DIRECTORY CHANGED";
-    }
+  var s = (eve.detail || eve.data || '').flat().trim().split('\n');
+  var text = s.slice(1).join('\n').trim() || s[0].replace(/^cd\s+/,'').trim() || '';
+  if(text.toLowerCase().includes('no such file') || text.toLowerCase().includes('not a directory')) {
+    box.tag('err', 1);
   }
-  content.innerText = text;
-  
-
-
+  B.all('#path')[0].textContent = text;
   hear.off();
 });
 </script>
