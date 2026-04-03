@@ -1,23 +1,15 @@
 <link rel="stylesheet" href="../gun/kit/web.css"><script src="../gun/kit/web.js"></script>
-<div id="container" class="pwd-box">
-  <div class="icon">📍</div>
-  <div id="content" class="path-display"></div>
+<div class="box">
+  <div class="bar">
+    <span class="tag">pwd</span>
+  </div>
+  <div id="content" class="crumbs"></div>
 </div>
 <style>
-.pwd-box {
-  display: flex; align-items: center; justify-content: flex-start;
-  padding: 1.5em;
-  background: linear-gradient(90deg, rgba(0,255,200,0.15), rgba(0,0,0,0.8));
-  border-left: 6px solid #00ffc8;
-  border-radius: 12px;
-  margin: 0.5em 0;
-  overflow-x: auto;
-  box-shadow: 0 5px 15px rgba(0,255,200,0.1);
-}
-.icon { font-size: 2.5em; margin-right: 0.5em; filter: drop-shadow(0 0 10px #00ffc8); }
-.path-display { display: flex; flex-wrap: wrap; gap: 0.4em; font-family: 'Courier New', monospace; font-size: 1.3em; font-weight: 900; color: #00ffc8; }
-.crumb { background: rgba(0, 255, 200, 0.1); padding: 0.4em 0.8em; border-radius: 8px; border: 2px solid #00ffc8; cursor: pointer; transition: 0.2s; text-shadow: 0 0 8px rgba(0,255,200,0.8); }
-.crumb:active { background: #00ffc8; color: #000; transform: scale(0.9); text-shadow: none; box-shadow: 0 0 20px #00ffc8; }
+body { display: block; min-height: 0; overflow: hidden; }
+.crumbs { display: flex; flex-wrap: wrap; gap: 0.3em; padding: 0.5em 0.8em; font-family: 'Courier New', monospace; font-weight: 900; }
+.crumb { display: inline-flex; align-items: center; font-size: 0.7em; letter-spacing: 0.2em; text-transform: uppercase; background: color-mix(in srgb, var(--pop) 10%, transparent); border: 1px dashed color-mix(in srgb, var(--pop) 50%, transparent); border-radius: 0.5em; padding: 0.25em 0.8em; color: var(--pop); cursor: pointer; }
+.crumb:active { background: var(--pop); color: var(--mood, black); }
 </style>
 <script src="../util.js"></script>
 <script>
@@ -32,8 +24,8 @@ kit.ear('pwd', function hear(eve) {
     content.replaceChildren();
     
     if (path.startsWith('/')) {
-      var root = B.new('div'); root.className = 'crumb'; root.innerText = '/';
-      root.onclick = ()=>{ kit.say('cd /', 'prompt.try'); };
+      var root = B.new('div'); root.className = 'crumb'; root.textContent = '/';
+      root.onclick = ()=>{ kit.say('cd /', 'prompt'); };
       content.appendChild(root);
     }
     
@@ -43,12 +35,12 @@ kit.ear('pwd', function hear(eve) {
       var targetPath = currentPath;
       var crumb = B.new('div');
       crumb.className = 'crumb';
-      crumb.innerText = p;
-      crumb.onclick = ()=>{ kit.say('cd ' + targetPath, 'prompt.try'); };
+      crumb.textContent = p;
+      crumb.onclick = ()=>{ kit.say('cd ' + targetPath, 'prompt'); };
       content.appendChild(crumb);
     });
   } else {
-    content.innerText = "UNKNOWN PATH";
+    content.textContent = "UNKNOWN PATH";
   }
   hear.off();
 });

@@ -17,80 +17,49 @@
 </dialog>
 
 <style>
-.ls { 
-  width: 100%; 
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 15px;
+body { display: block; min-height: 0; overflow: hidden; }
+.ls {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2em;
   padding: 10px;
-display: block;
-  float: left;
-  column-width: 6em;
-
-  
-}
-  /* Global box-sizing fix */
-
-*, *::before, *::after {
-
-  box-sizing: border-box;
-
+  align-content: flex-start;
 }
 .ls a {
-display: block;
-  float: left;
-  margin: 0.1em; width: 100%;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-h-eight: 1em;
-  padding: 1em 0.5em;
+  display: block;
+  flex: 0 0 auto;
+  min-width: 4em;
+  max-width: 10em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0.7em 0.6em;
   text-align: center;
-  background: linear-gradient(135deg, rgba(191, 0, 255, 0.1), rgba(0,0,0,0.6));
-  border: 2px solid var(--pop);
-  border-radius: 16px;
-  backdrop-filter: blur(var(--blur));
-  
+  background: color-mix(in srgb, var(--pop) 8%, transparent);
+  border: 1px solid var(--pop);
+  border-radius: 0.8em;
   font-family: 'Courier New', monospace;
   font-weight: 900;
-  text-shadow: 0 0 5px var(--pop);
-  box-shadow: 0 5px 15px rgba(191, 0, 255, 0.2), inset 0 0 10px rgba(191, 0, 255, 0.1);
-  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   cursor: pointer;
-  word-break: break-word;
   user-select: none;
 }
 .ls a:active {
   background: var(--pop);
   color: var(--mood);
   transform: scale(0.92);
-  text-shadow: none;
-  box-shadow: 0 0 30px var(--pop);
 }
-.icon {
-  font-size: 2.8em;
-  margin-bottom: 8px;
-  filter: drop-shadow(0 0 10px var(--pop));
-}
-.folder-icon { color: #f1c40f; filter: drop-shadow(0 0 10px rgba(241,196,15,0.8)); text-shadow: none; }
-.file-icon { color: #00ffc8; filter: drop-shadow(0 0 10px rgba(0,255,200,0.8)); text-shadow: none; }
-  .file, .agh { border-color: white; background: pink; } 
 .header-cmd {
-display: block; width: 100%;
+  display: block; width: 100%;
   color: var(--pop);
   font-weight: 900;
   font-size: 1.2em;
-  margin-bottom: 10px;
+  margin-bottom: 0.6em;
   font-family: 'Courier New', monospace;
-  border-bottom: 2px dashed var(--pop);
-  padding-bottom: 5px;
-  text-shadow: 0 0 8px var(--pop);
+  border-bottom: 1px dashed var(--pop);
+  padding-bottom: 0.3em;
 }
 .ls-action-dialog {
-
-
-
-
-back-ground: transparent;
   color: var(--pop);
   z-index: 1000;
   font-family: monospace;
@@ -102,45 +71,11 @@ back-ground: transparent;
   height: auto;
   overflow: auto;
 }
-
-.ls-action-head {
-
-
-
- 
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.ls-action-grid {
-  display: block;
-  float:right;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 0.45em;
-  width: 100%;
-}
-.ls-act {
-
-
-
-
-background: rgba(0,0,0,0.8);
-float: right;
-  cursor: pointer;
-  text-align: center;
-  font: inherit;
-
-}
-.ls-act:active {
-  background: rgba(255,255,255,0.08);
-}
-.ls-act-hot {
-  color: #ff6b6b;
-  border-color: rgba(255,107,107,0.35);
-}
-.ls-act-dim {
-  color: rgba(255,255,255,0.6);
-}
+.ls-action-head { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ls-action-grid { display: block; float: right; gap: 0.45em; width: 100%; }
+.ls-act { background: rgba(0,0,0,0.8); float: right; cursor: pointer; text-align: center; font: inherit; }
+.ls-act:active { background: color-mix(in srgb, var(--pop) 15%, transparent); }
+.ls-act-hot { color: var(--err); border-color: color-mix(in srgb, var(--err) 35%, transparent); }
 </style>
 <script src="../util.js"></script>
 <script>
@@ -171,22 +106,8 @@ kit.say(['touch','touch '], 'belt');
 kit.say(['clear','clear'], 'belt');
 kit.say(['npm','npm '], 'belt');
 kit.say(['git','git status'], 'belt');
-;(function(){
-  var ws = new WebSocket('ws://'+(location.hostname||'localhost')+':8022');
-  ws.onopen = function(){
-    var p = window.parent;
-    try{ ws.send(p.localStorage.pass || '') }catch(e){ ws.send('') }
-    setTimeout(function(){ ws.send(JSON.stringify({type:'claude-check'})) }, 100);
-  };
-  ws.onmessage = function(e){
-    try{
-      var m = JSON.parse(e.data);
-      if(m.type === 'claude-auth' && m.ok) kit.say(['claude','claude '], 'belt');
-    }catch(x){}
-    ws.close();
-  };
-  ws.onerror = function(){ ws.close() };
-}());
+kit.say(['claude','claude '], 'belt');
+kit.say(['codex','codex '], 'belt');
 
 
 CMD = {};
@@ -276,10 +197,8 @@ CMD.ls = function(s,v,f,cmd){
 	      }
 	      
 	      if(val.includes('.') && val !== '..') {
-	        kit.say('', 'prompt');
 	        kit.say('cat ' + quoteArg(val), 'prompt');
 	      } else {
-	        kit.say('', 'prompt');
 	        if(val === '..') {
 	          kit.say('cd ..', 'prompt');
 	          kit.say('ls .', 'prompt');
@@ -318,7 +237,7 @@ CMD.ls = function(s,v,f,cmd){
     function showActionDialog(anchor, val) {
         var kind = anchor.dataset.kind || 'file';
         var q = quoteArg(val);
-        dialogTargetFile.innerText = val + (kind === 'folder' ? '/' : '');
+        dialogTargetFile.textContent = val + (kind === 'folder' ? '/' : '');
         placeActionDialog(anchor);
         
         

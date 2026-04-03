@@ -1,34 +1,37 @@
 <link rel="stylesheet" href="../gun/kit/web.css">
 <script src="../gun/kit/web.js"></script>
 
-<div id="hd"></div>
-<div id="bod"></div>
+<div class="box">
+  <div class="bar">
+    <span class="tag">claude</span>
+    <span id="hd" class="val"></span>
+  </div>
+  <div id="bod" class="bod"></div>
+</div>
 
 <!-- templates -->
-<div class="hide">
+<div class="model">
   <pre class="tpl txt blk"></pre>
   <div class="tpl thk"><p class="tog">&#9654; thinking</p><pre class="inn blk"></pre></div>
-  <div class="tpl tol"><p class="top"></p><pre class="out blk"></pre></div>
+  <div class="tpl tol"><p class="top"></p><pre class="tou blk"></pre></div>
   <pre class="tpl fail blk"></pre>
 </div>
 
 <style>
-*{box-sizing:border-box; animation:none !important}
-html,body{margin:0;padding:0;background:transparent !important;color:var(--pop);font-family:'Courier New',monospace;display:block !important;place-items:unset !important;min-height:0 !important}
-#hd{padding:0.4em 0.6em;opacity:0.5;font-size:0.85em;border-bottom:1px solid var(--pop);word-break:break-all;display:block !important;place-items:unset !important;position:static !important;min-height:0 !important}
-#bod{padding:0.6em;display:block !important;place-items:unset !important;position:static !important;min-height:0 !important}
-#bod>*{display:block !important;place-items:unset !important;position:static !important;min-height:0 !important;margin-bottom:0.6em}
-.blk{white-space:pre-wrap;word-break:break-all;margin:0}
-.thk{border-left:2px solid var(--pop);padding-left:0.6em;opacity:0.55}
-.thk .inn{display:none !important}
-.thk.open .inn{display:block !important}
-.tog{font-size:0.8em;opacity:0.7;cursor:pointer;margin:0;user-select:none;display:block !important}
-.tol{border:1px solid var(--pop);border-radius:0.4em;overflow:hidden !important}
-.top{padding:0.3em 0.6em;font-size:0.8em;opacity:0.7;cursor:pointer;margin:0;display:block !important}
-.out{padding:0.5em 0.6em;display:none !important;opacity:0.8;font-size:0.9em}
-.tol.open .out{display:block !important}
-.fail{color:#f66}
-.hide{display:none !important}
+body { display: block; min-height: 0; overflow: hidden; }
+.bod { padding: 0.6em; display: block; }
+.bod > * { display: block; margin-bottom: 0.6em; }
+.blk { white-space: pre-wrap; word-break: break-word; margin: 0; font-family: 'Courier New', monospace; font-size: 0.85em; text-align: left; }
+.thk { border-left: 2px solid var(--pop); padding-left: 0.6em; opacity: 0.55; display: block; }
+.thk .inn { display: none; }
+.thk.open .inn { display: block; }
+.tog { font-size: 0.8em; opacity: 0.7; cursor: pointer; margin: 0; user-select: none; display: block; }
+.tol { border: 1px solid var(--pop); border-radius: 0.4em; overflow: hidden; display: block; }
+.top { padding: 0.3em 0.6em; font-size: 0.8em; opacity: 0.7; cursor: pointer; margin: 0; display: block; }
+.tou { padding: 0.5em 0.6em; display: none; opacity: 0.8; font-size: 0.9em; }
+.tol.open .tou { display: block; }
+.fail { color: var(--err); }
+.usr { opacity: 0.6; border-bottom: 1px solid var(--pop); padding-bottom: 0.3em; margin-bottom: 0.3em; display: block; }
 </style>
 
 <script src="../util.js"></script>
@@ -39,51 +42,33 @@ var bod = B.all('#bod')[0];
 
 var CLD = {};
 CLD.sid = null;
-CLD.ws  = null;
 CLD.on  = 0;
-
-CLD.key = function(){
-  var p = window.parent;
-  try{ if(p.localStorage.pass) return p.localStorage.pass }catch(e){}
-  var v = window.prompt('shell password?');
-  try{ p.localStorage.pass = v }catch(e){}
-  return v;
-};
-
-CLD.open = function(cb){
-  CLD.ws = new WebSocket('ws://'+(location.hostname||'localhost')+':8022');
-  CLD.ws.onopen = function(){ CLD.ws.send(CLD.key()); setTimeout(cb, 100) };
-  CLD.ws.onerror = function(){ CLD.fail('WS error') };
-};
+CLD.blocks = {};
 
 CLD.send = function(txt){
-  if(CLD.on || !CLD.ws || CLD.ws.readyState !== 1) return;
+  if(CLD.on){ return }
   CLD.on = 1;
-  var msg = {type:'claude', prompt:txt};
-  if(CLD.sid) msg.session = CLD.sid;
-  CLD.ws.send(JSON.stringify(msg));
-  CLD.ws.onmessage = CLD.got;
+  var msg = {type: 'claude', prompt: txt};
+  if(CLD.sid){ msg.session = CLD.sid }
+  if(CLD.cwd){ msg.cwd = CLD.cwd }
+  kit.up(msg, 'host');
 };
 
-CLD.got = function(e){
-  var m = JSON.parse(e.data);
-  if(m.type === 'claude-event') return CLD.evt(m.data);
+CLD.got = function(m){
+  if(m.type === 'claude-event'){ CLD.evt(m.data); return }
   if(m.type === 'claude-done'){
     CLD.on = 0;
     kit.up(CLD.sid, 'claude-session');
-    kit.up(0, 'claude-ready');
-    kit.say({},'style');
+    kit.say({}, 'style');
   }
 };
 
-CLD.blocks = {}; // track streaming content blocks by index
-
 CLD.evt = function(ev){
   if(ev.type === 'system' && ev.subtype === 'init'){ CLD.sid = ev.session_id; return }
-  if(ev.type === 'assistant') CLD.msg(ev.message);
-  if(ev.type === 'result') return; // turn complete
-  if(ev.type === 'stream_event') CLD.stream(ev);
-  if(ev.type === 'error') CLD.fail(ev.text||ev.message||JSON.stringify(ev));
+  if(ev.type === 'assistant'){ CLD.msg(ev.message) }
+  if(ev.type === 'result'){ return }
+  if(ev.type === 'stream_event'){ CLD.stream(ev) }
+  if(ev.type === 'error'){ CLD.fail(ev.text || ev.message || JSON.stringify(ev)) }
 };
 
 CLD.stream = function(ev){
@@ -96,21 +81,21 @@ CLD.stream = function(ev){
       var v = B.all('.tpl.txt')[0].cloneNode(true);
       v.classList.remove('tpl'); v.textContent = '';
       bod.append(v);
-      CLD.blocks[idx] = {el:v, type:'text', text:''};
+      CLD.blocks[idx] = {el: v, type: 'text', text: ''};
     } else if(blk.type === 'thinking'){
       var v = B.all('.tpl.thk')[0].cloneNode(true);
       v.classList.remove('tpl');
       v.querySelector('.tog').onclick = function(){ v.classList.toggle('open') };
       bod.append(v);
-      CLD.blocks[idx] = {el:v, type:'thinking', text:''};
+      CLD.blocks[idx] = {el: v, type: 'thinking', text: ''};
     }
-    kit.say({},'style');
+    kit.say({}, 'style');
   }
   if(t === 'content_block_delta'){
     var idx = se.index;
     var d = se.delta || {};
     var b = CLD.blocks[idx];
-    if(!b) return;
+    if(!b){ return }
     if(d.type === 'text_delta' && d.text){
       b.text += d.text;
       b.el.textContent = b.text;
@@ -119,7 +104,7 @@ CLD.stream = function(ev){
       b.text += d.thinking;
       b.el.querySelector('.inn').textContent = b.text;
     }
-    kit.say({},'style');
+    kit.say({}, 'style');
   }
   if(t === 'content_block_stop'){
     delete CLD.blocks[se.index];
@@ -127,19 +112,18 @@ CLD.stream = function(ev){
 };
 
 CLD.msg = function(msg){
-  // full assistant message (non-streaming fallback)
-  if(Object.keys(CLD.blocks).length) return; // skip if we streamed it
-  (msg.content||[]).forEach(function(blk){
-    if(blk.type === 'text')     CLD.text(blk.text);
-    if(blk.type === 'thinking') CLD.think(blk.thinking);
-    if(blk.type === 'tool_use') CLD.tool(blk.name, blk.input);
+  if(Object.keys(CLD.blocks).length){ return }
+  (msg.content || []).forEach(function(blk){
+    if(blk.type === 'text'){ CLD.text(blk.text) }
+    if(blk.type === 'thinking'){ CLD.think(blk.thinking) }
+    if(blk.type === 'tool_use'){ CLD.tool(blk.name, blk.input) }
   });
 };
 
 CLD.text = function(t){
   var v = B.all('.tpl.txt')[0].cloneNode(true);
   v.classList.remove('tpl'); v.textContent = t;
-  bod.append(v); kit.say({},'style');
+  bod.append(v); kit.say({}, 'style');
 };
 
 CLD.think = function(t){
@@ -147,47 +131,53 @@ CLD.think = function(t){
   v.classList.remove('tpl');
   v.querySelector('.inn').textContent = t;
   v.querySelector('.tog').onclick = function(){ v.classList.toggle('open') };
-  bod.append(v); kit.say({},'style');
+  bod.append(v); kit.say({}, 'style');
 };
 
 CLD.tool = function(name, inp){
   var v = B.all('.tpl.tol')[0].cloneNode(true);
   v.classList.remove('tpl');
   var top = v.querySelector('.top');
-  top.textContent = name+' \u25B6';
-  v.querySelector('.out').textContent = typeof inp === 'string' ? inp : JSON.stringify(inp,null,2);
+  top.textContent = name + ' \u25B6';
+  v.querySelector('.tou').textContent = typeof inp === 'string' ? inp : JSON.stringify(inp, null, 2);
   top.onclick = function(){
     v.classList.toggle('open');
-    top.textContent = name+(v.classList.contains('open')?' \u25BC':' \u25B6');
+    top.textContent = name + (v.classList.contains('open') ? ' \u25BC' : ' \u25B6');
   };
-  bod.append(v); kit.say({},'style');
+  bod.append(v); kit.say({}, 'style');
 };
 
 CLD.fail = function(t){
   var v = B.all('.tpl.fail')[0].cloneNode(true);
   v.classList.remove('tpl'); v.textContent = t;
-  bod.append(v); kit.say({},'style');
+  bod.append(v); kit.say({}, 'style');
 };
 
-// listen for prompts (initial + follow-ups)
+// receive prompts and responses
 kit.ear('claude', function(eve){
   var d = eve.detail || eve.data || {};
+
+  // response from server routed by chat.html
+  if(d.type && d.type.indexOf('claude') === 0){ CLD.got(d); return }
+
+  // prompt from chat.html
   var raw = typeof d === 'string' ? d : (d.prompt || '');
   var sid = typeof d === 'object' ? (d.session || null) : null;
-  var txt = raw.replace(/^claude\s*/i,'').trim();
-  if(!txt) return;
+  var cwd = typeof d === 'object' ? (d.cwd || '') : '';
+  var txt = raw.replace(/^claude\s*/i, '').trim();
+  if(!txt){ return }
+  if(cwd){ CLD.cwd = cwd }
 
-  // show user message for follow-ups (not the first one, parent shows that)
   if(CLD.sid){
     var u = B.new('pre');
-    u.style.cssText = 'opacity:0.6;border-bottom:1px solid var(--pop);padding-bottom:0.3em;margin-bottom:0.3em;display:block !important;place-items:unset !important;position:static !important;min-height:0 !important';
+    u.className = 'usr blk';
     u.textContent = '> ' + txt;
     bod.append(u);
   }
 
   hd.textContent = txt;
-  if(sid) CLD.sid = sid;
-  if(CLD.ws){ CLD.send(txt) } else { CLD.open(function(){ CLD.send(txt) }) }
+  if(sid){ CLD.sid = sid }
+  CLD.send(txt);
 });
 
 }());</script>

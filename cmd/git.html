@@ -7,22 +7,22 @@
 <script src="../util.js"></script>
 
 <style>
-:root { --bg: #000; --text: #fff; --act: #00ffc8; --yes: #34c759; --hot: #ff3b30; }
-body, html { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: 'Courier New', monospace; overflow-x: hidden; }
+:root { --yes: #34c759; --hot: #ff3b30; }
+body, html { margin: 0; padding: 0; min-height: 0; background: var(--mood, #000); color: var(--pop, #fff); font-family: 'Courier New', monospace; overflow: hidden; }
 
 .git-ui { width: 100%; display: flex; flex-direction: column; }
-.file-row { display: flex; align-items: center; padding: 1em; border-bottom: 1px solid #222; background: #050505; }
-.stage-toggle { width: 2em; height: 2em; border-radius: 50%; border: 2px solid var(--yes); display: grid; place-items: center; margin-right: 1em; cursor: pointer; flex-shrink: 0; transition: 0.2s; }
+.file-row { display: flex; align-items: center; padding: 1em; border-bottom: 1px solid color-mix(in srgb, var(--pop) 15%, transparent); }
+.stage-toggle { width: 2em; height: 2em; border-radius: 50%; border: 2px solid var(--yes); display: grid; place-items: center; margin-right: 1em; cursor: pointer; flex-shrink: 0; }
 .stage-toggle.checked { background: var(--yes); }
 .file-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 1.2em; font-weight: bold; cursor: pointer; }
 .file-name.status-A { color: var(--yes); }
-.file-name.status-M { color: var(--act); }
+.file-name.status-M { color: var(--pop); }
 .file-name.status-D { color: var(--hot); }
-.file-name.status-Q { color: #ff0055; }
-.twirl { cursor: pointer; padding: 1em; color: var(--act); font-size: 1.5em; transition: 0.2s; user-select: none; }
+.file-name.status-Q { color: var(--err, #ff0055); }
+.twirl { cursor: pointer; padding: 1em; color: var(--pop); font-size: 1.5em; user-select: none; }
 .twirl.open { transform: rotate(90deg); }
 
-.editor-wrapper { display: none; width: 100%; background: #000; padding: 0; box-sizing: border-box; }
+.editor-wrapper { display: none; width: 100%; padding: 0; box-sizing: border-box; }
 .editor-wrapper.active { display: block; }
 
 pre, code {
@@ -48,7 +48,7 @@ code { counter-reset: line; padding-bottom: 1em; }
   text-align: right;
   margin-right: 1em;
   font-size: 0.5em; 
-  color: #555;
+  color: color-mix(in srgb, var(--pop) 35%, transparent);
   user-select: none;
   vertical-align: middle;
 }
@@ -58,17 +58,52 @@ code { counter-reset: line; padding-bottom: 1em; }
 .line.add .prefix { color: var(--yes); }
 .line.del { background: rgba(255, 59, 48, 0.15); }
 .line.del .prefix { color: var(--hot); }
-.line.header { color: #888; background: #111; }
-.line.chunk { color: var(--act); background: #0a1a1a; font-weight: bold; }
+.line.header { color: color-mix(in srgb, var(--pop) 50%, transparent); background: color-mix(in srgb, var(--pop) 5%, transparent); }
+.line.chunk { color: var(--pop); background: color-mix(in srgb, var(--pop) 5%, transparent); font-weight: bold; }
 
 .char-add { background: rgba(52, 199, 89, 0.4); text-shadow: 0 0 5px #000; }
 .char-del { background: rgba(255, 59, 48, 0.4); text-decoration: line-through; text-shadow: 0 0 5px #000; }
+.git-raw { padding: 1em; margin: 0; white-space: pre-wrap; word-break: break-all; }
+.git-note { padding: 2em; text-align: center; opacity: 0.5; }
 </style>
 
 <div id="app" class="git-ui"></div>
 
 <script>
 var app = document.getElementById('app');
+
+function wipe(node) {
+    node.replaceChildren();
+}
+
+function fill(node, html) {
+    var ran = document.createRange();
+    ran.selectNodeContents(node);
+    wipe(node);
+    node.appendChild(ran.createContextualFragment(html));
+}
+
+function make(tag, cls, txt) {
+    var node = document.createElement(tag);
+    if (cls) node.className = cls;
+    if (txt !== undefined) node.textContent = txt;
+    return node;
+}
+
+function makeRow(f, open) {
+    var row = make('div', 'file-row');
+    var tog;
+    row.setAttribute('data-path', f.path || f);
+    if (f.kind) {
+        tog = make('div', 'stage-toggle' + (f.staged ? ' checked' : ''));
+        row.appendChild(tog);
+        row.appendChild(make('div', 'file-name status-' + f.kind, f.display));
+    } else {
+        row.appendChild(make('div', 'file-name status-M', f));
+    }
+    row.appendChild(make('div', open ? 'twirl open' : 'twirl', '▶'));
+    return row;
+}
 
 kit.ear('git', function hear(eve) {
   var s = eve.detail || eve.data || "";
@@ -276,7 +311,7 @@ function createEditor(file, initialDiff) {
         initialDiff = "diff --git a/"+file+" b/"+file+"\n--- a/"+file+"\n+++ b/"+file+"\n@@ -0,0 +0,0 @@\n // Loading diff in a new card below...";
     }
     
-    code.innerHTML = highlightDiff(initialDiff);
+    fill(code, highlightDiff(initialDiff));
     pre.appendChild(code);
     wrap.appendChild(pre);
     
@@ -284,7 +319,7 @@ function createEditor(file, initialDiff) {
     $(code).keyup(function(e) {
         var r = monotype(code[0]);
         var txt = $(code).text();
-        code.innerHTML = highlightDiff(txt);
+        fill(code, highlightDiff(txt));
         r.restore();
         
         clearTimeout(saveTimer);
@@ -299,7 +334,7 @@ function createEditor(file, initialDiff) {
             var r = monotype(code[0]);
             var txt = $(code).text();
             var out = txt.slice(0, r.s) + prevent[e.keyCode] + txt.slice(r.e);
-            code.innerHTML = highlightDiff(out);
+            fill(code, highlightDiff(out));
             r.e = r.s + prevent[e.keyCode].length;
             r.s = r.e;
             r.restore();
@@ -320,7 +355,9 @@ function renderRaw(raw) {
     // Skip the command echo line (first line with prompt)
     var output = lines.slice(1).join('\n').trim();
     if (!output) output = raw.trim();
-    app.innerHTML = '<pre style="padding:1em;margin:0;white-space:pre-wrap;word-break:break-all;color:#ccc;">' + output.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</pre>';
+    var pre = make('pre', 'git-raw');
+    pre.textContent = output;
+    app.replaceChildren(pre);
 }
 
 function renderStandaloneDiff(raw) {
@@ -330,7 +367,7 @@ function renderStandaloneDiff(raw) {
         if (existingRow) {
             var w = existingRow.nextSibling;
             var code = w.querySelector('code');
-            code.innerHTML = highlightDiff(diffs[f]);
+            fill(code, highlightDiff(diffs[f]));
             w.classList.add('active');
             existingRow.querySelector('.twirl').classList.add('open');
             continue;
@@ -338,11 +375,7 @@ function renderStandaloneDiff(raw) {
 
         var ed = createEditor(f, diffs[f]);
         ed.wrapper.classList.add('active');
-        
-        var row = document.createElement('div');
-        row.className = 'file-row';
-        row.setAttribute('data-path', f);
-        row.innerHTML = '<div class="file-name status-M">'+f+'</div><div class="twirl open">▶</div>';
+        var row = makeRow(f, 1);
         
         row.onclick = function() {
             var w = this.nextSibling;
@@ -358,16 +391,13 @@ function renderStandaloneDiff(raw) {
 function renderStatus(raw) {
     var files = parseStatus(raw);
     if (files.length === 0) {
-        app.innerHTML = '<div style="padding:2em;text-align:center;color:#666;">Working tree clean.</div>';
+        var empty = make('div', 'git-note', 'Working tree clean.');
+        app.replaceChildren(empty);
         return;
     }
     
     files.forEach(function(f) {
-        var row = document.createElement('div');
-        row.className = 'file-row';
-        row.setAttribute('data-path', f.path);
-        row.innerHTML = '<div class="stage-toggle ' + (f.staged ? 'checked' : '') + '"></div><div class="file-name status-' + f.kind + '">' + f.display + '</div><div class="twirl">▶</div>';
-        
+        var row = makeRow(f, 0);
         var ed = createEditor(f.path, '');
         
         row.querySelector('.stage-toggle').onclick = function(e) {
@@ -407,16 +437,13 @@ function renderCombined(statusRaw, diffRaw) {
     var diffs = parseDiffs(diffRaw);
     
     if (files.length === 0) {
-        app.innerHTML = '<div style="padding:2em;text-align:center;color:#666;">Working tree clean.</div>';
+        var empty = make('div', 'git-note', 'Working tree clean.');
+        app.replaceChildren(empty);
         return;
     }
     
     files.forEach(function(f) {
-        var row = document.createElement('div');
-        row.className = 'file-row';
-        row.setAttribute('data-path', f.path);
-        row.innerHTML = '<div class="stage-toggle ' + (f.staged ? 'checked' : '') + '"></div><div class="file-name status-' + f.kind + '">' + f.display + '</div><div class="twirl">▶</div>';
-        
+        var row = makeRow(f, 0);
         var ed = createEditor(f.path, diffs[f.path] || '');
         
         row.querySelector('.stage-toggle').onclick = function(e) {

@@ -4,13 +4,16 @@
 </div>
 
 <div class="kit"><div class="tin"></div></div>
-  
+
 <form onsubmit="kit.say('','prompt'); return false;">
     <div id="help"></div>
-    <textarea id="prompt" name="cmd" place-holder="$" autokomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" rows="1"></textarea>
+    <div class="inp">
+      <span class="sym">$</span>
+      <textarea id="prompt" name="cmd" placeholder="" autokomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" rows="1"></textarea>
+    </div>
 </form>
 
-<button id="scroll" onclick="B.scrollTop = B.scrollHeight; shell.scrollTop = shell.scrollHeight; this.style.display='none';" style="display:none; position:fixed; bottom:2em; right:40%; z-index:101; background:var(--pop); color:var(--mood, black); border:none; border-radius:50%; width:2em; height:2em; font-size:2em; cursor:pointer; align-items:center; justify-content:center; text-align:center;opacity:0.6;">↓</button>
+<button id="scroll">↓ scroll down</button>
 
 <style>
 :root { --fill: var(--mood); }
@@ -25,79 +28,107 @@ body, html {
 }
 body {
   background: var(--fill);
-  display: block; /* Removed flex so it can just flow and scroll naturally */
-}
-textarea {
-  height: 100%;
+  display: block;
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    #000 7em
+  );
 }
 #shell {
   width: 100%;
   box-sizing: border-box;
   padding: 0 0;
   display: block;
-  padding-bottom: 8em; /* Ensure content isn't hidden behind the fixed form */
+  padding-bottom: 8em;
 }
 #shell > div {
-  white-space: pre-wrap;
-  word-break: break-all;
   width: 100%;
   display: block;
-  fl-oat: left;
-  te-xt-align: left;
+  text-align: left;
   margin-bottom: 0.5em;
-  border: none;
   border-bottom: 1px solid var(--pop);
   border-radius: 1em;
   background: transparent;
-  backdrop-filter: blur(var(--blur));
-  animation: animate-in-and-out linear both;
-  animation-timeline: view();
+  animation: animate-in 0.25s ease-out both;
+  overflow: hidden;
 }
-  
-  @keyframes ani-mate-in-and-out {
-  entry 0%  {
-    opacity: 0; transform: scale(0.5);
-  }
-  entry 100%  {
-    opacity: 1; transform: scale(1);
-  }
-  exit 0% {
-    opacity: 1; transform: scale(1);
-  }
-  exit 100% {
-    opacity: 0; transform: scale(0.5);
-  }
+
+@keyframes animate-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1); }
 }
 
 @keyframes spring {
-
   0%, 99% { scroll-snap-type: none; }
   100% { scroll-snap-type: y mandatory; }
 }
 
-
-  
-
-  
 #shell > div > pre {
+  display: block;
   white-space: pre-wrap;
-  word-break: break-all;
+  word-break: break-word;
   margin: 0;
+  padding: 0.5em 0.8em;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85em;
+  text-align: left;
+  opacity: 0.7;
 }
 #shell > div > p {
   display: block;
-  fl-oat: left;
   text-align: left;
+  font-family: 'Courier New', monospace;
+  padding: 0.15em 0.8em;
+  word-break: break-all;
+}
+#shell > div > p:first-child {
+  font-size: 0.7em;
+  opacity: 0.4;
+  padding-top: 0.5em;
+}
+#shell > div > p:nth-child(2) {
+  font-weight: bold;
+  color: var(--pop);
+  text-shadow: 0 0 4px var(--pop);
+  opacity: 0.9;
+  padding-bottom: 0.4em;
 }
 #help {
+  display: block;
+  text-align: left;
   color: lime;
-  margin-bottom: 0.4em;
+  font-family: 'Courier New', monospace;
+  font-size: 0.8em;
+  min-height: 1em;
+  margin-bottom: 0.3em;
   opacity: 1;
   transition: opacity 2.4s linear;
 }
 #help:empty {
   display: none;
 }
+#scroll {
+  display: none;
+  position: fixed;
+  bottom: 5.5em;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 101;
+  background: var(--pop);
+  color: var(--mood,black);
+  border: none;
+  border-radius: 2em;
+  padding: 0.3em 1em;
+  font-size: 0.8em;
+  font-family: 'Courier New', monospace;
+  cursor: pointer;
+  opacity: 0.7;
+}
+#scroll.show {
+  display: block;
+}
+
 .kit {
   padding: 0;
   margin-right: 0.5em;
@@ -107,45 +138,34 @@ textarea {
   overflow-x: visible;
   scrollbar-width: none;
   position: fixed;
-  
   right: 0;
   bottom: 0;
-  hei-ght: 7em;
   width: max-content;
   animation: none !important;
-    
-    height: 100vh;
-    pointer-events: none; 
-    scrollbar-width: none; 
-    -ms-overflow-style: none;
-  }
-
- .kit::before {
-    content: " ";
-    height: calc(100vh - 2.5em);
-    width: 100%;
+  height: 100vh;
+  pointer-events: none;
+  -ms-overflow-style: none;
+}
+.kit::before {
+  content: " ";
+  height: calc(100vh - 2.5em);
+  width: 100%;
 }
 .kit .tin {
-  pointer-events: auto; 
+  pointer-events: auto;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   animation: none !important;
-} 
-  
-
+}
 .kit::-webkit-scrollbar { display: none; }
 .kit button {
   scroll-snap-align: start;
   flex: 0 0 auto;
   text-align: right;
-
-  background: rgba(0,0,0,0.2);
-  -webkit-back-drop-filter: blur(var(--blur));
-  backdrop-filter: blur(var(--blur));
-  border: 1px solid var(--pop);
+  background: rgba(191,0,255,0.08);
+  border: 1px solid rgba(191,0,255,0.28);
   animation: none !important;
-
   padding: 0.5em 1em;
   border-radius: 0.5em;
   font-family: 'Courier New', monospace;
@@ -154,12 +174,10 @@ textarea {
   cursor: pointer;
   white-space: nowrap;
   text-shadow: 0 0 5px var(--pop);
-  box-shadow: 0 0 10px rgba(11,0,255,0.2);
   transition: all var(--time);
 }
 .kit button:active {
   background: var(--pop);
-
   color: var(--mood);
   transform: scale(0.92);
   text-shadow: none;
@@ -172,31 +190,49 @@ textarea {
 
 form {
   position: fixed;
-  bottom: 0em;
+  bottom: 0;
   left: 0;
   right: 0;
   z-index: 100;
-  background: transparent;
-  border: none;
-  border-bottom: 1px solid var(--pop);
-  border-radius: 1em;
-  backdrop-filter: blur(var(--blur));
+  display: flex;
+  flex-direction: column;
+  gap: 0.15em;
+  padding: 0.2em 0.8em 0.45em;
+  background: linear-gradient(to top, rgba(0,0,0,0.96), rgba(0,0,0,0.76) 52%, rgba(0,0,0,0));
+  backdrop-filter: blur(12px);
 }
 
+.inp {
+  align-items: center;
+  gap: 0.45em;
+  padding: 0.05em 0 0;
+}
+.sym {
+  font-size: 1.05em;
+  line-height: 1.2;
+  opacity: 0.92;
+  text-shadow: 0 0 6px var(--pop);
+}
 textarea {
   flex: 1;
+  width: 100%;
+  display: block;
+  text-align: left;
   background: transparent;
   border: none;
   color: white;
   font-family: 'Courier New', monospace;
-  font-size: 1.2em;
-  padding: 0.2em 0;
+  font-size: 1.05em;
+  padding: 0;
   outline: none;
   resize: none;
   overflow-y: hidden;
+  caret-color: var(--pop);
+  caret-shape: block;
+  line-height: 1.2;
 }
 textarea:focus::placeholder { opacity: 0.3; }
-  
+
 iframe {
   display: block;
   width: 100%;
@@ -206,17 +242,6 @@ iframe {
   pointer-events: auto;
   touch-action: pan-y;
 }
-/*#shell > div {
-  overflow: hidden;
-  height: 4em;
-  transition: 1s all;
-}
-#shell > div:hover {
-  height: auto;
-}
-#shell > div:last-child {
-  height: auto;
-}*/
 input { animation: pulse 2s infinite; }
 input:focus { animation: none; }
 input::placeholder { opacity: 1; }
@@ -229,102 +254,157 @@ input:focus::placeholder { opacity: 0.5; }
 var prompt;
 var shell = B.all('#shell')[0];
 var help = B.all('#help')[0];
+var scrollBtn = B.all('#scroll')[0];
 var belt = B.all('.kit .tin')[0];
-var cldSid = null;
-var cldIframe = null; // active claude iframe
-var cldMode = 0;
+// --- agent mode (claude / codex) ---
+var agent = {mode:'', iframe:null, sid:null, kind:''};
+var shellCwd = '';
 
-var cldEnter = function(iframe){
-  cldIframe = iframe;
-  cldMode = 1;
-  help.textContent = 'claude session \u2014 type exit to return to shell';
+var agentEnter = function(iframe, kind){
+  agent.iframe = iframe;
+  agent.mode = kind;
+  agent.kind = kind;
   help.style.opacity = '1';
-  prompt.placeholder = 'claude>';
+  prompt.placeholder = kind + '>';
 };
-var cldExit = function(){
-  cldMode = 0;
-  cldIframe = null;
+var agentExit = function(){
+  agent.mode = '';
+  agent.iframe = null;
   help.textContent = '';
   help.style.opacity = '';
   prompt.placeholder = '$';
 };
 
-kit.ear('claude-session', function(eve){ cldSid = eve.detail || eve.data || null; });
-kit.ear('claude-ready', function(eve){
-  // claude finished responding, stay in claude mode
-  help.textContent = 'claude session \u2014 type exit to return to shell';
-});
+kit.ear('claude-session', function(eve){ if(agent.kind==='claude') agent.sid = eve.detail||eve.data||null; });
+kit.ear('codex-session', function(eve){ if(agent.kind==='codex') agent.sid = eve.detail||eve.data||null; });
 
-var card = function(val){
+// cwd is tracked by watching pwd output and cd commands in CMD.bash
+
+var card = function(val, kind){
   var v = B.new('div'), p = B.new('pre'), i = B.new('iframe');
-  v.className = 'reply-card claude-card';
+  v.className = 'reply-card '+kind+'-card';
   p.textContent = '$ '+val;
   v.append(p);
-  i.src = './cmd/claude.html';
-  v.cldIframe = i;
+  i.src = './cmd/'+kind+'.html';
   shell.append(v);
   kit.ear('load', function(eve){
     if(eve.detail === undefined) return;
     if(eve.target !== i) return;
-    kit.say({prompt:val, session:cldSid}, 'claude', i);
-    cldEnter(i);
+    var msg = {prompt:val, cwd:shellCwd};
+    if(kind === 'claude') msg.session = agent.sid;
+    if(kind === 'codex') msg.thread = agent.sid;
+    kit.say(msg, kind, i);
+    agentEnter(i, kind);
   }, i);
   v.append(i);
-  // click card header to resume this session
   p.style.cursor = 'pointer';
   p.onclick = function(){
-    if(cldMode && cldIframe === i) return; // already active
-    cldEnter(i);
-    B.scrollTop = B.scrollHeight; shell.scrollTop = shell.scrollHeight;
+    if(agent.mode && agent.iframe === i) return;
+    agentEnter(i, kind);
+    go();
   };
-  B.scrollTop = B.scrollHeight; shell.scrollTop = shell.scrollHeight;
+  go();
 };
 var mod = {};
 (prompt = B.all('#prompt')[0]).focus();
 
+var low = function(){
+  var gap = 50;
+  return (B.scrollHeight - B.scrollTop - B.clientHeight < gap) && (shell.scrollHeight - shell.scrollTop - shell.clientHeight < gap);
+};
+window.go = function(){
+  B.scrollTop = B.scrollHeight;
+  shell.scrollTop = shell.scrollHeight;
+};
+var tip = function(){
+  if(low()){
+    go();
+    if(scrollBtn){ scrollBtn.classList.remove('show'); }
+  }
+  else if(scrollBtn) { scrollBtn.classList.add('show'); }
+};
 
+kit.ear('style',()=>{ tip(); });
+
+kit.ear('host',(eve)=>{
+  if(eve.target === window){ return }
+  kit.up(eve.detail || eve.data, 'host');
+});
 
 kit.ear('chat',(eve)=>{
-  stream(eve.detail || eve.data);
+  var d = eve.detail || eve.data;
+  try{
+    var j = ('string' == typeof d) ? JSON.parse(d) : d;
+    if(j.type && agent.iframe){
+      if(j.type.indexOf('claude') === 0){ kit.say(j, 'claude', agent.iframe); return }
+      if(j.type.indexOf('codex') === 0){ kit.say(j, 'codex', agent.iframe); return }
+    }
+  }catch(e){}
+  stream(d);
 });
 kit.ear('prompt',(eve)=>{
   var cmd = eve.detail||eve.data;
-  if(cmd){ prompt.value = cmd }
+  if(cmd){
+    prompt.value = cmd;
+    autoGrow(prompt);
+  }
   var val = prompt.value.trim();
+  if(!val){
+    prompt.value = '';
+    autoGrow(prompt);
+    return;
+  }
 
-  // exit claude mode
-  if(cldMode && /^exit$/i.test(val)){
-    cldExit();
+  // exit agent mode
+  if(agent.mode && /^exit$/i.test(val)){
+    agentExit();
     prompt.value = "";
+    autoGrow(prompt);
     window.buzz();
     return;
   }
 
-  // in claude mode, send follow-up to active iframe
-  if(cldMode && cldIframe && val){
-    kit.say({prompt:val, session:cldSid}, 'claude', cldIframe);
+  // in agent mode, send follow-up
+  if(agent.mode && agent.iframe && val){
+    var msg = {prompt:val, cwd:shellCwd};
+    if(agent.kind === 'claude') msg.session = agent.sid;
+    if(agent.kind === 'codex') msg.thread = agent.sid;
+    kit.say(msg, agent.kind, agent.iframe);
     prompt.value = "";
+    autoGrow(prompt);
     window.buzz();
-    B.scrollTop = B.scrollHeight; shell.scrollTop = shell.scrollHeight;
+    go();
     return;
   }
 
   // start new claude session
   if(/^claude(\s|$)/.test(val)){
-    card(val);
+    card(val, 'claude');
     prompt.value = "";
+    autoGrow(prompt);
     window.buzz();
     return;
   }
 
-  // resume: just typing "claude" with no args resumes last session
+  // start new codex session
+  if(/^codex(\s|$)/.test(val)){
+    card(val, 'codex');
+    prompt.value = "";
+    autoGrow(prompt);
+    window.buzz();
+    return;
+  }
+
   kit.say(prompt.value+'\r','host');
   prompt.value = "";
+  autoGrow(prompt);
   window.buzz();
+  go();
 });
 
 kit.ear('prompt.try',(eve)=>{
   prompt.value = eve.detail||eve.data;
+  autoGrow(prompt);
 });
 
 var put = function(txt, a, z, s){
@@ -398,11 +478,12 @@ prompt.onkeydown = function(eve){
     return;
   }
   if(eve.key === 'ArrowUp') {
-    if(hi > 0) { hi--; prompt.value = history[hi]; }
+    if(hi > 0) { hi--; prompt.value = history[hi]; autoGrow(prompt); }
     eve.preventDefault();
   } else if (eve.key === 'ArrowDown') {
     if(hi < history.length - 1) { hi++; prompt.value = history[hi]; }
     else { hi = history.length; prompt.value = ''; }
+    autoGrow(prompt);
     eve.preventDefault();
   }
 };
@@ -430,7 +511,7 @@ window.addEventListener('pointerup',(eve)=>{
 window.addEventListener('touchend',(eve)=>{
    belt.tag('open',-1);
 });
-                         setTimeout(()=>{
+setTimeout(()=>{
 [
   {name: 'esc', key: 1},
   {name: 'ctrl', key: 1},
@@ -441,6 +522,7 @@ window.addEventListener('touchend',(eve)=>{
   kit.say(v, 'belt');
 });
 kit.say(['claude','claude '], 'belt');
+kit.say(['codex','codex '], 'belt');
 kit.say(['exit','exit'], 'belt');
 },999);
                          
@@ -449,14 +531,14 @@ prompt.oninput = function(eve){
   //console.log("oninput?", prompt.value, eve);
   if(prompt.wait){ clearTimeout(prompt.wait) }
   prompt.wait = setTimeout(async function(){
-    var answer = await AI.shell("1 sentence reply for terminal shell or code help:" + prompt.value);
-    var doc = new DOMParser().parseFromString(answer, 'text/html');
-    var v = doc.querySelector('.a') || doc.body;
-    var atBottom = (B.scrollHeight - B.scrollTop - B.clientHeight < 50) && (shell.scrollHeight - shell.scrollTop - shell.clientHeight < 50);
-    helpSay(v.textContent || '');
-    prompt.try = ((v.querySelector('code') || v.querySelector('b')) || {}).textContent||'';
-    if(atBottom) { B.scrollTop = B.scrollHeight; shell.scrollTop = shell.scrollHeight; }
-    else { var btn = B.all('#scroll')[0]; if(btn) btn.style.display = 'flex'; }
+    try{
+      var answer = await AI.shell("1 sentence reply for terminal shell or code help:" + prompt.value);
+      var doc = new DOMParser().parseFromString(answer, 'text/html');
+      var v = doc.querySelector('.a') || doc.body;
+      helpSay(v.textContent || '');
+      prompt.try = ((v.querySelector('code') || v.querySelector('b')) || {}).textContent||'';
+      tip();
+    }catch(e){}
   },333);
 }
 const autoGrow = (textarea) => {
@@ -475,12 +557,11 @@ prompt.onfocus = function(eve){
 autoGrow(prompt);
 
 window.addEventListener('scroll', function() {
-  var atBottom = (B.scrollHeight - B.scrollTop - B.clientHeight < 50) && (shell.scrollHeight - shell.scrollTop - shell.clientHeight < 50);
-  var btn = B.all('#scroll')[0];
-  if(atBottom && btn) {
-    btn.style.display = 'none';
+  if(low() && scrollBtn) {
+    scrollBtn.classList.remove('show');
   }
 }, true);
+scrollBtn.onclick = function(){ go(); scrollBtn.classList.remove('show'); };
 
 B.all('#help')[0].ear('pointerdown',function(eve){
   if(!prompt.try){ return }
@@ -508,9 +589,7 @@ var stream = function(t){
   var cleaned = (window.shellReply || {}).clean ? window.shellReply.clean(stream.live.raw) : stream.live.raw;
   stream.live.pre.textContent = cleaned.flat();
   stream.last = (window.shellReply || {}).clean ? window.shellReply.clean((isRefresh ? '' : (stream.last||''))+t) : ((isRefresh ? '' : (stream.last||''))+t);
-  var atBottom = (B.scrollHeight - B.scrollTop - B.clientHeight < 50) && (shell.scrollHeight - shell.scrollTop - shell.clientHeight < 50);
-  if(atBottom) { B.scrollTop = B.scrollHeight; shell.scrollTop = shell.scrollHeight; }
-  else { var btn = B.all('#scroll')[0]; if(btn) btn.style.display = 'flex'; }
+  tip();
   (stream.eat || CMD.bash)(stream.last);
 }, CMD = {};
 
@@ -554,6 +633,24 @@ CMD.bash = function(S, cmdl, cmd, tmp){
   S.forEach(function(s,i){
     var v,t,p;
     if(!(t = s.flat()).trim()){ return }
+    // track cwd from pwd output and cd commands
+    var lines = t.split(/[\r\n]+/);
+    var cmdLine = lines[0].replace(/^.*(?:\$|#|>|PS>)\s*/,'').trim();
+    if(/^pwd\b/.test(cmdLine)){
+      // pwd output is the last non-empty line before prompt
+      for(var li = lines.length-1; li >= 1; li--){
+        var ln = lines[li].trim();
+        if(ln && ln.charAt(0) === '/'){ shellCwd = ln; break; }
+      }
+    }
+    if(/^cd\b/.test(cmdLine)){
+      // after cd, look for a path in output or resolve relative to current
+      var cdArg = cmdLine.replace(/^cd\s+/,'').replace(/['"]/g,'').trim();
+      if(cdArg === '~' || cdArg === '') shellCwd = '';
+      else if(cdArg === '..') shellCwd = shellCwd.replace(/\/[^\/]*$/,'') || '/';
+      else if(cdArg.charAt(0) === '/') shellCwd = cdArg;
+      else if(shellCwd) shellCwd = shellCwd + '/' + cdArg;
+    }
     (p = B.new('pre')).textContent = t;
     (v = B.new('div')).className = 'reply-card ready-upgrade';
     v.raw = s;
@@ -612,8 +709,7 @@ CMD.bash = function(S, cmdl, cmd, tmp){
     },99);
     shell.append(v);
   });
-  if(atBottom) { B.scrollTop = B.scrollHeight; shell.scrollTop = shell.scrollHeight; }
-  else { var btn = B.all('#scroll')[0]; if(btn) btn.style.display = 'flex'; }
+  tip();
 }
 }());
 kit.ear('clear',eve=>{return;shell.innerHTML = ""; });
@@ -671,4 +767,3 @@ window.AI = {
 
 }));
 </script>
-<script src="/gun/fix.js"></script>
