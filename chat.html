@@ -677,7 +677,10 @@ CMD.bash = function(S, cmdl, cmd, tmp){
     v.raw = s;
     v.append(p);
     setTimeout(function(eve){
-      if(v.upgraded || v.upgrading){ return }
+      if(v.upgraded || v.upgrading){ 
+        if(v.upgraded){ kit.say(s, cmd, v.all('iframe')[0]); }
+        return 
+      }
       var cmd = t.cut(['\r\n','\n','\r'],ESC)[0].trim();
       cmd = cmd.replace(/^.*(?:\$|#|>|PS>)\s*/, '');
       var p = B.new('p');

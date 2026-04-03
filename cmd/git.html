@@ -9,7 +9,6 @@
 
 <style>
 :root { --yes: #34c759; --hot: #ff3b30; }
-body, html { margin: 0; padding: 0; min-height: 0; background: var(--mood, #000); color: var(--pop, #fff); font-family: 'Courier New', monospace; overflow: hidden; }
 
 .git-ui { width: 100%; display: flex; flex-direction: column; }
 .file-row { display: flex; align-items: center; padding: 1em; border-bottom: 1px solid color-mix(in srgb, var(--pop) 15%, transparent); }
@@ -183,18 +182,20 @@ function renderNoRepo(raw) {
         div.appendChild(a);
     });
     
-    app.appendChild(div);
-    
     var pre = make('pre', 'git-raw');
     pre.textContent = raw.trim();
     app.appendChild(pre);
+
+    app.appendChild(div);
 }
 
 kit.ear('git', function hear(eve) {
   var s = eve.detail || eve.data || "";
+  //console.log("GIT STREAMING", s);
   
   // Use util.js shellReply to clean pager text, then gitFlat() to strip ANSI and handle \r
   var raw = window.shellReply && window.shellReply.clean ? window.shellReply.clean(s) : String(s);
+  var hasPrompt = /[\r\n]+.*(?:\$|#|>)\s*$/.test(raw);
   raw = gitFlat(raw).replace(/[\r\n]+.*(?:\$|#|>)\s*$/, '');
   
   // The first line of the shell output contains the prompt and command executed
@@ -213,7 +214,7 @@ kit.ear('git', function hear(eve) {
   var isConfig = fullCmd.indexOf(' config') >= 0;
   if (isConfig && window.renderConfig) {
       renderConfig(raw, app);
-      hear.off();
+      if(hasPrompt) hear.off();
       return;
   }
 
@@ -231,7 +232,7 @@ kit.ear('git', function hear(eve) {
       // Non-status, non-diff git commands (git -v, git log, git branch, etc.)
       renderRaw(raw);
   }
-  hear.off();
+  if(hasPrompt) hear.off();
 });
 
 function parseStatus(raw) {
@@ -454,9 +455,13 @@ function renderRaw(raw) {
     // Skip the command echo line (first line with prompt)
     var output = lines.slice(1).join('\n').trim();
     if (!output) output = raw.trim();
-    var pre = make('pre', 'git-raw');
+    
+    var pre = app.querySelector('.git-raw');
+    if (!pre) {
+        pre = make('pre', 'git-raw');
+        app.replaceChildren(pre);
+    }
     pre.textContent = output;
-    app.replaceChildren(pre);
 }
 
 function renderStandaloneDiff(raw) {
