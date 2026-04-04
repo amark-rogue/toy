@@ -732,7 +732,10 @@ kit.ear('clear',eve=>{console.log('???clear???');shell.innerHTML = ""; });
 
 //kit.say('clear', 'prompt');
 kit.say('whoami', 'prompt');
-if(localStorage.cwd){ kit.say('cd '+localStorage.cwd, 'prompt') }
+if(localStorage.cwd){
+  localStorage.isRestoring = "1";
+  kit.say('cd '+localStorage.cwd, 'prompt');
+}
 kit.say('ls .', 'prompt');
                          
                          
