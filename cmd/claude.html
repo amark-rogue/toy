@@ -5,6 +5,7 @@
   <div class="bar">
     <span class="tag">claude</span>
     <span id="hd" class="val"></span>
+    <span id="sid" class="id"></span>
   </div>
   <div id="bod" class="bod"></div>
 </div>
@@ -13,12 +14,14 @@
 <div class="model">
   <pre class="tpl txt blk"></pre>
   <div class="tpl thk"><p class="tog">&#9654; thinking</p><pre class="inn blk"></pre></div>
-  <div class="tpl tol"><p class="top"></p><pre class="tou blk"></pre></div>
   <pre class="tpl fail blk"></pre>
 </div>
 
 <style>
 body { display: block; min-height: 0; overflow: hidden; }
+.bar { display: flex; align-items: center; gap: 0.5em; padding: 0.4em 0.8em; border-bottom: 1px solid var(--pop); flex-shrink: 0; }
+.val { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 900; }
+.id { font-size: 0.6em; opacity: 0.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 10em; cursor: pointer; }
 .bod { padding: 0.6em; display: block; }
 .bod > * { display: block; margin-bottom: 0.6em; }
 .blk { white-space: pre-wrap; word-break: break-word; margin: 0; font-family: 'Courier New', monospace; font-size: 0.85em; text-align: left; }
@@ -26,19 +29,23 @@ body { display: block; min-height: 0; overflow: hidden; }
 .thk .inn { display: none; }
 .thk.open .inn { display: block; }
 .tog { font-size: 0.8em; opacity: 0.7; cursor: pointer; margin: 0; user-select: none; display: block; }
-.tol { border: 1px solid var(--pop); border-radius: 0.4em; overflow: hidden; display: block; }
-.top { padding: 0.3em 0.6em; font-size: 0.8em; opacity: 0.7; cursor: pointer; margin: 0; display: block; }
-.tou { padding: 0.5em 0.6em; display: none; opacity: 0.8; font-size: 0.9em; }
-.tol.open .tou { display: block; }
+.run { display: block; border-left: 2px solid color-mix(in srgb, var(--pop) 40%, transparent); margin: 0.3em 0; overflow: hidden; }
+.run.ok { border-left-color: color-mix(in srgb, var(--pop) 70%, transparent); }
+.rlb { font-family: 'Courier New', monospace; font-size: 0.75em; padding: 0.2em 0.6em; margin: 0; opacity: 0.6; cursor: pointer; user-select: none; display: block; text-align: left; }
+.rlb:active { opacity: 1; }
+.rout { padding: 0.3em 0.6em; display: none; opacity: 0.7; font-size: 0.8em; max-height: 12em; overflow-y: auto; }
+.run.open .rout { display: block; }
 .fail { color: var(--err); }
-.usr { opacity: 0.6; border-bottom: 1px solid var(--pop); padding-bottom: 0.3em; margin-bottom: 0.3em; display: block; }
+.usr { opacity: 0.6; border-top: 1px solid color-mix(in srgb, var(--pop) 30%, transparent); padding: 0.4em 0; margin-top: 0.4em; display: block; }
 </style>
 
 <script src="../util.js"></script>
 <script>;(function(){
 
 var hd  = B.all('#hd')[0];
+var sid = B.all('#sid')[0];
 var bod = B.all('#bod')[0];
+sid.onclick = function(){ if(CLD.sid) kit.up('claude --resume '+CLD.sid+' ', 'prompt.try') };
 
 var CLD = {};
 CLD.sid = null;
@@ -58,6 +65,8 @@ CLD.got = function(m){
   if(m.type === 'claude-event'){ CLD.evt(m.data); return }
   if(m.type === 'claude-done'){
     CLD.on = 0;
+    if(m.sessionId) CLD.sid = m.sessionId;
+    if(CLD.sid){ sid.textContent = CLD.sid.slice(0,8); sid.title = 'click to copy: '+CLD.sid }
     kit.up(CLD.sid, 'claude-session');
     kit.say({}, 'style');
   }
@@ -66,9 +75,19 @@ CLD.got = function(m){
 CLD.evt = function(ev){
   if(ev.type === 'system' && ev.subtype === 'init'){ CLD.sid = ev.session_id; return }
   if(ev.type === 'assistant'){ CLD.msg(ev.message) }
+  if(ev.type === 'user' && ev.message){ CLD.res(ev.message) }
   if(ev.type === 'result'){ return }
   if(ev.type === 'stream_event'){ CLD.stream(ev) }
   if(ev.type === 'error'){ CLD.fail(ev.text || ev.message || JSON.stringify(ev)) }
+};
+
+CLD.res = function(msg){
+  (msg.content || []).forEach(function(blk){
+    if(blk.type === 'tool_result' && CLD.lastTool){
+      Tool.out(CLD.lastTool, blk.content || '');
+      Tool.done(CLD.lastTool);
+    }
+  });
 };
 
 CLD.stream = function(ev){
@@ -135,16 +154,8 @@ CLD.think = function(t){
 };
 
 CLD.tool = function(name, inp){
-  var v = B.all('.tpl.tol')[0].cloneNode(true);
-  v.classList.remove('tpl');
-  var top = v.querySelector('.top');
-  top.textContent = name + ' \u25B6';
-  v.querySelector('.tou').textContent = typeof inp === 'string' ? inp : JSON.stringify(inp, null, 2);
-  top.onclick = function(){
-    v.classList.toggle('open');
-    top.textContent = name + (v.classList.contains('open') ? ' \u25BC' : ' \u25B6');
-  };
-  bod.append(v); kit.say({}, 'style');
+  var v = Tool.mk(bod, name, inp);
+  CLD.lastTool = v;
 };
 
 CLD.fail = function(t){
@@ -153,30 +164,28 @@ CLD.fail = function(t){
   bod.append(v); kit.say({}, 'style');
 };
 
-// receive prompts and responses
+CLD.usr = function(txt){
+  var u = B.new('pre');
+  u.className = 'usr blk';
+  u.textContent = '> ' + txt;
+  bod.append(u);
+  kit.say({}, 'style');
+};
+
 kit.ear('claude', function(eve){
   var d = eve.detail || eve.data || {};
 
-  // response from server routed by chat.html
   if(d.type && d.type.indexOf('claude') === 0){ CLD.got(d); return }
 
-  // prompt from chat.html
   var raw = typeof d === 'string' ? d : (d.prompt || '');
-  var sid = typeof d === 'object' ? (d.session || null) : null;
+  var s = typeof d === 'object' ? (d.session || null) : null;
   var cwd = typeof d === 'object' ? (d.cwd || '') : '';
   var txt = raw.replace(/^claude\s*/i, '').trim();
   if(!txt){ return }
   if(cwd){ CLD.cwd = cwd }
+  if(s){ CLD.sid = s }
 
-  if(CLD.sid){
-    var u = B.new('pre');
-    u.className = 'usr blk';
-    u.textContent = '> ' + txt;
-    bod.append(u);
-  }
-
-  hd.textContent = txt;
-  if(sid){ CLD.sid = sid }
+  CLD.usr(txt);
   CLD.send(txt);
 });
 

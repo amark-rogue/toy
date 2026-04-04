@@ -442,12 +442,13 @@ pkg.apk = async function(names, emu) {
 var preBootQueue = [];
 kit.ear('host',(eve)=>{
   var cmd = eve.detail||eve.data;
-  if('string' != typeof cmd){ return }
-  if(!cop.ws){ 
-      preBootQueue.push(cmd);
-      return; 
+  if(cmd === undefined){ return }
+  var msg = (typeof cmd === 'string')? cmd : JSON.stringify(cmd);
+  if(!cop.ws){
+      preBootQueue.push(msg);
+      return;
   }
-  cop.ws.send(cmd);
+  cop.ws.send(msg);
 });
 
 }(window.cop = {}));

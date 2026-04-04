@@ -3,7 +3,7 @@
 
 <div class="box">
   <div class="bar">
-    <span class="tag">codex</span>
+    <span class="tag">gemini</span>
     <span id="hd" class="val"></span>
     <span id="sid" class="id"></span>
   </div>
@@ -45,106 +45,107 @@ body { display: block; min-height: 0; overflow: hidden; }
 var hd  = B.all('#hd')[0];
 var sid = B.all('#sid')[0];
 var bod = B.all('#bod')[0];
-sid.onclick = function(){ if(CDX.tid) kit.up('codex --resume '+CDX.tid+' ', 'prompt.try') };
+sid.onclick = function(){ if(GEM.sid) kit.up('gemini --resume '+GEM.sid+' ', 'prompt.try') };
 
-var CDX = {};
-CDX.tid = null;
-CDX.on  = 0;
-CDX.textEl = null;
-CDX.thinkEl = null;
+var GEM = {};
+GEM.sid = null;
+GEM.on  = 0;
+GEM.textEl = null;
+GEM.thinkEl = null;
+GEM.toolEls = {};
 
-CDX.send = function(txt){
-  if(CDX.on){ return }
-  CDX.on = 1;
-  CDX.textEl = null; CDX.thinkEl = null;
-  var msg = {type: 'codex', prompt: txt};
-  if(CDX.tid){ msg.thread = CDX.tid }
-  if(CDX.cwd){ msg.cwd = CDX.cwd }
+GEM.send = function(txt){
+  if(GEM.on){ return }
+  GEM.on = 1;
+  GEM.textEl = null; GEM.thinkEl = null; GEM.toolEls = {};
+  var msg = {type: 'gemini', prompt: txt};
+  if(GEM.sid){ msg.session = GEM.sid }
+  if(GEM.cwd){ msg.cwd = GEM.cwd }
   kit.up(msg, 'host');
 };
 
-CDX.got = function(m){
-  if(m.type === 'codex-event'){ CDX.evt(m.data); return }
-  if(m.type === 'codex-done'){
-    CDX.on = 0;
-    if(m.threadId) CDX.tid = m.threadId;
-    if(CDX.tid){ sid.textContent = CDX.tid.slice(0,8); sid.title = 'click to copy: '+CDX.tid }
-    kit.up(CDX.tid, 'codex-session');
+GEM.got = function(m){
+  if(m.type === 'gemini-event'){ GEM.evt(m.data); return }
+  if(m.type === 'gemini-done'){
+    GEM.on = 0;
+    if(m.sessionId) GEM.sid = m.sessionId;
+    if(GEM.sid){ sid.textContent = GEM.sid.slice(0,8); sid.title = 'click to copy: '+GEM.sid }
+    kit.up(GEM.sid, 'gemini-session');
     kit.say({}, 'style');
   }
 };
 
-CDX.evt = function(ev){
-  var t = ev.type || '';
-  var p = ev.params || {};
+GEM.evt = function(u){
+  var t = u.sessionUpdate || '';
 
-  if(t === 'thread-init'){ CDX.tid = ev.threadId; return }
+  if(t === 'session-init'){ GEM.sid = u.sessionId; return }
 
-  if(t === 'item/agentMessage/delta'){
-    if(!CDX.textEl){
-      CDX.textEl = B.all('.tpl.txt')[0].cloneNode(true);
-      CDX.textEl.classList.remove('tpl'); CDX.textEl.textContent = '';
-      CDX.textEl._buf = '';
-      bod.append(CDX.textEl);
+  if(t === 'agent_message_chunk'){
+    var txt = (u.content||{}).text || '';
+    if(!txt){ return }
+    if(!GEM.textEl){
+      GEM.textEl = B.all('.tpl.txt')[0].cloneNode(true);
+      GEM.textEl.classList.remove('tpl'); GEM.textEl.textContent = '';
+      GEM.textEl._buf = '';
+      bod.append(GEM.textEl);
     }
-    CDX.textEl._buf += (p.delta || '');
-    CDX.textEl.textContent = CDX.textEl._buf;
+    GEM.textEl._buf += txt;
+    GEM.textEl.textContent = GEM.textEl._buf;
     kit.say({}, 'style');
     return;
   }
 
-  if(t === 'item/reasoning/textDelta' || t === 'codex/event/reasoning_content_delta'){
-    if(!CDX.thinkEl){
-      CDX.thinkEl = B.all('.tpl.thk')[0].cloneNode(true);
-      CDX.thinkEl.classList.remove('tpl');
-      CDX.thinkEl.querySelector('.tog').onclick = function(){ CDX.thinkEl.classList.toggle('open') };
-      CDX.thinkEl._buf = '';
-      bod.append(CDX.thinkEl);
+  if(t === 'agent_thought_chunk'){
+    var txt = (u.content||{}).text || '';
+    if(!txt){ return }
+    if(!GEM.thinkEl){
+      GEM.thinkEl = B.all('.tpl.thk')[0].cloneNode(true);
+      GEM.thinkEl.classList.remove('tpl');
+      GEM.thinkEl.querySelector('.tog').onclick = function(){ GEM.thinkEl.classList.toggle('open') };
+      GEM.thinkEl._buf = '';
+      bod.append(GEM.thinkEl);
     }
-    CDX.thinkEl._buf += (p.delta || p.text || '');
-    CDX.thinkEl.querySelector('.inn').textContent = CDX.thinkEl._buf;
+    GEM.thinkEl._buf += txt;
+    GEM.thinkEl.querySelector('.inn').textContent = GEM.thinkEl._buf;
     kit.say({}, 'style');
     return;
   }
 
-  if(t === 'item/started'){
-    var item = p.item || {};
-    if(item.type === 'commandExecution' || item.type === 'fileChange'){
-      var raw = item.type === 'commandExecution' ? (item.command || 'exec') : (item.path || 'file');
-      CDX.toolEl = Tool.mk(bod, raw);
-    }
-    if(item.type === 'agentMessage'){ CDX.textEl = null }
+  if(t === 'tool_call'){
+    var id = u.toolCallId || '';
+    var v = Tool.mk(bod, id, {title: u.title, kind: u.kind});
+    if(v) GEM.toolEls[id] = v;
+    GEM.textEl = null;
+    GEM.thinkEl = null;
     return;
   }
 
-  if(t === 'item/commandExecution/outputDelta' || t === 'item/fileChange/outputDelta'){
-    if(!CDX.toolEl){ CDX.toolEl = Tool.mk(bod, 'exec') }
-    Tool.out(CDX.toolEl, p.delta);
+  if(t === 'tool_call_update'){
+    var id = u.toolCallId || '';
+    var v = GEM.toolEls[id];
+    if(!v){ return }
+    // content is array: [{type:"content", content:{type:"text", text:"..."}}]
+    var out = '';
+    (u.content||[]).forEach(function(c){ out += ((c.content||{}).text || '') });
+    if(!out) out = u.output || u.result || '';
+    if(typeof out !== 'string') out = JSON.stringify(out, null, 2);
+    Tool.out(v, out);
+    Tool.done(v);
+    GEM.textEl = null;
+    GEM.thinkEl = null;
     return;
   }
 
-  if(t === 'item/completed'){
-    var item = p.item || {};
-    if(CDX.toolEl && item.aggregatedOutput){
-      Tool.out(CDX.toolEl, item.aggregatedOutput);
-    }
-    Tool.done(CDX.toolEl);
-    CDX.textEl = null; CDX.thinkEl = null; CDX.toolEl = null;
-    return;
-  }
-
-  if(t === 'error'){ CDX.fail(p.message || p.text || JSON.stringify(p)); return }
+  if(t === 'available_commands_update' || t === 'current_mode_update' || t === 'usage_update' || t === 'session_info_update' || t === 'config_option_update'){ return }
 };
 
-CDX.toolEl = null;
-
-CDX.fail = function(t){
+GEM.fail = function(t){
   var v = B.all('.tpl.fail')[0].cloneNode(true);
   v.classList.remove('tpl'); v.textContent = t;
   bod.append(v); kit.say({}, 'style');
 };
 
-CDX.usr = function(txt){
+GEM.usr = function(txt){
   var u = B.new('pre');
   u.className = 'usr blk';
   u.textContent = '> ' + txt;
@@ -152,21 +153,21 @@ CDX.usr = function(txt){
   kit.say({}, 'style');
 };
 
-kit.ear('codex', function(eve){
+kit.ear('gemini', function(eve){
   var d = eve.detail || eve.data || {};
 
-  if(d.type && d.type.indexOf('codex') === 0){ CDX.got(d); return }
+  if(d.type && d.type.indexOf('gemini') === 0){ GEM.got(d); return }
 
   var raw = typeof d === 'string' ? d : (d.prompt || '');
-  var tid = typeof d === 'object' ? (d.thread || null) : null;
+  var s = typeof d === 'object' ? (d.session || null) : null;
   var cwd = typeof d === 'object' ? (d.cwd || '') : '';
-  var txt = raw.replace(/^codex\s*/i, '').trim();
+  var txt = raw.replace(/^gemini\s*/i, '').trim();
   if(!txt){ return }
-  if(cwd){ CDX.cwd = cwd }
-  if(tid){ CDX.tid = tid }
+  if(cwd){ GEM.cwd = cwd }
+  if(s){ GEM.sid = s }
 
-  CDX.usr(txt);
-  CDX.send(txt);
+  GEM.usr(txt);
+  GEM.send(txt);
 });
 
 }());</script>
