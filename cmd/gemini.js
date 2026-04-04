@@ -2,16 +2,12 @@ var cp = require('child_process');
 
 function Gemini(c){
   var self = this;
-  console.log('[gemini] spawn --acp');
   self.c = c; self.id = 1; self.sid = null; self.buf = '';
   self.proc = cp.spawn('gemini',['--acp'],{stdio:['pipe','pipe','pipe']});
   self.proc.stdout.on('data',function(d){ self.onData(d) });
-  self.proc.stderr.on('data',function(d){ console.log('[gemini] stderr:',d.toString().trim()) });
-  self.proc.on('close',function(){ console.log('[gemini] process closed'); self.proc = null });
+  self.proc.on('close',function(){self.proc = null });
   self.rpc('initialize',{protocolVersion:1,clientInfo:{name:'toy',version:'1.0'},capabilities:{}},function(r){
-    console.log('[gemini] initialized, version:', (r||{}).agentInfo);
     self.rpc('authenticate',{methodId:'oauth-personal'},function(){
-      console.log('[gemini] authenticated');
       self.ready = 1;
       if(self.pending) self.go(self.pending);
     });
@@ -20,7 +16,6 @@ function Gemini(c){
 Gemini.prototype.rpc = function(m,p,cb){
   var id = this.id++; if(cb) this['_cb'+id] = cb;
   var msg = JSON.stringify({jsonrpc:'2.0',id:id,method:m,params:p||{}});
-  console.log('[gemini] rpc:', m);
   this.proc && this.proc.stdin.write(msg+'\n');
 };
 Gemini.prototype.respond = function(id,r){
@@ -35,16 +30,13 @@ Gemini.prototype.onMsg = function(m){
   // response to our rpc call
   if(m.id && !m.method){
     if(this['_cb'+m.id]){ this['_cb'+m.id](m.result,m.error); delete this['_cb'+m.id] }
-    if(m.error) console.log('[gemini] rpc error:', JSON.stringify(m.error).slice(0,200));
     return;
   }
   // server requesting something from us (has id + method)
   if(m.id && m.method){
-    console.log('[gemini] request:', m.method);
     if(m.method === 'session/request_permission'){
       var opts = ((m.params||{}).permissions||[{}])[0].options || [];
       var allow = opts.find(function(o){ return o.kind === 'allow_always' }) || opts.find(function(o){ return o.kind === 'allow_once' }) || opts[0];
-      console.log('[gemini] auto-approve:', (allow||{}).optionId);
       this.respond(m.id, {outcome:{outcome:'selected',optionId:(allow||{}).optionId||''}});
     } else {
       this.respond(m.id, {});
@@ -55,11 +47,9 @@ Gemini.prototype.onMsg = function(m){
   if(m.method === 'session/update'){
     var u = (m.params||{}).update||{};
     var t = u.sessionUpdate||'';
-    console.log('[gemini] update:', t);
     this.c.send(JSON.stringify({type:'gemini-event',data:u}));
     return;
   }
-  console.log('[gemini] unknown:', JSON.stringify(m).slice(0,200));
 };
 Gemini.prototype.go = function(opt){
   var self = this;
@@ -68,9 +58,7 @@ Gemini.prototype.go = function(opt){
   self.pending = null;
   // resume existing session by id
   if(sid && sid !== self.sid){
-    console.log('[gemini] load session:', sid);
     self.rpc('session/load',{sessionId:sid},function(r,e){
-      if(e){ console.log('[gemini] load error:', JSON.stringify(e).slice(0,200)); }
       self.sid = sid;
       self.prompt(prompt);
     });
@@ -82,28 +70,22 @@ Gemini.prototype.go = function(opt){
     return;
   }
   // new session
-  console.log('[gemini] new session, cwd:', cwd);
   self.rpc('session/new',{cwd:cwd||process.cwd(),mcpServers:[]},function(r){
     self.sid = (r||{}).sessionId||null;
-    console.log('[gemini] session:', self.sid);
     self.c.send(JSON.stringify({type:'gemini-event',data:{sessionUpdate:'session-init',sessionId:self.sid}}));
     self.rpc('session/set_mode',{sessionId:self.sid,modeId:'yolo'},function(){
-      console.log('[gemini] mode set to yolo');
       self.prompt(prompt);
     });
   });
 };
 Gemini.prototype.prompt = function(txt){
   var self = this;
-  console.log('[gemini] prompt:', txt, 'sid:', self.sid);
   self.rpc('session/prompt',{sessionId:self.sid,prompt:[{type:'text',text:txt}]},function(r,e){
-    console.log('[gemini] prompt done:', e ? 'error' : 'ok');
     self.c.send(JSON.stringify({type:'gemini-done',sessionId:self.sid}));
   });
 };
 Gemini.prototype.cancel = function(){
   if(this.sid){
-    console.log('[gemini] cancel');
     // session/cancel is a notification, not a request
     this.proc && this.proc.stdin.write(JSON.stringify({jsonrpc:'2.0',method:'session/cancel',params:{sessionId:this.sid}})+'\n');
   }
@@ -117,11 +99,10 @@ module.exports = function(c, json, cwd){
 
 module.exports.check = function(c){
   try{ cp.execSync('gemini --version',{timeout:3000,stdio:'pipe'}); console.log('[gemini] check: ok'); c.send(JSON.stringify({type:'gemini-auth',ok:true})); }
-  catch(e){ console.log('[gemini] check: not found'); c.send(JSON.stringify({type:'gemini-auth',ok:false})); }
+  catch(e){ c.send(JSON.stringify({type:'gemini-auth',ok:false})); }
 };
 
 module.exports.stop = function(c){
-  console.log('[gemini] stop');
   if(c.gemini) c.gemini.cancel();
 };
 
