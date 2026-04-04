@@ -2,7 +2,7 @@
 
 <iframe id="Status" src="git/status.html" class="none"></iframe>
 
-<iframe src="git/branch.html" class="none"></iframe>
+<!-- iframe src="git/branch.html" class="none"></iframe -->
 
 <div id="app" class="git-ui"></div>
 
@@ -119,12 +119,11 @@ code { counter-reset: line; padding-bottom: 1em; }
 <script src="git/config.js"></script>
 
 <script>
-var git = {};
 kit.ear('git', function hear(eve) {
   var s = eve.detail || eve.data || "", f = s.flat(), l = f.split('\n'), c = l[0]||'', cmd = (c.split(' ')[1]||'').trim();
   console.log('debug', f, '"'+cmd+'"', cmd.length, Status);
   Status.tag('none',-1);
-  setTimeout(x => kit.say(f, cmd, Status), 999);
+  kit.say(f, cmd, Status);
   return;
   git[cmd] && git[cmd](f);
 });

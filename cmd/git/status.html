@@ -1,6 +1,6 @@
 <link rel="stylesheet" href="../../gun/kit/web.css"><script src="../../gun/kit/web.js"></script>
 
-<p>Branch <span id="branch"></span> is <span id="status"></span> with <span id="upstream"></span>.</p>
+<p>Branch <span id="Branch"></span> is <span id="Status"></span> with <span id="Upstream"></span>.</p>
 
 <style>
 p, span { display: inline-block; }
@@ -8,9 +8,9 @@ p, span { display: inline-block; }
 <script>
 kit.ear('status', function hear(f){ f = f.detail || f.data || "";
   //console.log("GOOT IT", f);
-  branch.innerText = ((f.cut('On branch')[2]||'').cut(['\r','\n'])[0]||'').trim();
-  status.innerText = ((f.cut('branch is')[2]||'').cut('with')[0]||'').trim();
-  upstream.innerText = ((f.cut('with')[2]||'').cut('.')[0]||'').trim();
+  Branch.innerText = ((f.cut('On branch')[2]||'').cut(['\r','\n'])[0]||'').trim();
+  Status.innerText = ((f.cut('branch is')[2]||'').cut('with')[0]||'').trim();
+  Upstream.innerText = ((f.cut('with')[2]||'').cut('.')[0]||'').trim();
 });
 </script>
 <script src="../../util.js"></script>

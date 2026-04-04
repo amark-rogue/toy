@@ -1,0 +1,35 @@
+<link rel="stylesheet" href="../../gun/kit/web.css"><script src="../../gun/kit/web.js"></script>
+
+<a>branch</a>
+
+<style>
+a {
+  display: block;
+  flex: 0 0 auto;
+  min-width: 4em;
+  max-width: 10em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0.7em 0.6em;
+  text-align: center;
+  background: color-mix(in srgb, var(--pop) 8%, transparent);
+  border: 1px solid var(--pop);
+  border-radius: 0.6em;
+  font-family: 'Courier New', monospace;
+  font-weight: 900;
+  cursor: pointer;
+  user-select: none;
+}
+a:active {
+  background: var(--pop);
+  color: var(--mood);
+  transform: scale(0.92);
+}
+</style>
+<script>
+kit.ear('branch', function hear(f){ f = f.detail || f.data || "";
+  console.log("git branch:", f);
+});
+</script>
+<script src="../../util.js"></script>

@@ -518,15 +518,8 @@ kit.ear('belt', function(eve, data, b){
   };
   belt.append(b);
 });
-kit.ear('pointerdown',(eve)=>{
-   belt.tag('open',1);
-}, belt);
-window.addEventListener('pointerup',(eve)=>{
-   belt.tag('open',-1);
-});
-window.addEventListener('touchend',(eve)=>{
-   belt.tag('open',-1);
-});
+ais.forEach(function(k){ kit.say([k, k+' '], 'belt') });
+kit.say(['exit','exit'], 'belt');
 setTimeout(()=>{
 [
   {name: 'esc', key: 1},
@@ -537,8 +530,7 @@ setTimeout(()=>{
 ].forEach(function(v){
   kit.say(v, 'belt');
 });
-ais.forEach(function(k){ kit.say([k, k+' '], 'belt') });
-kit.say(['exit','exit'], 'belt');
+
 },999);
                          
 prompt.oninput = function(eve){
@@ -578,7 +570,7 @@ window.addEventListener('scroll', function() {
 }, true);
 scrollBtn.onclick = function(){ go(); scrollBtn.classList.remove('show'); };
 
-B.all('#help')[0].ear('pointerdown',function(eve){
+B.all('#help')[0].ear('click',function(eve){
   if(!prompt.try){ return }
   eve.preventDefault();
   kit.say(prompt.try, 'prompt.try');

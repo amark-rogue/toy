@@ -11,9 +11,51 @@ tmp = D.head.parentNode.style; if(W.parent === W) { tmp['overscroll-behavior-y']
 function LOAD(src, h, s){ (s = D[HI]('script')).onload = h; s.src = src; D.head.appendChild(s) };
 function MAP(scroll, screen){ return (scroll / screen)>>0 }; // scroll, screen
 kit = function(){};
+kit.ears = kit.ears || {};
+kit.q = kit.q || {};
 // dip, dive, into, eat, lid, tin, key, face
-kit.ear = function(h,e,v){ (v=v||W)[ON](e=(h.call?(h.where=e):(e.where=h,(h=e).where))||'',h); h.off = function(){ v.removeEventListener(e,h) }; W===v&&kit.up(e,'ear'); return h; };
-kit.say = function(d,e,v,s){ (v=v||W).dispatchEvent(new CustomEvent(e=e||'',{detail:d,bubbles:true})); !s&&(W===v)&&kit.up(d,e) };
+//kit.ear = function(h,e,v){ (v=v||W)[ON](e=(h.call?(h.where=e):(e.where=h,(h=e).where))||'',h); h.off = function(){ v.removeEventListener(e,h) }; W===v&&kit.up(e,'ear'); return h; };
+//kit.say = function(d,e,v,s){ (v=v||W).dispatchEvent(new CustomEvent(e=e||'',{detail:d,bubbles:true})); !s&&(W===v)&&kit.up(d,e) };
+kit.ear = function(h,e,v){ 
+  (v=v||W)[ON](e=(h.call?(h.where=e):(e.where=h,(h=e).where))||'',h); 
+  kit.ears[e] = 1;
+  h.off = function(){ v.removeEventListener(e,h) }; 
+  W===v&&kit.up(e,'ear'); 
+  if(kit.q[e]){
+    var q = kit.q[e]; kit.q[e] = null;
+    q.forEach(function(m){ kit.say(m.d, e, v, m.s) });
+  }
+  return h; 
+};
+kit.say = function(d,e,v,s){ 
+  e=e||''; v=v||W;
+  if(s === 1 && v === W && !kit.ears[e]){
+    var qi = {d:d, s:s};
+    (kit.q[e] = kit.q[e] || []).push(qi);
+    setTimeout(function(){
+      if(kit.q[e]){
+        var x = kit.q[e].indexOf(qi);
+        if(x > -1){ kit.q[e].splice(x, 1) }
+      }
+    }, 9999);
+  }
+  v.dispatchEvent(new CustomEvent(e,{detail:d,bubbles:true})); 
+  !s&&(W===v)&&kit.up(d,e); 
+  if(v.tagName === 'IFRAME'){
+    if(!v.ready){
+      var qi = {d:d, e:e, s:s};
+      (v.wait = v.wait || []).push(qi);
+      setTimeout(function(){
+        if(v.wait){
+          var x = v.wait.indexOf(qi);
+          if(x > -1){ v.wait.splice(x, 1) }
+        }
+      }, 9999);
+    } else if(v.contentWindow && !(kit._echo && kit._echo.i === v && kit._echo.t === e)){
+      v.contentWindow.postMessage({data:d, type:e, wrap:-1}, DEV?'*':location.origin);
+    }
+  }
+};
 kit.up = function up(data,type,tmp){
   if(W === W.parent){ return }
   if(U === data){ return } // TODO: BUG? maybe allow?
@@ -35,7 +77,17 @@ W[ON]('message',function(eve,data,i,tmp){
     kit.say(data.data||data.detail,data.type,0,1);
     return;
   }
-  if('ear'==data.type){ kit.ear(data.detail||data.data,function hear(eve){ if(!(i||'').contentWindow){hear.off(); return } if(kit._echo && kit._echo.i === i && kit._echo.t === eve.type){ return } i.contentWindow.postMessage({data:eve.detail||eve.data,type:eve.type,wrap:-1}, DEV?'*':location.origin) }); return; }
+  //if('ear'==data.type){ kit.ear(data.detail||data.data,function hear(eve){ if(!(i||'').contentWindow){hear.off(); return } if(kit._echo && kit._echo.i === i && kit._echo.t === eve.type){ return } i.contentWindow.postMessage({data:eve.detail||eve.data,type:eve.type,wrap:-1}, DEV?'*':location.origin) }); return; }
+  if('ear'==data.type){ kit.ear(data.detail||data.data,function hear(eve){ if(!(i||'').contentWindow){hear.off(); return } if(kit._echo && kit._echo.i === i && kit._echo.t === eve.type){ return } if(eve.target === i){ return } i.contentWindow.postMessage({data:eve.detail||eve.data,type:eve.type,wrap:-1}, DEV?'*':location.origin) }); return; }
+  if('load'==data.type){
+    i.ready = 1;
+    if(i.wait){
+      var q = i.wait; i.wait = null;
+      q.forEach(function(m){ 
+        if(i.contentWindow){ i.contentWindow.postMessage({data:m.d, type:m.e, wrap:-1}, DEV?'*':location.origin) }
+      });
+    }
+  }
   kit._echo = {i:i,t:data.type}; kit.say(data.data||data.detail,data.type,i); kit._echo = null;
 });
 kit.views = new Map;
