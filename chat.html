@@ -292,12 +292,18 @@ var agentExit = function(){
   prompt.placeholder = '$';
 };
 
-kit.ear('claude-session', function(eve){ if(agent.kind==='claude') agent.sid = eve.detail||eve.data||null; });
-kit.ear('codex-session', function(eve){ if(agent.kind==='codex') agent.sid = eve.detail||eve.data||null; });
-
 // cwd is tracked by watching pwd output and cd commands in CMD.bash
 
-var card = function(val, kind){
+var ais = ['claude','codex','gemini'];
+ais.forEach(function(k){ kit.ear(k+'-session', function(eve){ if(agent.kind===k) agent.sid = eve.detail||eve.data||null }) });
+var parse = function(val){
+  var m = val.match(/^(claude|codex|gemini)(?:\s+--resume\s+(\S+))?\s*([\s\S]*)$/i);
+  if(!m) return null;
+  return {kind: m[1].toLowerCase(), sid: m[2]||null, prompt: m[3].trim()||m[1]};
+};
+var sidKey = function(kind){ return kind === 'codex'? 'thread' : 'session' };
+
+var card = function(val, kind, sid){
   var v = B.new('div'), p = B.new('pre'), i = B.new('iframe');
   v.className = 'reply-card '+kind+'-card';
   p.textContent = '$ '+val;
@@ -308,8 +314,7 @@ var card = function(val, kind){
     if(eve.detail === undefined) return;
     if(eve.target !== i) return;
     var msg = {prompt:val, cwd:(localStorage.cwd || '')};
-    if(kind === 'claude') msg.session = agent.sid;
-    if(kind === 'codex') msg.thread = agent.sid;
+    if(sid) msg[sidKey(kind)] = sid;
     kit.say(msg, kind, i);
     agentEnter(i, kind);
   }, i);
@@ -354,8 +359,7 @@ kit.ear('chat',(eve)=>{
   try{
     var j = ('string' == typeof d) ? JSON.parse(d) : d;
     if(j.type && agent.iframe){
-      if(j.type.indexOf('claude') === 0){ kit.say(j, 'claude', agent.iframe); return }
-      if(j.type.indexOf('codex') === 0){ kit.say(j, 'codex', agent.iframe); return }
+      for(var ai=0; ai<ais.length; ai++){ if(j.type.indexOf(ais[ai]) === 0){ kit.say(j, ais[ai], agent.iframe); return } }
     }
   }catch(e){}
   stream(d);
@@ -385,8 +389,7 @@ kit.ear('prompt',(eve)=>{
   // in agent mode, send follow-up
   if(agent.mode && agent.iframe && val){
     var msg = {prompt:val, cwd:(localStorage.cwd || '')};
-    if(agent.kind === 'claude') msg.session = agent.sid;
-    if(agent.kind === 'codex') msg.thread = agent.sid;
+    msg[sidKey(agent.kind)] = agent.sid;
     kit.say(msg, agent.kind, agent.iframe);
     prompt.value = "";
     autoGrow(prompt);
@@ -395,18 +398,11 @@ kit.ear('prompt',(eve)=>{
     return;
   }
 
-  // start new claude session
-  if(/^claude(\s|$)/.test(val)){
-    card(val, 'claude');
-    prompt.value = "";
-    autoGrow(prompt);
-    window.buzz();
-    return;
-  }
-
-  // start new codex session
-  if(/^codex(\s|$)/.test(val)){
-    card(val, 'codex');
+  // start or resume agent session
+  var cmd = parse(val);
+  if(cmd){
+    agent.sid = cmd.sid || null;
+    card(val, cmd.kind, cmd.sid);
     prompt.value = "";
     autoGrow(prompt);
     window.buzz();
@@ -541,8 +537,7 @@ setTimeout(()=>{
 ].forEach(function(v){
   kit.say(v, 'belt');
 });
-kit.say(['claude','claude '], 'belt');
-kit.say(['codex','codex '], 'belt');
+ais.forEach(function(k){ kit.say([k, k+' '], 'belt') });
 kit.say(['exit','exit'], 'belt');
 },999);
                          

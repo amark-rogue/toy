@@ -60,6 +60,73 @@ String.prototype.unansi = function() {
 ESC = {"'":'','"':'','#':'\n'};
 var D = document, B = D.body;
 
+// tool-call renderer for AI agent cards (claude, codex, gemini)
+;(function(){
+
+// normalize tool name → short label
+// claude: Bash→command, Read→file, Write→file, Edit→file, Grep→pattern, Glob→pattern
+// codex: "/bin/zsh -lc pwd" → "pwd", "/bin/zsh -lc 'ls -la'" → "ls -la"
+// gemini: "run_shell_command-123-1" + title:"pwd" → "pwd"
+var names = {Read:'read', Write:'write', Edit:'edit', Grep:'grep', Glob:'glob',
+  read_file:'read', read_many_files:'read', write_file:'write', replace:'edit',
+  grep_search:'grep', list_directory:'ls', glob:'glob',
+  google_web_search:'search', web_fetch:'fetch'};
+
+window.Tool = {};
+
+Tool.label = function(name, inp){
+  inp = inp || {};
+  // codex shell: "/bin/zsh -lc 'ls -la'"
+  var m = (name||'').match(/-lc\s+'?(.*?)(?:'|$)/);
+  if(m) return m[1];
+  if(name && name.indexOf('/') === 0) return name.replace(/^\/\S+\s+(-\S+\s+)*/,'').trim();
+  // gemini toolCallId: "run_shell_command-1234-1"
+  if(name && /^[a-z_]+-\d+-\d+$/.test(name)){
+    var tool = name.replace(/-\d+-\d+$/,'');
+    if(tool === 'run_shell_command') return inp.title || 'shell';
+    return names[tool] || inp.title || tool.replace(/_/g,' ');
+  }
+  // claude Bash
+  if(/^bash$/i.test(name) && inp.command) return inp.command;
+  // claude/gemini mapped
+  if(names[name]){
+    var arg = inp.file_path || inp.pattern || inp.path || '';
+    return names[name] + (arg ? ' '+arg : '');
+  }
+  return name || 'tool';
+};
+
+Tool.mk = function(bod, name, inp){
+  var label = Tool.label(name, inp);
+  var v = D.createElement('div');
+  v.className = 'run';
+  var top = D.createElement('p');
+  top.className = 'rlb';
+  top.textContent = '$ ' + label;
+  top.onclick = function(){ v.classList.toggle('open'); kit.say({},'style') };
+  var out = D.createElement('pre');
+  out.className = 'rout blk';
+  v.append(top); v.append(out);
+  v._out = out; v._buf = '';
+  bod.append(v);
+  kit.say({},'style');
+  return v;
+};
+
+Tool.out = function(v, txt){
+  if(!v) return;
+  v._buf += (txt||'');
+  v._out.textContent = v._buf;
+  kit.say({},'style');
+};
+
+Tool.done = function(v){
+  if(!v) return;
+  if(v._buf) v.classList.add('ok');
+};
+
+}());
+
 window.buzz = function(ms) {
   try { if (navigator.vibrate) navigator.vibrate(ms || 9); } catch(e) {}
 };
