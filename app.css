@@ -1,22 +1,5 @@
 :root {
-  --bg: #030005;
-  --fg: #fff;
-  --pop: #d946ef;
-  --edge: 1px solid var(--pop);
-  --gap: 0.5em;
-  --font: 'Courier New', monospace;
-  --blur: 10px;
-}
 
-* { box-sizing: border-box; }
-
-body, html {
-  margin: 0;
-  padding: 0;
-  height: 100%;
-  background: var(--bg);
-  color: var(--fg);
-  font-family: var(--font);
 }
 
 .card {
@@ -34,7 +17,7 @@ body, html {
 
 .pop { color: var(--pop); text-shadow: 0 0 10px var(--pop); }
 
-button, .key {
+/*a, button, .key {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -49,12 +32,27 @@ button, .key {
   transition: all 0.2s;
   text-shadow: 0 0 5px var(--pop);
   box-shadow: 0 0 10px rgba(217, 70, 239, 0.2);
-}
+}*/
 
-button:active, .key:active, .live {
+a, button {
+  scroll-snap-align: start;
+  flex: 0 0 auto;
+  text-align: right;
+  -webkit-backdrop-filter: blur(var(--blur) );
+  backdrop-filter: blur(var(--blur));
+  background: rgba(0,0,0,0.2);
+  border: 1px solid var(--pop);
+  box-shadow: 0 0 0.1em var(--pop);
+  padding: 0.5em 1em;
+  border-radius: 0.5em;
+  cursor: pointer;
+  white-space: nowrap;
+  text-shadow: 0 0 5px var(--pop);
+}
+a:active, button:active {
   background: var(--pop);
-  color: var(--bg);
-  transform: scale(0.92);
+  color: var(--mood);
+  transform: scale(0.9);
   text-shadow: none;
 }
 
@@ -80,15 +78,3 @@ input, textarea {
 
 .row { display: flex; gap: 0.5em; align-items: center; }
 .grid { display: grid; gap: 0.5em; }
-
-/* Retro Scanlines */
-body::after {
-  content: " ";
-  display: block;
-  position: fixed;
-  top: 0; left: 0; bottom: 0; right: 0;
-  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
-  z-index: 9999;
-  background-size: 100% 2px, 3px 100%;
-  pointer-events: none;
-}

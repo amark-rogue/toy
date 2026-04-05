@@ -40,13 +40,13 @@ kit.say = function(d,e,v,s){
       }
     }, 9999);
   }
-  v.dispatchEvent(new CustomEvent(e,{detail:d,bubbles:true})); 
-  !s&&(W===v)&&kit.up(d,e); 
+  var ev = new CustomEvent(e,{detail:d,bubbles:true,cancelable:true});
+  v.dispatchEvent(ev); 
+  (!s && W===v || s === 1 && !ev.cancelBubble) && kit.up(d,e); 
   if(v.tagName === 'IFRAME'){
     if(kit._echo && kit._echo.i === v && kit._echo.t === e){ return }
     var send = function() {
       if(send.off) send.off();
-      //console.log("SENDING TO IFRAME:", e, d);
       if(v.contentWindow) v.contentWindow.postMessage({data:d, type:e, wrap:-1}, DEV?'*':location.origin);
     };
     if(v.readyState){ send() } else { kit.ear('ready', send, v) }
