@@ -293,7 +293,6 @@ var agentExit = function(){
 };
 
 // cwd is tracked by watching pwd output and cd commands in CMD.bash
-
 var ais = ['claude','codex','gemini'];
 ais.forEach(function(k){ kit.ear(k+'-session', function(eve){ if(agent.kind===k) agent.sid = eve.detail||eve.data||null }) });
 var parse = function(val){
@@ -310,14 +309,13 @@ var card = function(val, kind, sid){
   v.append(p);
   i.src = './cmd/'+kind+'.html';
   shell.append(v);
-  kit.ear('load', function(eve){
-    if(eve.detail === undefined) return;
-    if(eve.target !== i) return;
+  i.onload = function(e){
+    if(!i.readyState){ return i.remove() }
     var msg = {prompt:val, cwd:(localStorage.cwd || '')};
     if(sid) msg[sidKey(kind)] = sid;
     kit.say(msg, kind, i);
     agentEnter(i, kind);
-  }, i);
+  };
   v.append(i);
   p.style.cursor = 'pointer';
   p.onclick = function(){
@@ -354,14 +352,13 @@ kit.ear('host',(eve)=>{
   kit.up(eve.detail || eve.data, 'host');
 });
 
-kit.ear('chat',(eve)=>{
-  var d = eve.detail || eve.data;
-  try{
+kit.ear('chat',(eve)=>{ var d = eve.detail || eve.data || '';
+  if('{'==d[0]){ try{
     var j = ('string' == typeof d) ? JSON.parse(d) : d;
     if(j.type && agent.iframe){
       for(var ai=0; ai<ais.length; ai++){ if(j.type.indexOf(ais[ai]) === 0){ kit.say(j, ais[ai], agent.iframe); return } }
     }
-  }catch(e){}
+  }catch(e){}}
   stream(d);
 });
 kit.ear('prompt',(eve)=>{
@@ -408,7 +405,6 @@ kit.ear('prompt',(eve)=>{
     window.buzz();
     return;
   }
-
   kit.say(prompt.value+'\r','host');
   prompt.value = "";
   autoGrow(prompt);
@@ -579,7 +575,6 @@ var stream = function(t){
   (window.shellReply || {}).maybeContinue && window.shellReply.maybeContinue(t, {state: stream, send: function(c){ kit.say(c, 'host') }});
   stream.live || (stream.live = (function(card, pre){
     card = B.new('div');
-    card.className = 'reply-card streaming';
     pre = B.new('pre');
     card.append(pre);
     card.pre = pre;
@@ -650,72 +645,52 @@ CMD.bash = function(S, cmdl, cmd, tmp){
         if(ln && ln.charAt(0) === '/'){ localStorage.cwd = ln; break; }
       }
     }
-    (p = B.new('pre')).textContent = t;
-    (v = B.new('div')).className = 'reply-card ready-upgrade';
-    v.raw = s;
-    v.append(p);
-    setTimeout(function(eve){
-      if(v.upgraded || v.upgrading){ 
-        if(v.upgraded){ kit.say(s, cmd, v.all('iframe')[0]); }
-        return 
-      }
-      var cmd = t.cut(['\r\n','\n','\r'],ESC)[0].trim();
-      cmd = cmd.replace(/^.*(?:\$|#|>|PS>)\s*/, '');
-      var p = B.new('p');
+    var cmdFull = t.cut(['\r\n','\n','\r'],ESC)[0].trim().replace(/^.*(?:\$|#|>|PS>)\s*/, '');
+    var cmd = cmdFull.trim().split(/\s+/)[0].trim();
 
-      var promptToUse = firstChunk ? oldF : F;
-      firstChunk = false;
-      var promptText = (Array.isArray(promptToUse) ? '$' : (promptToUse.flat ? promptToUse.flat() : promptToUse)).trim();
-      var match = promptText.match(/^(.*?)([\$#>\%]\s*|\~%\s*)$/s);
-      if (match) {
-         var pathPart = match[1].trim();
-         var symPart = match[2].trim();
-         var colonIdx = pathPart.lastIndexOf(':');
-         var pathOnly = colonIdx !== -1 ? pathPart.substring(colonIdx + 1) : pathPart;
-         var prefix = colonIdx !== -1 ? pathPart.substring(0, colonIdx + 1) : "";
-         var parts = pathOnly.split('/');
-         if (parts.length > 4) {
-           pathOnly = parts.slice(0, 2).join('/') + '/.../' + parts.slice(-2).join('/');
-         }
-         promptText = prefix + pathOnly ;
-      }
-      
-      
-      p.innerText = promptText;
-      v.append(p);
-      p = B.new('p');
-      p.innerText = symPart+' '+cmd;
-      v.append(p);
-      cmd = cmd.trim().split(/\s+/)[0].trim();
-      if(!cmd){ return }
-      //if(cmd === 'clear'){ kit.say(s, 'clear'); return; }
-      var i = B.new('iframe');
-      i.src = './cmd/'+cmd+'.html';
-      i.setAttribute('scrolling','no');
-      v.upgrading = 1;
-      v.append(i);
-      kit.ear('load', function(eve){
-        if(eve.detail === undefined) return; // Ignore native iframe load (e.g. 404)
-        if(eve.target !== i) return;
-        kit.say(s,cmd, i);
-        v.upgraded = 1;
-        v.upgrading = 0;
-        v.classList.remove('ready-upgrade');
-        v.all('pre')[0].remove();
-      }, i);
-      setTimeout(function(){
-        if(v.upgraded || !v.upgrading){ return }
-        v.upgrading = 0;
-        i.remove();
-      },900);
-    },99);
+    (v = B.new('div'));
+    v.raw = s;
+
+    var promptToUse = firstChunk ? oldF : F;
+    firstChunk = false;
+    var promptText = (Array.isArray(promptToUse) ? '$' : (promptToUse.flat ? promptToUse.flat() : promptToUse)).trim();
+    var match = promptText.match(/^(.*?)([\$#>\%]\s*|\~%\s*)$/s);
+    var symPart = '';
+    if (match) {
+       var pathPart = match[1].trim();
+       symPart = match[2].trim();
+       var colonIdx = pathPart.lastIndexOf(':');
+       var pathOnly = colonIdx !== -1 ? pathPart.substring(colonIdx + 1) : pathPart;
+       var prefix = colonIdx !== -1 ? pathPart.substring(0, colonIdx + 1) : "";
+       var parts = pathOnly.split('/');
+       if (parts.length > 4) {
+         pathOnly = parts.slice(0, 2).join('/') + '/.../' + parts.slice(-2).join('/');
+       }
+       promptText = prefix + pathOnly ;
+    }
+
+    (p = B.new('p')).innerText = promptText;
+    v.append(p);
+    (p = B.new('p')).innerText = symPart+' '+cmdFull;
+    v.append(p);
+
+    (p = B.new('pre')).textContent = t;
+    v.append(p);
+
+    if(cmd){
+      v.append(i = B.new('iframe'));
+      i.onload = function(e){
+        if(!i.readyState){ return i.remove() }
+        kit.say(s, cmd, i);
+        p.remove();
+      }; i.src = './cmd/'+cmd+'.html';
+    }
     shell.append(v);
   });
   tip();
 }
 }());
 kit.ear('clear',eve=>{console.log('???clear???');shell.innerHTML = ""; });
-//console.log("WAT");
 
 //kit.say('clear', 'prompt');
 kit.say('whoami', 'prompt');
@@ -746,7 +721,7 @@ window.AI = {
   async spell(w){
     return this.ask('TEXT ONLY NO HTML spell correct & add next predicted word to this sentence: '+w);
   },
-  async code(q, code, path, res, data, one, msg){ console.log("ask OR", q, code, path);
+  async code(q, code, path, res, data, one, msg){ //console.log("ask OR", q, code, path);
       res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST", headers: { "Authorization": "Bearer "+await AI.key(), "Content-Type": "application/json",
         //'HTTP-Referer': window.location.href, // be ranked?

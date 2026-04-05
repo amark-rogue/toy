@@ -16,11 +16,11 @@ kit.q = kit.q || {};
 // dip, dive, into, eat, lid, tin, key, face
 //kit.ear = function(h,e,v){ (v=v||W)[ON](e=(h.call?(h.where=e):(e.where=h,(h=e).where))||'',h); h.off = function(){ v.removeEventListener(e,h) }; W===v&&kit.up(e,'ear'); return h; };
 //kit.say = function(d,e,v,s){ (v=v||W).dispatchEvent(new CustomEvent(e=e||'',{detail:d,bubbles:true})); !s&&(W===v)&&kit.up(d,e) };
-kit.ear = function(h,e,v){ 
-  (v=v||W)[ON](e=(h.call?(h.where=e):(e.where=h,(h=e).where))||'',h); 
+kit.ear = function(h,e,v){
+  (v=v||W)[ON](e=(h.call?(h.where=e):(e.where=h,(h=e).where))||'',h);
+  v.tagName === 'IFRAME' && v.contentWindow && kit.views.set(v.contentWindow, v);
   kit.ears[e] = 1;
-  h.off = function(){ v.removeEventListener(e,h) }; 
-  W===v&&kit.up(e,'ear'); 
+  h.off = function(){ v.removeEventListener(e,h) };  W===v&&kit.up(e,'ear'); 
   if(kit.q[e]){
     var q = kit.q[e]; kit.q[e] = null;
     q.forEach(function(m){ kit.say(m.d, e, v, m.s) });
@@ -29,7 +29,8 @@ kit.ear = function(h,e,v){
 };
 kit.say = function(d,e,v,s){ 
   e=e||''; v=v||W;
-  if(s === 1 && v === W && !kit.ears[e]){
+  v.tagName === 'IFRAME' && v.contentWindow && kit.views.set(v.contentWindow, v);
+  if(v === W && !kit.ears[e]){
     var qi = {d:d, s:s};
     (kit.q[e] = kit.q[e] || []).push(qi);
     setTimeout(function(){
@@ -42,18 +43,13 @@ kit.say = function(d,e,v,s){
   v.dispatchEvent(new CustomEvent(e,{detail:d,bubbles:true})); 
   !s&&(W===v)&&kit.up(d,e); 
   if(v.tagName === 'IFRAME'){
-    if(!v.ready){
-      var qi = {d:d, e:e, s:s};
-      (v.wait = v.wait || []).push(qi);
-      setTimeout(function(){
-        if(v.wait){
-          var x = v.wait.indexOf(qi);
-          if(x > -1){ v.wait.splice(x, 1) }
-        }
-      }, 9999);
-    } else if(v.contentWindow && !(kit._echo && kit._echo.i === v && kit._echo.t === e)){
-      v.contentWindow.postMessage({data:d, type:e, wrap:-1}, DEV?'*':location.origin);
-    }
+    if(kit._echo && kit._echo.i === v && kit._echo.t === e){ return }
+    var send = function() {
+      if(send.off) send.off();
+      //console.log("SENDING TO IFRAME:", e, d);
+      if(v.contentWindow) v.contentWindow.postMessage({data:d, type:e, wrap:-1}, DEV?'*':location.origin);
+    };
+    if(v.readyState){ send() } else { kit.ear('ready', send, v) }
   }
 };
 kit.up = function up(data,type,tmp){
@@ -73,22 +69,24 @@ W[ON]('message',function(eve,data,i,tmp){
   }
   if(U === (data = eve.data||eve.detail)){ return } // TODO: BUG? maybe allow?
   if(!(i = kit.views.get(eve.source))){ // no iframe view? then message coming down to us from above.
-    //console.log(location.pathname.split('/').slice(-1)[0], "GOT FROM ABOVE:", eve);
-    kit.say(data.data||data.detail,data.type,0,1);
-    return;
-  }
-  //if('ear'==data.type){ kit.ear(data.detail||data.data,function hear(eve){ if(!(i||'').contentWindow){hear.off(); return } if(kit._echo && kit._echo.i === i && kit._echo.t === eve.type){ return } i.contentWindow.postMessage({data:eve.detail||eve.data,type:eve.type,wrap:-1}, DEV?'*':location.origin) }); return; }
-  if('ear'==data.type){ kit.ear(data.detail||data.data,function hear(eve){ if(!(i||'').contentWindow){hear.off(); return } if(kit._echo && kit._echo.i === i && kit._echo.t === eve.type){ return } if(eve.target === i){ return } i.contentWindow.postMessage({data:eve.detail||eve.data,type:eve.type,wrap:-1}, DEV?'*':location.origin) }); return; }
-  if('load'==data.type){
-    i.ready = 1;
-    if(i.wait){
-      var q = i.wait; i.wait = null;
-      q.forEach(function(m){ 
-        if(i.contentWindow){ i.contentWindow.postMessage({data:m.d, type:m.e, wrap:-1}, DEV?'*':location.origin) }
-      });
+    try { i = eve.source.frameElement; } catch(e) {}
+    if(i && i.ownerDocument !== D) i = null;
+    if(i){
+      kit.views.set(eve.source, i);
+      kit.frame.lockScroll(i);
+      kit.frame.refresh();
+    } else {
+      //console.log(location.pathname.split('/').slice(-1)[0], "GOT FROM ABOVE:", eve);
+      kit.say(data.data||data.detail,data.type,0,data.wrap||-1);
+      return;
     }
   }
-  kit._echo = {i:i,t:data.type}; kit.say(data.data||data.detail,data.type,i); kit._echo = null;
+  //if('ear'==data.type){ kit.ear(data.detail||data.data,function hear(eve){ if(!(i||'').contentWindow){hear.off(); return } if(kit._echo && kit._echo.i === i && kit._echo.t === eve.type){ return } i.contentWindow.postMessage({data:eve.detail||eve.data,type:eve.type,wrap:-1}, DEV?'*':location.origin) }); return; }
+
+  i.readyState = 1;
+
+  if('ear'==data.type){ kit.ear(data.detail||data.data,function hear(eve){ if(!(i||'').contentWindow){hear.off(); return } if(kit._echo && kit._echo.i === i && kit._echo.t === eve.type){ return } if(eve.target === i){ return } i.contentWindow.postMessage({data:eve.detail||eve.data,type:eve.type,wrap:-1}, DEV?'*':location.origin) }); return; }
+  kit._echo = {i:i,t:data.type}; kit.say(data.data||data.detail,data.type,i,data.wrap||1); kit._echo = null;
 });
 kit.views = new Map;
 (kit.size = function(b,d,h,w,last){
@@ -340,9 +338,26 @@ W[ON]('DOMContentLoaded',function(m){
     location.path = hash;
     eve && kit.up({newURL: eve.newURL, oldURL: eve.oldURL},'hashchange');
   }; W[ON]('hashchange',change) }());
-  kit.up('','load');
   kit.frame && kit.frame.refresh && kit.frame.refresh();
   return;
   //if(location.hash){ kit.say('','hashchange') }
 });
+var p = HTMLIFrameElement.prototype, _ifL;
+while(p && !(_ifL = Object.getOwnPropertyDescriptor(p, 'onload'))) p = Object.getPrototypeOf(p);
+_ifL = _ifL || {};
+Object.defineProperty(HTMLIFrameElement.prototype, 'onload', {
+  set: function(fn) {
+    var i = this;
+    if(i.contentWindow) kit.views.set(i.contentWindow, i);
+    if (!fn) return _ifL.set ? _ifL.set.call(i, fn) : (i.onloaded = fn);
+    var w = function(e) {
+      if(i.readyState) return fn.call(i, e);
+      var r = function(){ if(r.d) return; r.d = 1; fn.call(i, e) };
+      kit.ear('ready', function(){ i.readyState = 1; r() }, i);
+      setTimeout(r, 99);
+    };
+    _ifL.set ? _ifL.set.call(i, w) : i.addEventListener('load', w);
+  }
+});
+kit.up('','ready');
 }());
