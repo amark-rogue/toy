@@ -1,35 +1,42 @@
 <link rel="stylesheet" href="../../gun/kit/web.css"><script src="../../gun/kit/web.js"></script>
 
-<a>branch</a>
-
 <style>
-a {
-  display: block;
-  flex: 0 0 auto;
-  min-width: 4em;
-  max-width: 10em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  padding: 0.7em 0.6em;
-  text-align: center;
-  background: color-mix(in srgb, var(--pop) 8%, transparent);
-  border: 1px solid var(--pop);
-  border-radius: 0.6em;
-  font-family: 'Courier New', monospace;
-  font-weight: 900;
-  cursor: pointer;
-  user-select: none;
-}
-a:active {
-  background: var(--pop);
-  color: var(--mood);
-  transform: scale(0.92);
+:root {
+  --fill: var(--mood);
+  --mo-od: white;
+  --m0-0d: 100%,100%,100%;
 }
 </style>
 <script>
-kit.ear('branch', function hear(f){ f = f.detail || f.data || "";
-  console.log("git branch:", f);
+kit.ear('branch', function hear(f){ hear.off(); f = f.detail || f.data || "";
+  var lines = f.trim().split('\n').slice(1);
+  lines.forEach(function(l){
+    if(!l.trim()){ return }
+    if(l.match(/(?:\$|#|>|PS>)\s*git/)){ return }
+    
+    var on = '*' == l[0];
+    var name = l;//.substring(1).trim();
+    if(name.indexOf('->') > -1){ return } // skip remote HEAD pointer
+    
+    var print = name;
+    print = print.replace('remotes/','').replace('origin/','');
+    
+    var go = name;
+    if(name.startsWith('remotes/')){
+      var parts = name.split('/');
+      if(parts.length >= 3) go = parts.slice(2).join('/');
+    }
+    
+    var a = document.new('a');
+    a.textContent = print;
+    if(on){ a.tag('active',1) }
+    
+    a.onclick = function(){
+      kit.say('git checkout ' + go, 'prompt');
+    };
+    document.body.append(a);
+  });
 });
 </script>
 <script src="../../util.js"></script>
+<link rel="stylesheet" href="../../app.css">

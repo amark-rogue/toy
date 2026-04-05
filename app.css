@@ -1,6 +1,24 @@
 :root {
-
 }
+@media (prefers-color-scheme: dark) {
+  :root { --glow: 0.2em; }
+}
+
+a, button {
+  margin: 0.1em;
+  padding: 0.5em 1em;
+  border-radius: 0.5em;
+  border: 1px solid var(--pop);
+  background: rgba(var(--m00d),0.2);
+  -webkit-backdrop-filter: blur(var(--blur));
+  backdrop-filter: blur(var(--blur));
+  box-shadow: 0 0 var(--glow) var(--pop);
+  cursor: pointer;
+}
+a:active, a:hover, button:active, button:hover {
+  background: var(--pop);
+  color: var(--mood);
+} a:active, button:active { transform: scale(0.9); }
 
 .card {
   background: rgba(20, 5, 25, 0.6);
@@ -8,52 +26,6 @@
   border-radius: 1em;
   padding: 1.5em;
   backdrop-filter: blur(var(--blur));
-}
-
-.fog {
-  backdrop-filter: blur(var(--blur));
-  -webkit-backdrop-filter: blur(var(--blur));
-}
-
-.pop { color: var(--pop); text-shadow: 0 0 10px var(--pop); }
-
-/*a, button, .key {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.5em 1em;
-  background: rgba(0,0,0,0.2);
-  border: var(--edge);
-  border-radius: 0.5em;
-  color: var(--fg);
-  font: inherit;
-  font-weight: 900;
-  cursor: pointer;
-  transition: all 0.2s;
-  text-shadow: 0 0 5px var(--pop);
-  box-shadow: 0 0 10px rgba(217, 70, 239, 0.2);
-}*/
-
-a, button {
-  scroll-snap-align: start;
-  flex: 0 0 auto;
-  text-align: right;
-  -webkit-backdrop-filter: blur(var(--blur) );
-  backdrop-filter: blur(var(--blur));
-  background: rgba(0,0,0,0.2);
-  border: 1px solid var(--pop);
-  box-shadow: 0 0 0.1em var(--pop);
-  padding: 0.5em 1em;
-  border-radius: 0.5em;
-  cursor: pointer;
-  white-space: nowrap;
-  text-shadow: 0 0 5px var(--pop);
-}
-a:active, button:active {
-  background: var(--pop);
-  color: var(--mood);
-  transform: scale(0.9);
-  text-shadow: none;
 }
 
 input, textarea {

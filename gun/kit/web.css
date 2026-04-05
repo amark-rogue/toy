@@ -1,6 +1,7 @@
 :root {
   --cs: 18pt;
   --mood: white;
+  --m00d: 100%,100%,100%;
   --fill: white;
   --blur: 5px;
   --drip: center;
@@ -10,6 +11,11 @@
   --pop: #BF00FF;
   --err: #ff4757;
 }
+@media (prefers-color-scheme: dark) {
+  :root { --mood: black; --m00d: 0,0,0; }
+}
+*, *::before, *::after { box-sizing: border-box; }
+html, body, iframe, frame { overflow-x: hidden; }
 html, body /*, main, .page*/ {
 	margin: 0;
 	padding: 0;
@@ -33,18 +39,12 @@ html, body /*, main, .page*/ {
   scrollbar-width: thin;
   scrollbar-color: var(--pop) transparent;
 } body, main, .page { display: grid; place-items: var(--drip); }
-@media (prefers-color-scheme: dark) {
-  :root { --mood: black; }
-} /*.page { dis-play:none } .page:target { display:grid; }*/
+/*.page { dis-play:none } .page:target { display:grid; }*/
 main, .page {
   position: absolute; inset: 0;
   width: 100%; min-height: 100vh; min-height: 100dvh;
 }
-frame, iframe, body, html {
-  overflow-x: hidden;
- }
-*, *::before, *::after { box-sizing: border-box; }
-div, ul, ol, li, p, span, form, button, input, textarea, img, dialog[open], frame, iframe {
+div, ul, ol, li, a, p, form, button, input, textarea, img, dialog[open], frame, iframe {
   border: 0;
   margin: 0;
   padding: 0;
@@ -58,10 +58,10 @@ div, ul, ol, li, p, span, form, button, input, textarea, img, dialog[open], fram
   background-attachment: fixed;
   background-position: center;
   background-size: cover;
-  box-sizing: border-box;
   max-width: 100%;
   font: inherit;
 }
+a, p { display: inline-block; }
 
 .ani {
   animation: stage linear both;
@@ -95,8 +95,8 @@ dialog {
 dialog::backdrop {
   background: transparent;
 }
-button, input, textarea { padding: 0.5em 1em; }
-a, button, input, textarea {
+button, input, textarea {
+  padding: 0.5em 1em;
   display: grid; place-items: var(--drip);
   background-color: inherit;
   border: inherit;

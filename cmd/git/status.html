@@ -2,10 +2,9 @@
 
 <p>Branch <a id="Branch" onclick="kit.say('git branch -a','prompt')"></a> is <span id="Status"></span> with <a id="Upstream"></a>.</p>
 
-<style>
-a, p, span { display: inline-block; text-align: center; margin: 0.1em 0; }
-</style>
 <link rel="stylesheet" href="../../app.css">
+<style>
+</style>
 <script src="../../util.js"></script>
 <script>
 kit.ear('status', function hear(f){ hear.off(); f = f.detail || f.data || "";
