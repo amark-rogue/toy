@@ -38,7 +38,7 @@ html, body /*, main, .page*/ {
   background-size: cover;
   scrollbar-width: thin;
   scrollbar-color: var(--pop) transparent;
-} body, main, .page { display: grid; place-items: var(--drip); }
+} body, main { display: grid; place-items: var(--drip); }
 /*.page { dis-play:none } .page:target { display:grid; }*/
 main, .page {
   position: absolute; inset: 0;
@@ -95,9 +95,10 @@ dialog {
 dialog::backdrop {
   background: transparent;
 }
+[contenteditable=true] { outline: none; }
 button, input, textarea {
   padding: 0.5em 1em;
-  display: grid; place-items: var(--drip);
+  /*display: grid; place-items: var(--drip);*/
   background-color: inherit;
   border: inherit;
   color: inherit;
@@ -124,9 +125,7 @@ p + p {
   padding-top: 0;
 }
 
-[contenteditable=true]:empty:before {
-  content: attr(placeholder);
-}
+/*[contenteditable=true]:empty:before { content: attr(placeholder); }*/
 ::placeholder, .hint {
   color: inherit;
   opacity: 0.5;

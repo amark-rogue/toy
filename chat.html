@@ -269,6 +269,9 @@ input:focus::placeholder { opacity: 0.5; }
 </style>
 <script src="util.js"></script>
 <script>;(function(chat){ chat();
+
+document.new = dom.new = function(t){ return document.createElement(t) }; // polyfill old behavior.
+
 var prompt;
 var shell = B.all('#shell')[0];
 var help = B.all('#help')[0];

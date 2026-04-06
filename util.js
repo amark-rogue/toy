@@ -1,7 +1,7 @@
 var dom = HTMLElement.prototype, doms = NodeList.prototype, all = function(t,e){ (t.forEach?t:[t]).forEach(e); return t; }
-document.new = dom.new = function(t){ return document.createElement(t) };
 dom.all = function(q){ return this.querySelectorAll(q) };
-dom.ear =doms.ear= function(e,h){ return all(this,v=>{v.addEventListener(e,h)}); return this };
+dom.new = function(t){ return (this.all(t)[0]||document.createElement(t)).cloneNode(1); };
+dom.ear =doms.ear= function(e,h){ return all(this,v=>{v.addEventListener(e,h)}) };
 dom.tag =doms.tag= function(c,s){ return all(this,v=>{v.classList[s?(s>0?'add':'remove'):'toggle'](c)}) };
 
 String.prototype.cut = function(f, e, c){ e = e||{}, c = c||'\\';

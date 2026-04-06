@@ -1,0 +1,354 @@
+<link rel="stylesheet" href="./gun/kit/web.css"><script src="./gun/kit/web.js"></script>
+
+<shell>
+  <task>
+    <symbol>$ </symbol>
+    <prompt contenteditable="true"><br/></prompt>
+    <help></help>
+    <raw></raw>
+    <iframe></iframe>
+    <style>
+
+    </style>
+  </task>
+</shell>
+
+<kit id="belt"><tin></tin></kit>
+<button id="look">↓</button>
+
+<fit>
+</fit>
+
+<style>
+:root { --fill: var(--mood); --font: 'Courier New', monospace; }
+body { display: block; background: var(--fill); }
+shell {
+  width: 100%;
+  font: var(--font);
+  font-size: var(--cs);
+  color: var(--pop);
+}
+task {
+  margin: 1em 0;
+}
+symbol {
+  display: inline;
+  float: left;
+  white-space: pre-wrap;
+}
+prompt {
+  display: block;
+  width: 100%;
+  min-height: 1em;
+  caret-shape: block;
+  white-space: pre-wrap;
+}
+fit { display: none; }
+::selection { background: var(--pop); color: var(--fill); }
+fit { display: none; }
+
+bo-dy::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 7em;
+  background: var(--fill);
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 0%, transparent 100%);
+  z-index: 99;
+  pointer-events: none;
+}
+</style>
+<script src="util.js"></script>
+<script>;(function(shell){ shell();
+(shell.$ = document.body.all('prompt')[0]).focus();
+kit.ear('chat',(eve)=>{ var d = eve.detail || eve.data || '';
+  if('{'==d[0]){ try{
+    var j = ('string' == typeof d) ? JSON.parse(d) : d;
+    if(j.type && agent.iframe){
+      for(var ai=0; ai<ais.length; ai++){ if(j.type.indexOf(ais[ai]) === 0){ kit.say(j, ais[ai], agent.iframe); return } }
+    }
+  }catch(e){}}
+  //stream(d);
+  stream2(d);
+});
+
+kit.ear('prompt',(eve)=>{
+  var cmd = eve.detail||eve.data;
+  console.log('prompt <<<', cmd);
+  cmd = cmd || prompt.value;
+  kit.say(cmd+'\r','host');
+  return;
+  if(cmd){
+    prompt.value = cmd;
+    autoGrow(prompt);
+  }
+  var val = prompt.value.trim();
+  if(!val){
+    prompt.value = '';
+    autoGrow(prompt);
+    return;
+  }
+
+  // exit agent mode
+  if(agent.mode && /^exit$/i.test(val)){
+    agentExit();
+    prompt.value = "";
+    autoGrow(prompt);
+    window.buzz();
+    return;
+  }
+
+  // in agent mode, send follow-up
+  if(agent.mode && agent.iframe && val){
+    var msg = {prompt:val, cwd:(localStorage.cwd || '')};
+    msg[sidKey(agent.kind)] = agent.sid;
+    kit.say(msg, agent.kind, agent.iframe);
+    prompt.value = "";
+    autoGrow(prompt);
+    window.buzz();
+    go();
+    return;
+  }
+
+  // start or resume agent session
+  var cmd = parse(val);
+  if(cmd){
+    agent.sid = cmd.sid || null;
+    card(val, cmd.kind, cmd.sid);
+    prompt.value = "";
+    autoGrow(prompt);
+    window.buzz();
+    return;
+  }
+  kit.say(prompt.value+'\r','host');
+  prompt.value = "";
+  autoGrow(prompt);
+  window.buzz();
+  go();
+});
+
+kit.ear('prompt.try',(eve)=>{
+  prompt.value = eve.detail||eve.data;
+  autoGrow(prompt);
+  prompt.focus();
+  prompt.setSelectionRange(prompt.value.length, prompt.value.length);
+});
+
+var task = document.body.all('task')[0];
+function stream2(s){
+  console.log(">>>", s);
+  stream2.raw += s;
+  task.all('raw')[0].innerText = stream2.raw.flat();
+}; stream2.raw = '';
+
+prompt.onkeydown = function(eve){
+  var ch;
+  if(mod.ctrl && eve.key && eve.key.length === 1 && !eve.altKey && !eve.metaKey){
+    ch = ctrl(eve.key);
+    if(ch){
+      eve.preventDefault();
+      put(ch);
+      mod.ctrl = 0;
+      keyUi();
+      return;
+    }
+  }
+  if (eve.key === 'Enter' && !eve.shiftKey) {
+    eve.preventDefault();
+    console.log("NEED TO SEND");
+    kit.say('', 'prompt');
+    return;
+  }
+  if(eve.key === 'ArrowUp') {
+    if(hi > 0) { hi--; prompt.value = history[hi]; autoGrow(prompt); }
+    eve.preventDefault();
+  } else if (eve.key === 'ArrowDown') {
+    if(hi < history.length - 1) { hi++; prompt.value = history[hi]; }
+    else { hi = history.length; prompt.value = ''; }
+    autoGrow(prompt);
+    eve.preventDefault();
+  }
+};
+            
+kit.ear('belt', function(eve, data, b){
+  data = eve.detail || eve.data;
+  var name = data.name||data[0];
+  if(B.all('#'+name)[0]){return}
+  b = B.new('button');
+
+  b.id = b.textContent = name;
+
+  b.onclick = function(){
+    if(data.key){ tapKey(name); return; }
+    kit.say(data.prompt||data[1], 'prompt');
+  };
+  belt.append(b);
+});
+kit.say(['exit','exit'], 'belt');
+                         
+prompt.oninput = function(eve){
+  autoGrow(prompt);
+  //console.log("oninput?", prompt.value, eve);
+  if(prompt.wait){ clearTimeout(prompt.wait) }
+  prompt.wait = setTimeout(async function(){
+    try{
+      var answer = await AI.shell("1 sentence reply for terminal shell or code help:" + prompt.value);
+      var doc = new DOMParser().parseFromString(answer, 'text/html');
+      var v = doc.querySelector('.a') || doc.body;
+      helpSay(v.textContent || '');
+      prompt.try = ((v.querySelector('code') || v.querySelector('b')) || {}).textContent||'';
+      tip();
+    }catch(e){}
+  },333);
+}
+
+window.addEventListener('scroll', function() {
+  if(low() && scrollBtn) {
+    scrollBtn.classList.remove('show');
+  }
+}, true);
+look.onclick = function(){ go(); look.tag('show',-1) };
+
+document.body.all('#help').ear('click',function(eve){
+  if(!prompt.try){ return }
+  eve.preventDefault();
+  kit.say(prompt.try, 'prompt.try');
+});
+var stream = function(t){
+  console.log(">>>", t);
+  (window.shellReply || {}).maybeContinue && window.shellReply.maybeContinue(t, {state: stream, send: function(c){ kit.say(c, 'host') }});
+  stream.live || (stream.live = (function(card, pre){
+    card = B.new('div');
+    pre = task.all('raw')[0];
+    card.append(pre);
+    card.pre = pre;
+    card.raw = '';
+    //shell.append(card);
+    task.append(card);
+    return card;
+  }()));
+  var isRefresh = t.includes('\x1b[H') || t.includes('\x1b[2J') || t.includes('\x1b[J');
+  if(isRefresh){
+    stream.live.raw = t;
+  } else {
+    stream.live.raw += t;
+  }
+  var cleaned = (window.shellReply || {}).clean ? window.shellReply.clean(stream.live.raw) : stream.live.raw;
+  stream.live.pre.textContent = cleaned.flat();
+  stream.last = (window.shellReply || {}).clean ? window.shellReply.clean((isRefresh ? '' : (stream.last||''))+t) : ((isRefresh ? '' : (stream.last||''))+t);
+  tip();
+  (stream.eat || CMD.bash)(stream.last);
+}, CMD = {};
+
+;(function(){
+var F = ['$','#','>','C:\\>','PS>','>>>','...','(venv)','>>','%','~%'];
+stream.eat = function(s){
+  var f = s.cut(F,ESC);
+  if(!f[1]){ /*setTimeout(t=>{if(F.forEach){shell.append("cannot find prompt. custom shell being used?")}});*/ return }
+  F = f[1];
+  f = f[0].split('\r\n').slice(-1)[0]; // make more unique?
+  F = f+F;
+  //console.log("prompt:", [F]);
+  (stream.eat = CMD.bash)(s);
+}
+CMD.bash = function(S, cmdl, cmd, tmp){
+  var arr = S.split(F);
+  var usedF = F;
+
+  if(arr[arr.length-1].flat().trim()){ 
+    var P = ['$','#','>','C:\\>','PS>','>>>','...','(venv)','>>','%','~%'];
+    if(P.some(c => S.flat().replace(/\s+$/, '').endsWith(c))){
+      var lines = S.split('\n'), lastL = lines[lines.length-1];
+      var newF = lastL.cut(P, ESC);
+      if(newF[1]){
+        var nextF = newF[0].split('\r').slice(-1)[0] + newF[1];
+        S = S.split(F).join(nextF);
+        F = nextF;
+        arr = S.split(F);
+      } else return;
+    } else return;
+  }
+  S = arr;
+  stream.last = '';
+  if(stream.live){
+    stream.live.remove();
+    stream.live = null;
+  }
+  var atBottom = (B.scrollHeight - B.scrollTop - B.clientHeight < 50) && (shell.scrollHeight - shell.scrollTop - shell.clientHeight < 50);
+  var oldF = usedF;
+  var firstChunk = true;
+  S.forEach(function(s,i){
+    var v,t,p;
+    if(!(t = s.flat()).trim()){ return }
+    // track cwd from pwd output and cd commands
+    var lines = t.split(/[\r\n]+/);
+    var cmdLine = lines[0].replace(/^.*(?:\$|#|>|PS>)\s*/,'').trim();
+    if(/^pwd\b/.test(cmdLine)){
+      // pwd output is the last non-empty line before prompt
+      for(var li = lines.length-1; li >= 1; li--){
+        var ln = lines[li].trim();
+        if(ln && ln.charAt(0) === '/'){ localStorage.cwd = ln; break; }
+      }
+    }
+    var cmdFull = t.cut(['\r\n','\n','\r'],ESC)[0].trim().replace(/^.*(?:\$|#|>|PS>)\s*/, '');
+    var cmd = cmdFull.trim().split(/\s+/)[0].trim();
+
+    (v = B.new('div'));
+    v.raw = s;
+
+    var promptToUse = firstChunk ? oldF : F;
+    firstChunk = false;
+    var promptText = (Array.isArray(promptToUse) ? '$' : (promptToUse.flat ? promptToUse.flat() : promptToUse)).trim();
+    var match = promptText.match(/^(.*?)([\$#>\%]\s*|\~%\s*)$/s);
+    var symPart = '';
+    if (match) {
+       var pathPart = match[1].trim();
+       symPart = match[2].trim();
+       var colonIdx = pathPart.lastIndexOf(':');
+       var pathOnly = colonIdx !== -1 ? pathPart.substring(colonIdx + 1) : pathPart;
+       var prefix = colonIdx !== -1 ? pathPart.substring(0, colonIdx + 1) : "";
+       var parts = pathOnly.split('/');
+       if (parts.length > 4) {
+         pathOnly = parts.slice(0, 2).join('/') + '/.../' + parts.slice(-2).join('/');
+       }
+       promptText = prefix + pathOnly ;
+    }
+
+    (p = B.new('p')).innerText = promptText;
+    v.append(p);
+    (p = B.new('p')).innerText = symPart+' '+cmdFull;
+    v.append(p);
+
+    (p = B.new('pre')).textContent = t;
+    v.append(p);
+
+    if(cmd){
+      v.append(i = B.new('iframe'));
+      i.onload = function(e){
+        if(!i.readyState){ return i.remove() }
+        kit.say(s, cmd, i);
+        p.remove();
+      }; i.src = './cmd/'+cmd+'.html';
+    }
+    shell.append(v);
+  });
+  tip();
+}
+}());
+kit.ear('clear',eve=>{console.log('???clear???');shell.innerHTML = ""; });
+
+//kit.say('clear', 'prompt');
+kit.say('whoami', 'prompt');
+if(localStorage.cwd){
+  localStorage.isRestoring = "1";
+  kit.say('cd '+localStorage.cwd, 'prompt');
+}
+kit.say('ls .', 'prompt');
+
+}(window.shell = function(){
+
+}));
+</script>
