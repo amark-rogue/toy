@@ -1,0 +1,14 @@
+[?2004h[0;32m~[0m [0;97m$[0m whoami
+[?2004lu0_a410
+[?2004h[0;32m~[0m [0;97m$[0m ls --color=auto
+[?2004l [0m[01;34mcontacts[0m    foo        [01;34mnode_modules[0m   ssh.js    ssh3.js   [01;34mtmp[0m
+ [01;34mdownloads[0m   git.html   pass           ssh2.js   [01;34mstorage[0m  [01;34m'~'[0m
+[?2004h[0;32m~[0m [0;97m$[0m cd node_modules
+[?2004l[?2004h[0;32m~/node_modules[0m [0;97m$[0m ls --color=auto
+[?2004lgit.html  git.js  [0m[01;34mgtoy[0m  [01;34mnode-addon-api[0m  [01;34mnode-pty[0m  [01;34mtoy[0m  [01;34mws[0m
+[?2004h[0;32m~/node_modules[0m [0;97m$[0m cd toy
+[?2004l[?2004h[0;32m~/node_modules/toy[0m [0;97m$[0m cat README.md
+[?2004l# TOY
+Code on Phone is a SaaS IDE for toying around with vibe coding.
+[?2004h[0;32m~/node_modules/toy[0m [0;97m$[0m exit
+[?2004lexit
