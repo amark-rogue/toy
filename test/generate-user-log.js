@@ -19,7 +19,7 @@ const ptyProcess = pty.spawn('bash', [], {
   name: 'xterm-256color',
   cols: 80,
   rows: 24,
-  cwd: '/data/data/com.termux/files/home',
+  cwd: process.cwd(),
   env: process.env
 });
 
@@ -30,10 +30,10 @@ ptyProcess.onData((data) => {
 const commands = [
   'whoami',
   'ls --color=auto',
-  'cd node_modules',
+  'cd test',
   'ls --color=auto',
-  'cd toy',
-  'cat README.md',
+  'cd samples',
+  'git status',
   'exit'
 ];
 
