@@ -156,3 +156,88 @@ document.addEventListener('pointerdown', function(e) { return;
     buzz(15);
   }
 });
+
+String.prototype.splitPrompts = function() {
+    const rawText = '' + this;
+    const ansiRegex = /[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g;
+    
+    let flatToRaw = [];
+    let flatText = '';
+    
+    let match;
+    let lastIndex = 0;
+    ansiRegex.lastIndex = 0;
+    
+    while ((match = ansiRegex.exec(rawText)) !== null) {
+        for (let i = lastIndex; i < match.index; i++) {
+            flatToRaw.push(i);
+            flatText += rawText[i];
+        }
+        lastIndex = ansiRegex.lastIndex;
+    }
+    for (let i = lastIndex; i < rawText.length; i++) {
+        flatToRaw.push(i);
+        flatText += rawText[i];
+    }
+    flatToRaw.push(rawText.length);
+    
+    let splitPoints = [];
+    let currentLineStart = 0;
+    
+    for (let i = 0; i <= flatText.length; i++) {
+        if (i === flatText.length || flatText[i] === '\n') {
+            let line = flatText.substring(currentLineStart, i);
+            let checkLine = line.endsWith('\r') ? line.substring(0, line.length - 1) : line;
+            
+            let isPrompt = false;
+            
+            if (!checkLine.startsWith(' ') && !checkLine.startsWith('\t')) {
+                // Check if it matches a typical prompt pattern, e.g. "path $ " or "user@host:path $ "
+                let matchPrompt = checkLine.match(/(.*?)[$#>%]\s/);
+                if (matchPrompt) {
+                    let prefix = matchPrompt[1].trim();
+                    let rawStart = currentLineStart > 0 ? flatToRaw[currentLineStart - 1] + 1 : 0;
+                    
+                    let lookbackRaw = rawText.substring(Math.max(0, rawStart - 15), rawStart + 15);
+                    
+                    let validPrefix = false;
+                    if (prefix.length === 0) {
+                        validPrefix = lookbackRaw.includes('2004h');
+                    } else if (!prefix.includes(' ')) {
+                        validPrefix = true;
+                    } else if (prefix.includes('@')) {
+                        validPrefix = true;
+                    } else if (prefix.startsWith('PS ')) {
+                        validPrefix = true;
+                    } else if (prefix.startsWith('(') && prefix.includes(')')) {
+                        validPrefix = true;
+                    } else if (prefix.startsWith('[')) {
+                        validPrefix = true;
+                    }
+                    
+                    if (validPrefix) {
+                        isPrompt = true;
+                    }
+                }
+            }
+            
+            if (isPrompt) {
+                let rawStart = currentLineStart > 0 ? flatToRaw[currentLineStart - 1] + 1 : 0;
+                splitPoints.push(rawStart);
+            }
+            
+            currentLineStart = i + 1;
+        }
+    }
+    
+    if (splitPoints.length === 0) return [rawText];
+    
+    let chunks = [];
+    for (let i = 0; i < splitPoints.length; i++) {
+        let start = splitPoints[i];
+        let end = i + 1 < splitPoints.length ? splitPoints[i+1] : rawText.length;
+        chunks.push(rawText.substring(start, end));
+    }
+    
+    return chunks;
+};
