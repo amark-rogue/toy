@@ -305,6 +305,7 @@ kit.fs = {files:{},
         if(i = D[ID](url)){ setTimeout(load,0) }
         else {
           (i = D[HI]('iframe')).onload = load
+          i.allow = 'microphone';
           i.id = (i.src = url)/*.replace('.html','')*/; D.body.appendChild(i);
         }
         //setTimeout(i.onload,0);

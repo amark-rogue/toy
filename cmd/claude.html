@@ -68,7 +68,10 @@ CLD.got = function(m){
     if(m.sessionId) CLD.sid = m.sessionId;
     if(CLD.sid){ sid.textContent = CLD.sid.slice(0,8); sid.title = 'click to copy: '+CLD.sid }
     kit.up(CLD.sid, 'claude-session');
-    kit.say({}, 'style');
+    var txt = '';
+    B.all('.txt:not(.tpl)').forEach(function(v){ txt += v.textContent + ' '; });
+    if (txt.trim()) kit.up(txt.trim(), 'voice');
+    setTimeout(function(){ kit.up(kit.size(), 'style') }, 50);
   }
 };
 
@@ -108,7 +111,7 @@ CLD.stream = function(ev){
       bod.append(v);
       CLD.blocks[idx] = {el: v, type: 'thinking', text: ''};
     }
-    kit.say({}, 'style');
+    setTimeout(function(){ kit.up(kit.size(), 'style') }, 50);
   }
   if(t === 'content_block_delta'){
     var idx = se.index;
@@ -123,7 +126,7 @@ CLD.stream = function(ev){
       b.text += d.thinking;
       b.el.querySelector('.inn').textContent = b.text;
     }
-    kit.say({}, 'style');
+    setTimeout(function(){ kit.up(kit.size(), 'style') }, 50);
   }
   if(t === 'content_block_stop'){
     delete CLD.blocks[se.index];
@@ -174,7 +177,6 @@ CLD.usr = function(txt){
 
 kit.ear('claude', function(eve){
   var d = eve.detail || eve.data || {};
-
   if(d.type && d.type.indexOf('claude') === 0){ CLD.got(d); return }
 
   var raw = typeof d === 'string' ? d : (d.prompt || '');

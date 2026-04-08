@@ -309,8 +309,11 @@ var card = function(val, kind, sid){
   v.append(p);
   i.src = './cmd/'+kind+'.html';
   shell.append(v);
+  var sent;
   i.onload = function(e){
     if(!i.readyState){ return i.remove() }
+    if(sent) return;
+    sent = 1;
     var msg = {prompt:val, cwd:(localStorage.cwd || '')};
     if(sid) msg[sidKey(kind)] = sid;
     kit.say(msg, kind, i);
@@ -348,8 +351,9 @@ kit.ear('style',()=>{ tip(); });
 kit.ear('scroll',()=>{ go(); });
 
 kit.ear('host',(eve)=>{
-  if(eve.target === window){ return }
-  kit.up(eve.detail || eve.data, 'host');
+  var d = eve.detail || eve.data;
+  if(eve.target === window && typeof d === 'string'){ return }
+  kit.up(d, 'host');
 });
 
 kit.ear('chat',(eve)=>{ var d = eve.detail || eve.data || '';
@@ -510,10 +514,12 @@ kit.ear('belt', function(eve, data, b){
 
   b.onclick = function(){
     if(data.key){ tapKey(name); return; }
+    if(name === 'mic'){ try{ window.parent.mic() }catch(e){} b.tag('live'); return; }
     kit.say(data.prompt||data[1], 'prompt');
   };
   belt.append(b);
 });
+kit.say({name:'mic', prompt:'mic'}, 'belt');
 ais.forEach(function(k){ kit.say([k, k+' '], 'belt') });
 kit.say(['exit','exit'], 'belt');
 setTimeout(()=>{
@@ -528,7 +534,30 @@ setTimeout(()=>{
 });
 
 },999);
-                         
+
+// --- Voice: status + TTS ---
+;(function(){
+kit.ear('help', function(eve){
+  var msg = eve.detail || eve.data || '';
+  help.textContent = msg;
+});
+kit.ear('voice', function(eve){
+  var txt = eve.detail || eve.data;
+  if (!txt) return;
+  if (txt.length > 800) txt = txt.slice(0, 800);
+  var u = new SpeechSynthesisUtterance(txt);
+  u.rate = 1.1;
+  speechSynthesis.speak(u);
+});
+kit.ear('mic', function(eve){
+  var txt = eve.detail || eve.data;
+  if (!txt) return;
+  prompt.value = txt;
+  autoGrow(prompt);
+  kit.say('', 'prompt');
+});
+}());
+
 prompt.oninput = function(eve){
   autoGrow(prompt);
   //console.log("oninput?", prompt.value, eve);
