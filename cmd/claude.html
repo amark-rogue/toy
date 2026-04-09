@@ -22,7 +22,7 @@ body { display: block; min-height: 0; overflow: hidden; }
 .bar { display: flex; align-items: center; gap: 0.5em; padding: 0.4em 0.8em; border-bottom: 1px solid var(--pop); flex-shrink: 0; }
 .val { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 900; }
 .id { font-size: 0.6em; opacity: 0.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 10em; cursor: pointer; }
-.bod { padding: 0.6em; display: block; }
+.bod { padding: 0.6em; display: block; overflow-x: hidden; max-width: 100%; }
 .bod > * { display: block; margin-bottom: 0.6em; }
 .blk { white-space: pre-wrap; word-break: break-word; margin: 0; font-family: 'Courier New', monospace; font-size: 0.85em; text-align: left; }
 .thk { border-left: 2px solid var(--pop); padding-left: 0.6em; opacity: 0.55; display: block; }

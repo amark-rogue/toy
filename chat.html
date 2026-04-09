@@ -193,6 +193,32 @@ body::before {
   text-shadow: none;
 }
 
+@media (max-width: 640px) {
+  .kit {
+    position: fixed;
+    bottom: 3.5em;
+    left: 0;
+    right: 0;
+    width: 100%;
+    height: auto;
+    overflow-x: auto;
+    overflow-y: hidden;
+    pointer-events: auto;
+  }
+  .kit::before { display: none; }
+  .kit .tin {
+    flex-direction: row;
+    gap: 0.3em;
+    padding: 0.3em;
+    justify-content: flex-start;
+  }
+  .kit button {
+    padding: 0.4em 0.7em;
+    font-size: 0.8em;
+  }
+  #shell { padding-bottom: 8em; }
+}
+
 form {
   position: fixed;
   bottom: 0;
@@ -668,11 +694,17 @@ CMD.bash = function(S, cmdl, cmd, tmp){
     var lines = t.split(/[\r\n]+/);
     var cmdLine = lines[0].replace(/^.*(?:\$|#|>|PS>)\s*/,'').trim();
     if(/^pwd\b/.test(cmdLine)){
-      // pwd output is the last non-empty line before prompt
       for(var li = lines.length-1; li >= 1; li--){
         var ln = lines[li].trim();
         if(ln && ln.charAt(0) === '/'){ localStorage.cwd = ln; break; }
       }
+    }
+    if(/^cd\b/.test(cmdLine)){
+      var cdArg = cmdLine.replace(/^cd\s+/,'').replace(/['"]/g,'').trim();
+      if(cdArg === '~' || cdArg === '') localStorage.cwd = '';
+      else if(cdArg === '..') localStorage.cwd = (localStorage.cwd||'').replace(/\/[^\/]*$/,'') || '/';
+      else if(cdArg.charAt(0) === '/') localStorage.cwd = cdArg;
+      else if(localStorage.cwd) localStorage.cwd = localStorage.cwd + '/' + cdArg;
     }
     var cmdFull = t.cut(['\r\n','\n','\r'],ESC)[0].trim().replace(/^.*(?:\$|#|>|PS>)\s*/, '');
     var cmd = cmdFull.trim().split(/\s+/)[0].trim();
