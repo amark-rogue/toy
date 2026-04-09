@@ -12,61 +12,11 @@ VM.ready = false;
 VM.queue = [];
 VM.say = function(){};
 
-// --- snapshot ---
+// --- snapshot (stub — add back as external feature) ---
 
-VM.snap = { ver: 's1', db: 'cop', store: 'vm' };
-
-VM.snap.open = function(mode, cb){
-  var r = indexedDB.open(VM.snap.db, 1);
-  r.onupgradeneeded = (e) => { e.target.result.createObjectStore(VM.snap.store) };
-  r.onsuccess = (e) => {
-    var tx = e.target.result.transaction(VM.snap.store, mode);
-    cb(tx.objectStore(VM.snap.store), tx);
-  };
-  r.onerror = () => { cb(null) };
-};
-
-VM.snap.save = function(emu){
-  emu = emu || VM.emu;
-  if(!emu) return Promise.resolve();
-  return emu.save_state().then((buf) => {
-    return new Promise((ok) => {
-      VM.snap.open('readwrite', (os, tx) => {
-        if(!os){ ok(); return }
-        os.put(buf, VM.snap.ver);
-        tx.oncomplete = () => { ok(buf.byteLength) };
-        tx.onerror = () => { ok(0) };
-      });
-    });
-  });
-};
-
-VM.snap.load = function(){
-  return new Promise((ok) => {
-    VM.snap.open('readonly', (os) => {
-      if(!os){ ok(null); return }
-      var req = os.get(VM.snap.ver);
-      req.onsuccess = () => { ok(req.result || null) };
-      req.onerror = () => { ok(null) };
-    });
-  });
-};
-
-VM.snap.dirty = false;
-
-VM.snap.auto = function(ms){
-  ms = ms || 5000;
-  var tid;
-  VM.snap.tick = function(){
-    if(tid) clearTimeout(tid);
-    tid = setTimeout(() => {
-      if(VM.ready) VM.snap.save();
-    }, ms);
-  };
-  window.addEventListener('beforeunload', () => {
-    if(VM.ready) VM.snap.save();
-  });
-};
+VM.snap = {};
+VM.snap.save = function(){ return Promise.resolve() };
+VM.snap.load = function(){ return Promise.resolve(null) };
 
 // --- filesystem ---
 
@@ -99,7 +49,8 @@ VM.io = {};
 VM.io.buf = '';
 VM.io.boot = 0;
 VM.io.nonce = '';
-VM.io.tip = null; // vmBoot element
+VM.io.tip = null;
+VM.io.primed = false; // true after first prompt seen
 
 VM.io.listen = function(emu, say){
   VM.io.buf = '';
@@ -140,25 +91,31 @@ VM.io.listen = function(emu, say){
     }
 
     // serial proxy response capture
-    if(VM.io.buf.includes('===HTTP:')){
-      var m = VM.io.buf.match(/===HTTP:(\w+)===\r?\n([\s\S]*?)===END:\1===/);
+    if(VM.io.buf.includes('===H')){
+      var m = VM.io.buf.match(/===H(\w+)===\r?\n([\s\S]*?)===E\1===/);
       if(m && VM.srv.pending[m[1]]){
-        VM.srv.pending[m[1]](m[2].replace(/\r\n/g, '\n').trim());
+        var body = m[2].replace(/\r\n/g, '\n').trim();
+        VM.srv.pending[m[1]](body);
         delete VM.srv.pending[m[1]];
         VM.io.buf = '';
         return;
       }
     }
 
-    // debounced output to chat
+    // debounced output to chat — wait for prompt before flushing
     if(window.vmSerial) clearTimeout(window.vmSerial);
     window.vmSerial = setTimeout(() => {
       if(!VM.ready) return;
+      // don't flush while waiting for proxy response
+      if(VM.io.buf.includes('===H') && Object.keys(VM.srv.pending).length) return;
       var out = VM.io.buf.replace(/\x1b\[6n/g, '');
-      if(out){
-        say(out);
-        VM.srv.scan(out);
-      }
+      if(!out){ VM.io.buf = ''; return }
+      var clean = out.replace(/\x1b\[[^m]*m/g, '');
+      // hold output until we see a prompt ($ at end of line)
+      if(!VM.io.primed && !/\$\s*$/.test(clean)) return;
+      VM.io.primed = true;
+      say(out);
+      VM.srv.scan(out);
       VM.io.buf = '';
     }, 50);
   });
@@ -180,8 +137,6 @@ VM.io.done = function(emu, fresh){
   VM.io.boot = 3;
   VM.io.buf = '';
   VM.ready = true;
-  if(fresh) VM.snap.save(emu);
-  VM.snap.auto();
   // flush queued commands (chat.html may have loaded before VM was ready)
   var flush = () => {
     if(kit.views && kit.views.size > 0){
@@ -220,7 +175,6 @@ VM.shim = function(emu){
       if(cmd && !cmd.endsWith('\n') && !cmd.endsWith('\r')) cmd += '\n';
       var trimmed = (cmd || '').replace(/[\r\n]+$/, '').trim();
       if(VM.ready && VM.cmd.route(trimmed, emu)) return;
-      if(VM.snap.tick) VM.snap.tick();
       if(!VM.ready){ VM.queue.push(cmd) }
       else { emu.serial0_send(cmd) }
     }
@@ -521,8 +475,8 @@ VM.srv.scan = function(out){
 
 VM.srv.fetch = function(port, path){
   if(!VM.emu || !VM.ready) return Promise.resolve('VM not ready');
-  var id = Math.random().toString(36).slice(2, 10);
-  var cmd = 'echo ===HTTP:' + id + '=== && wget -qO- localhost:' + port + (path||'/') + ' 2>/dev/null; echo; echo ===END:' + id + '===\n';
+  var id = Math.random().toString(36).slice(2, 8);
+  var cmd = 'echo ===H' + id + '=== && nc -w 2 127.0.0.1 ' + port + '; echo; echo ===E' + id + '===\n';
   VM.emu.serial0_send(cmd);
   return new Promise((ok) => {
     VM.srv.pending[id] = ok;
@@ -531,6 +485,6 @@ VM.srv.fetch = function(port, path){
         delete VM.srv.pending[id];
         ok('timeout: no response from port ' + port);
       }
-    }, 5000);
+    }, 10000);
   });
 };

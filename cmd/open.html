@@ -31,7 +31,7 @@ var port, path;
 
 var load = function(url){
   url = url || addr.value || '';
-  var m = url.match(/^(?:localhost:)?(\d+)(\/.*)?$/);
+  var m = url.match(/^(?:(?:localhost|127\.0\.0\.1):)?(\d+)(\/.*)?$/);
   if(!m){ show('error: use format PORT/path or localhost:PORT/path'); return }
   port = m[1];
   path = m[2] || '/';
