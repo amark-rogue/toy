@@ -9,19 +9,23 @@ body { display: block; overflow-x: hidden; }
 html, body { background:black; }
 pre { 
   margin: 0; 
-  white-space: pre-wrap;
+  /*white-space: pre-wrap;*/
   /*word-break: break-all;*/
   font-family: 'Courier New', monospace; 
   line-height: 2.2em; 
   counter-reset: line;
 
-  trans-form: translateX(calc(var(--pan, 0) * -0.5em));
+  tab-size: 1;
+  -moz-tab-size: 1;
+
+  display: inline-block;
+  min-width: 100vw;
   transform: translateX(calc(var(--pan, 0) * -1px));
   transition: transform 1s cubic-bezier(0.2, 0.8, 0.2, 1);
   will-change: transform;
 }
 
-code { outline: none; display: block; width: 100vw; }
+code { outline: none; display: block; }
 div, code, span { display: unset; }
 
 .hljs { background: transparent !important; }
@@ -31,12 +35,14 @@ div, code, span { display: unset; }
   display: block !important; 
   counter-increment: line; 
   position: relative; 
-  width: 100vw;
-  trans-form: translateX(calc(var(--indent) * 0.5em));
-  pad-ding-left: calc(var(--indent) * 0.5em);
+  white-space: nowrap;
 }
-
-.indent {
+.indent { 
+  display: inline-block; 
+  white-space: pre;
+}
+  
+.zoom {
   transform-origin: left;
   animation: zoom ease both;
   animation-timeline: view();
@@ -46,13 +52,19 @@ div, code, span { display: unset; }
 @keyframes zoom {
   0% {
     transform: scale(0.5);
-  } 20% {
+  } 40% {
     transform: scale(1);
-  } 80% {
+  } 60% {
     transform: scale(1);
   } 100% {
     transform: scale(0.5);
   }
+}
+.content {
+  display: inline-block;
+  width: calc(100vw - 1ch);
+  white-space: pre-wrap;
+  vertical-align: top;
 }
 </style>
 <script src="../util.js"></script>
@@ -76,7 +88,7 @@ function hear(eve){ hear.off();
 
   var was;
   editor.innerHTML = highlighted.split('\n').map(function(l){ l = trims(l);
-    return '<span class="line">'+(l[0]||'')+'<span class="number"></span>'+(l[1]||'')+'</span>';
+    return '<span class="line"><span class="indent">'+(l[0]||'')+'<span class="number"></span></span><span class="content">'+(l[1]||'')+'</span></span>';
   }).join('');
 };
 function trims(l) { return (i = l.search(/\S/)) === -1 ? [l,''] : [l.slice(0,i), l.slice(i)] }
@@ -85,24 +97,22 @@ function pan(){ setTimeout(pan,99);
   var el = document.elementFromPoint(1, window.innerHeight / 2), line;
   if(!(line = el && el.closest('.line'))){ return }
   var indent = pan.out(line);
-  document.body.style.setProperty('--pan', indent || 0);
+  if(pan.was === indent){ return }
+  document.body.style.setProperty('--pan', pan.was = indent || 0);
 };
-pan.at = function(el){ return el?.firstChild?.length||0 }
+pan.at = function(el){ return el?.querySelector('.indent')?.textContent?.length || 0 }
 pan.out = function(el){
   var now = pan.at(el)||1, was, i = 99;
   while(--i && (was = pan.at(el = el.previousSibling)) >= now){}
   if(!el){ return 0 }
-  el = el.getElementsByClassName('number')[0];
-  if(!el){ return 0 }
-  return el.offsetLeft || 0;
-  return el.getBoundingClientRect().left;
-  return was;
+  el = el.querySelector('.content');
+  return el ? el.offsetLeft : 0;
 }
 setTimeout(pan, 1);
 //window.onkeyup = function(){ hear({detail:'cat "cat.html"\n'+editor.textContent}); }
 
 
-(async function() {return;
+(async function() { //return;
   var t = await (await fetch("https://cdn.jsdelivr.net/gh/amark/gun/gun.js")).text();
   
   kit.say('cat "cat.js"\n'+(t|| document.body.parentNode.innerHTML) , 'cat');
