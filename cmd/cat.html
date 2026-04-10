@@ -112,7 +112,7 @@ setTimeout(pan, 1);
 //window.onkeyup = function(){ hear({detail:'cat "cat.html"\n'+editor.textContent}); }
 
 
-(async function() { //return;
+(async function() { return;
   var t = await (await fetch("https://cdn.jsdelivr.net/gh/amark/gun/gun.js")).text();
   
   kit.say('cat "cat.js"\n'+(t|| document.body.parentNode.innerHTML) , 'cat');
