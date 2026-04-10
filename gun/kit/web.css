@@ -1,5 +1,5 @@
 :root {
-  --cs: 18pt;
+  --cs: 16pt;
   --mood: white;
   --m00d: 100%,100%,100%;
   --fill: white;
@@ -27,8 +27,8 @@ html, body /*, main, .page*/ {
   color: var(--pop);
 	position: relative;
   font-family: var(--font);
-  font-size: max(18pt, 2vw);
-  font-size: 18pt;
+  font-size: max(16pt, 2vw);
+  font-size: 16pt;
   font-size: var(--cs);
   transition: all 0.3s;
   transition: all var(--time);

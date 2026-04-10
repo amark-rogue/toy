@@ -1,42 +1,105 @@
 <link rel="stylesheet" href="../gun/kit/web.css"><script src="../gun/kit/web.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/base16/monokai.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+
+<pre id="code"><code id="editor" contenteditable="true"></code></pre>
+
 <style>
-body { display: block; min-height: 0; overflow: hidden; }
-pre { margin: 0; white-space: pre-wrap; word-break: break-all; font-family: 'Courier New', monospace; line-height: 2.2em; counter-reset: line; }
-code { outline: none; display: block; }
-body, div, code, pre, span { display: unset; }
+body { display: block; overflow-x: hidden; }
+html, body { background:black; }
+pre { 
+  margin: 0; 
+  white-space: pre-wrap; 
+  /*word-break: break-all;*/
+  font-family: 'Courier New', monospace; 
+  line-height: 2.2em; 
+  counter-reset: line;
+
+  trans-form: translateX(calc(var(--pan, 0) * -0.5em));
+  transform: translateX(calc(var(--pan, 0) * -1px));
+  transition: transform 1s cubic-bezier(0.2, 0.8, 0.2, 1);
+  will-change: transform;
+}
+
+code { outline: none; display: block; width: 100vw; }
+div, code, span { display: unset; }
+
 .hljs { background: transparent !important; }
-.line { display: block !important; counter-increment: line; position: relative; }
-.line::before { content: counter(line); vertical-align: middle; left: -0.1em; padding-right: 0.2em; color: var(--pop); user-select: none; font-size: 0.5em; opacity: 0.8; }
+.line .number::before /*.line::after*/ { content: counter(line); vertical-align: middle; padding: 0 0.1em; /*left: -0.1em; padding-right: 0.2em;*/ color: var(--pop); user-select: none; font-size: 0.5em; opacity: 0.8; }
+
+.line { 
+  display: block !important; 
+  counter-increment: line; 
+  position: relative; 
+  width: 100vw;
+  trans-form: translateX(calc(var(--indent) * 0.5em));
+  pad-ding-left: calc(var(--indent) * 0.5em);
+}
+
+.indent {
+  transform-origin: left;
+  animation: zoom ease both;
+  animation-timeline: view();
+  animation-range: entry 0% exit 100%;
+}
+
+@keyframes zoom {
+  0% {
+    transform: scale(0.5);
+  } 20% {
+    transform: scale(1);
+  } 80% {
+    transform: scale(1);
+  } 100% {
+    transform: scale(0.5);
+  }
+}
 </style>
-<pre><code id="content" contenteditable="true"></code></pre>
 <script src="../util.js"></script>
 <script>
-kit.ear('cat', function hear(eve) {
+kit.ear('cat', hear);
+function hear(eve){ hear.off();
   var s = eve.detail || eve.data || "";
-  var raw = s.flat();
-  var lines = raw.split('\n');
-  var cmdLine = (lines[0] || "").trim();
-  var text = lines.slice(1).join('\n');
-  text = text.replace(/[\r\n]+.*(?:\$|#|>|PS>)\s*$/, '').trim();
-  var codeEl = document.getElementById('content');
-  var langMap = {
-    js:'javascript', json:'json', html:'xml', css:'css',
-    md:'markdown', py:'python', sh:'bash', yaml:'yaml', yml:'yaml'
-  };
+  var raw = s;
+  var lines = raw.split(/\r?\n/);
+  var cmd = (lines.shift() || "").trim();
+
+  var text = lines.join('\n').replace(/[\r\n]+.*(?:\$|#|>|PS>)\s*$/, '').trim();
+  var langs = {js:'javascript', json:'json', html:'xml', css:'css',md:'markdown', py:'python', sh:'bash', yaml:'yaml', yml:'yaml'};
   var lang = null;
-  var m = cmdLine.match(/cat\s+(.+)/);
-  if(m) { lang = langMap[m[1].replace(/["']/g,'').split('.').pop().toLowerCase()]; }
+  var m = cmd.match(/cat\s+(.+)/);
+  if(m){ lang = langs[m[1].replace(/["']/g,'').split('.').pop().toLowerCase()]; }
+
   var highlighted;
-  try {
-    highlighted = lang ? hljs.highlight(text, {language: lang}).value : hljs.highlightAuto(text).value;
-  } catch(e) {
-    highlighted = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  }
-  codeEl.innerHTML = highlighted.split('\n').map(function(l) {
-    return '<span class="line">' + (l || ' ') + '</span>';
+  try{ highlighted = lang ? hljs.highlight(text, {language: lang}).value : hljs.highlightAuto(text).value;
+  }catch(e){ highlighted = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') }
+
+  var was;
+  editor.innerHTML = highlighted.split('\n').map(function(l){ l = trims(l);
+    return '<span class="line">'+(l[0]||'')+'<span class="number"></span>'+(l[1]||'')+'</span>';
   }).join('');
-  hear.off();
-});
+};
+function trims(l) { return (i = l.search(/\S/)) === -1 ? [l,''] : [l.slice(0,i), l.slice(i)] }
+
+function pan(){ setTimeout(pan,99);
+  var el = document.elementFromPoint(1, window.innerHeight / 2), line;
+  if(!(line = el && el.closest('.line'))){ return }
+  var indent = pan.out(line);
+  document.body.style.setProperty('--pan', indent || 0);
+}; setTimeout(pan);
+
+pan.out = function(el){
+  var now = pan.at(el)||1, was, i = 99;
+  while(--i && (was = pan.at(el = el.previousSibling)) >= now){}
+  if(!el){ return 0 }
+  el = el.getElementsByClassName('number')[0];
+  if(!el){ return 0 }
+  return el.offsetLeft || 0;
+  return el.getBoundingClientRect().left;
+  return was;
+}
+pan.at = function(el){ return el?.firstChild?.length||0 }
+
+//window.onkeyup = function(){ hear({detail:'cat "cat.html"\n'+editor.textContent}); }
+//kit.say('cat "cat.html"\n'+document.body.parentNode.innerHTML, 'cat');
 </script>
