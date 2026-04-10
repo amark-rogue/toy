@@ -9,7 +9,7 @@ body { display: block; overflow-x: hidden; }
 html, body { background:black; }
 pre { 
   margin: 0; 
-  white-space: pre-wrap; 
+  white-space: pre-wrap;
   /*word-break: break-all;*/
   font-family: 'Courier New', monospace; 
   line-height: 2.2em; 
@@ -86,8 +86,8 @@ function pan(){ setTimeout(pan,99);
   if(!(line = el && el.closest('.line'))){ return }
   var indent = pan.out(line);
   document.body.style.setProperty('--pan', indent || 0);
-}; setTimeout(pan);
-
+};
+pan.at = function(el){ return el?.firstChild?.length||0 }
 pan.out = function(el){
   var now = pan.at(el)||1, was, i = 99;
   while(--i && (was = pan.at(el = el.previousSibling)) >= now){}
@@ -98,8 +98,13 @@ pan.out = function(el){
   return el.getBoundingClientRect().left;
   return was;
 }
-pan.at = function(el){ return el?.firstChild?.length||0 }
-
+setTimeout(pan, 1);
 //window.onkeyup = function(){ hear({detail:'cat "cat.html"\n'+editor.textContent}); }
-//kit.say('cat "cat.html"\n'+document.body.parentNode.innerHTML, 'cat');
+
+
+(async function() {return;
+  var t = await (await fetch("https://cdn.jsdelivr.net/gh/amark/gun/gun.js")).text();
+  
+  kit.say('cat "cat.js"\n'+(t|| document.body.parentNode.innerHTML) , 'cat');
+ } ()) ;
 </script>
