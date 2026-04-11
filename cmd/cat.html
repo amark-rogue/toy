@@ -27,7 +27,7 @@ code { outline: none; display: block; }
 div, code, span { display: unset; }
 
 .hljs { background: transparent !important; }
-.line .number::before /*.line::after*/ { content: counter(line); vertical-align: middle; padding: 0 0.1em; /*left: -0.1em; padding-right: 0.2em;*/ color: var(--pop); user-select: none; font-size: 0.5em; opacity: 0.8; }
+.line .content::before /*.line::after*/ { content: counter(line); vertical-align: top; padding: 0 0.1em; /*left: -0.1em; padding-right: 0.2em;*/ color: var(--pop); user-select: none; font-size: 0.5em; opacity: 0.8; }
 
 .line { 
   display: block !important; 
@@ -65,12 +65,12 @@ div, code, span { display: unset; }
 }
 .content {
   display: inline-block;
-  width: calc(100vw - 3ch);
+  width: 100vw;/*calc(100vw - 2ch);*/
   white-space: pre-wrap;
-  vertical-align: top;
+  verti-cal-align: top;
  
 }
-.number { vertical-align: top; } 
+.number { vert-ical-align: top; } 
 
 </style>
 <script src="../util.js"></script>
@@ -94,7 +94,7 @@ function hear(eve){ hear.off();
 
   var was;
   editor.innerHTML = highlighted.split('\n').map(function(l){ l = trims(l);
-    return '<span class="line"><span class="indent">'+(l[0]||'')+'<span class="number"></span></span><span class="content">'+(l[1]||'')+'</span></span>';
+    return '<span class="line"><span class="indent">'+(l[0]||'')+'</span><span class="content">'+(l[1]||'')+'</span></span>';
   }).join('');
 };
 function trims(l) { return (i = l.search(/\S/)) === -1 ? [l,''] : [l.slice(0,i), l.slice(i)] }
