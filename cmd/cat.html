@@ -5,7 +5,7 @@
 <pre id="code"><code id="editor" contenteditable="true"></code></pre>
 
 <style>
-body { display: block; overflow-x: hidden; }
+body { display: block; over-flow-x: hidden; }
 html, body { background:black; }
 pre { 
   margin: 0; 
@@ -34,43 +34,42 @@ div, code, span { display: unset; }
   counter-increment: line; 
   position: relative; 
   white-space: nowrap;
-  overflow-x: scroll;
 }
 
 .indent { 
   display: inline-block; 
   white-space: pre;
 }
+.line:active .indent { max-wi-dth: 0; } 
   
 .line {
 
   transform-origin: left;
-  view-time-line-inset: 500% 0%;
+  /*view-timeline-inset: 50% 0%;*/
   animation: zoom ease both;
   animation-timeline: view();
   animation-range: entry 0% exit 100%;
 }
-.line:active .indent{ } 
+.line:active .indent{ dis-play: none; } 
 
 @keyframes zoom {
   0% {
-    transform: scale(0.1) translateY(0%); line-hei-ght: 0.9em;
+    transform: scale(0.1) translateY(0%);
   } 65% {
-    transform: scale(1) translateY(0); line-hei-ght: 1.5em;
+    transform: scale(1) translateY(0);
   } 70% {
-    transform: scale(1) translateY(0); line-hei-ght: 1.5em;
+    transform: scale(1) translateY(0);
   } 100% {
-    transform: scale(0.3) translateY(0%); line-hei-ght: 0.9em;
+    transform: scale(0.3) translateY(0%);
   }
 }
 .content {
   display: inline-block;
-  width: 100vw;/*calc(100vw - 2ch);*/
+  width: 100vw;
   white-space: pre-wrap;
-  verti-cal-align: top;
- 
+
 }
-.number { vert-ical-align: top; } 
+.number { } 
 
 </style>
 <script src="../util.js"></script>
