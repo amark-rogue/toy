@@ -7,6 +7,5 @@ self.addEventListener('activate', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
-  // Minimal SW for installability, just fetch through
-  e.respondWith(fetch(e.request));
+  e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
 });

@@ -31,11 +31,14 @@ if ('serviceWorker' in navigator) {
 }
 </script>
 <script>;(function(cop){
+host.value = localStorage.host || '';
 host.focus();
 console.off=1;
 cop.sign = async ()=>{ if(cop.ws){ return }
   var opened = false;
-  cop.ws = new WebSocket((localStorage.host=host.value).replace(/^http/,'ws')||'ws://localhost:8022');
+  var h = host.value || localStorage.host || 'ws://localhost:8022';
+  if (host.value) localStorage.host = host.value;
+  cop.ws = new WebSocket(h.replace(/^http/,'ws'));
   cop.ws.onopen = ()=>{
     opened = true;
     console.log('ws open');
@@ -450,5 +453,50 @@ kit.ear('host',(eve)=>{
 });
 
 }(window.cop = {}));
+</script>
+<script>
+;(function(){
+if (!window.MediaRecorder || !navigator.mediaDevices) return;
+var mic = {}, pipe;
+var tip = function(msg){ kit.say(msg, 'help') };
+mic.load = async function(){
+  if (pipe) return pipe;
+  tip('loading whisper model...');
+  var T = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3');
+  pipe = await T.pipeline('automatic-speech-recognition', 'onnx-community/whisper-tiny.en', { dtype: 'q8', device: 'wasm' });
+  tip('whisper ready');
+  return pipe;
+};
+mic.on = async function(){
+  mic.live = 1;
+  try {
+    await mic.load();
+    tip('requesting mic...');
+    var stream = await navigator.mediaDevices.getUserMedia({audio: true});
+    tip('recording... tap mic to stop');
+    var media = new MediaRecorder(stream);
+    var parts = [];
+    media.ondataavailable = function(e){ parts.push(e.data) };
+    mic.blob = new Promise(function(ok){ media.onstop = function(){ stream.getTracks().forEach(function(t){ t.stop() }); ok(new Blob(parts)) } });
+    media.start(1000);
+    mic.stop = function(){ media.stop() };
+  } catch(e) { tip('mic error: ' + e.message); mic.live = 0; mic.stop = null }
+};
+mic.off = async function(){
+  var fn = mic.stop; mic.stop = null; mic.live = 0;
+  if (!fn) { tip(''); return }
+  fn(); tip('transcribing...');
+  try {
+    var blob = await mic.blob, buf = await blob.arrayBuffer();
+    var ctx = new (window.AudioContext || window.webkitAudioContext)({sampleRate: 16000});
+    var audio = await ctx.decodeAudioData(buf), data = audio.getChannelData(0);
+    ctx.close();
+    var out = await pipe(data);
+    if (out.text && out.text.trim()){ tip('heard: ' + out.text.trim()); kit.say('claude ' + out.text.trim(), 'mic') }
+    else { tip('no speech detected') }
+  } catch(e) { tip('error: ' + e.message) }
+};
+window.mic = function(){ if (mic.live || mic.stop) mic.off(); else mic.on() };
+}());
 </script>
 <script src="util.js"></script>

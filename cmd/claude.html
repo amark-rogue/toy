@@ -22,7 +22,7 @@ body { display: block; min-height: 0; overflow: hidden; }
 .bar { display: flex; align-items: center; gap: 0.5em; padding: 0.4em 0.8em; border-bottom: 1px solid var(--pop); flex-shrink: 0; }
 .val { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 900; }
 .id { font-size: 0.6em; opacity: 0.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 10em; cursor: pointer; }
-.bod { padding: 0.6em; display: block; }
+.bod { padding: 0.6em; display: block; overflow-x: hidden; max-width: 100%; }
 .bod > * { display: block; margin-bottom: 0.6em; }
 .blk { white-space: pre-wrap; word-break: break-word; margin: 0; font-family: 'Courier New', monospace; font-size: 0.85em; text-align: left; }
 .thk { border-left: 2px solid var(--pop); padding-left: 0.6em; opacity: 0.55; display: block; }
@@ -68,7 +68,10 @@ CLD.got = function(m){
     if(m.sessionId) CLD.sid = m.sessionId;
     if(CLD.sid){ sid.textContent = CLD.sid.slice(0,8); sid.title = 'click to copy: '+CLD.sid }
     kit.up(CLD.sid, 'claude-session');
-    kit.say({}, 'style');
+    var txt = '';
+    B.all('.txt:not(.tpl)').forEach(function(v){ txt += v.textContent + ' '; });
+    if (txt.trim()) kit.up(txt.trim(), 'voice');
+    setTimeout(function(){ kit.up(kit.size(), 'style') }, 50);
   }
 };
 
@@ -108,7 +111,7 @@ CLD.stream = function(ev){
       bod.append(v);
       CLD.blocks[idx] = {el: v, type: 'thinking', text: ''};
     }
-    kit.say({}, 'style');
+    setTimeout(function(){ kit.up(kit.size(), 'style') }, 50);
   }
   if(t === 'content_block_delta'){
     var idx = se.index;
@@ -123,7 +126,7 @@ CLD.stream = function(ev){
       b.text += d.thinking;
       b.el.querySelector('.inn').textContent = b.text;
     }
-    kit.say({}, 'style');
+    setTimeout(function(){ kit.up(kit.size(), 'style') }, 50);
   }
   if(t === 'content_block_stop'){
     delete CLD.blocks[se.index];
@@ -174,7 +177,6 @@ CLD.usr = function(txt){
 
 kit.ear('claude', function(eve){
   var d = eve.detail || eve.data || {};
-
   if(d.type && d.type.indexOf('claude') === 0){ CLD.got(d); return }
 
   var raw = typeof d === 'string' ? d : (d.prompt || '');
