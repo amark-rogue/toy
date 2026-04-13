@@ -312,8 +312,11 @@ var card = function(val, kind, sid){
   v.append(p);
   i.src = './cmd/'+kind+'.html';
   shell.append(v);
+  var sent;
   i.onload = function(e){
     if(!i.readyState){ return i.remove() }
+    if(sent) return;
+    sent = 1;
     var msg = {prompt:val, cwd:(localStorage.cwd || '')};
     if(sid) msg[sidKey(kind)] = sid;
     kit.say(msg, kind, i);
@@ -408,6 +411,31 @@ kit.ear('prompt',(eve)=>{
     window.buzz();
     return;
   }
+
+  // open PORT[/path] — serial proxy browser
+  var om = val.match(/^open\s+(\d+)(\/\S*)?$/);
+  if(om){
+    var ov = B.new('div'), op = B.new('pre'), oi = B.new('iframe');
+    ov.className = 'reply-card open-card';
+    op.textContent = '$ ' + val;
+    ov.append(op);
+    oi.src = './cmd/open.html';
+    shell.append(ov);
+    var osent;
+    oi.onload = function(){
+      if(!oi.readyState){ return oi.remove() }
+      if(osent) return;
+      osent = 1;
+      kit.say({port: om[1], path: om[2] || '/'}, 'open', oi);
+    };
+    ov.append(oi);
+    prompt.value = "";
+    autoGrow(prompt);
+    window.buzz();
+    go();
+    return;
+  }
+
   kit.say(prompt.value+'\r','host');
   prompt.value = "";
   autoGrow(prompt);
