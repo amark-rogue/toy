@@ -103,8 +103,15 @@ kit.say(['touch','touch '], 'belt');
 //kit.say(['mv','mv '], 'belt');
 //kit.say(['rm','rm '], 'belt');
 kit.say(['clear','clear'], 'belt');
-kit.say(['npm','npm '], 'belt');
-kit.say(['git','git status'], 'belt');
+kit.say({name:'npm', chain:[
+  ['ls','npm ls'],['init','npm init'],['run','npm run '],
+  ['test','npm test'],['start','npm start'],['i','npm install ']
+]}, 'belt');
+kit.say({name:'git', chain:[
+  ['status','git status'],['diff','git diff'],['log','git log --oneline -20'],
+  ['branch','git branch'],['pull','git pull'],['push','git push'],
+  ['add .','git add .'],['stash','git stash']
+]}, 'belt');
 kit.say(['claude','claude '], 'belt');
 kit.say(['codex','codex '], 'belt');
 

@@ -3,7 +3,7 @@
 <div id="shell">
 </div>
 
-<div class="kit"><div class="tin"></div></div>
+<div class="kit"><div class="tin"></div><div class="tab">⋮</div></div>
 
 <form onsubmit="kit.say('','prompt'); return false;">
     <div id="help"></div>
@@ -117,8 +117,9 @@ body::before {
 #scroll {
   display: none;
   position: fixed;
-  bottom: 3em;
-  right: 1em;
+  bottom: 3.2em;
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 101;
   background: var(--pop);
   color: var(--mood,black);
@@ -135,32 +136,70 @@ body::before {
   padding: 0;
   margin-right: 0.5em;
   background: transparent;
-  z-index: 101;
-  overflow-y: auto;
-  overflow-x: visible;
-  scrollbar-width: none;
+  z-index: 102;
   position: fixed;
   right: 0;
-  bottom: 0;
-  width: max-content;
+  bottom: 3em;
   animation: none !important;
-  height: 100vh;
   pointer-events: none;
-  -ms-overflow-style: none;
 }
-.kit::before {
-  content: " ";
-  height: calc(100vh - 2.5em);
-  width: 100%;
-}
-.kit .tin {
+.kit .tab {
   pointer-events: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.2em;
+  height: 2.2em;
+  margin-left: auto;
+  border-radius: 50%;
+  border: 1px solid var(--pop);
+  background: rgba(0,0,0,0.3);
+  -webkit-backdrop-filter: blur(var(--blur));
+  backdrop-filter: blur(var(--blur));
+  box-shadow: 0 0 0.1em var(--pop);
+  cursor: pointer;
+  color: var(--pop);
+  opacity: 0.5;
+  user-select: none;
+  touch-action: none;
+  text-shadow: 0 0 5px var(--pop);
+  font-weight: 900;
+  font-size: 1.1em;
+  transition: opacity 0.2s;
+}
+.kit.open .tab { opacity: 1; }
+.kit .tin {
+  pointer-events: none;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   animation: none !important;
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease, opacity 0.2s ease;
+  scrollbar-width: none;
 }
-.kit::-webkit-scrollbar { display: none; }
+.kit .tin::-webkit-scrollbar { display: none; }
+.kit.open .tin {
+  pointer-events: auto;
+  max-height: calc(100vh - 10em);
+  opacity: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+.kit .chain {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.15em;
+  align-items: center;
+}
+.kit .chain button:not(:last-child) {
+  font-size: 0.9em;
+  border-style: dashed;
+}
 .kit button {
   scroll-snap-align: start;
   flex: 0 0 auto;
@@ -277,6 +316,22 @@ var shell = B.all('#shell')[0];
 var help = B.all('#help')[0];
 var scrollBtn = B.all('#scroll')[0];
 var belt = B.all('.kit .tin')[0];
+var kitEl = belt.parentNode;
+var tab = B.all('.kit .tab')[0];
+;(function(sy){
+  tab.addEventListener('pointerdown', function(e){ sy = e.clientY; });
+  tab.addEventListener('pointerup', function(e){
+    var dy = e.clientY - sy;
+    if(Math.abs(dy) < 15){ kitEl.classList.toggle('open'); }
+    else if(dy < -30){ kitEl.classList.add('open'); }
+    else if(dy > 30){ kitEl.classList.remove('open'); }
+  });
+  document.addEventListener('pointerdown', function(e){
+    if(!kitEl.classList.contains('open')) return;
+    if(e.target.closest('.kit')) return;
+    kitEl.classList.remove('open');
+  });
+}(0));
 // --- agent mode (claude / codex) ---
 var agent = {mode:'', iframe:null, sid:null, kind:''};
 
@@ -508,14 +563,50 @@ kit.ear('belt', function(eve, data, b){
   var name = data.name||data[0];
   if(B.all('#'+name)[0]){return}
   b = B.new('button');
-
   b.id = b.textContent = name;
 
-  b.onclick = function(){
-    if(data.key){ tapKey(name); return; }
-    kit.say(data.prompt||data[1], 'prompt');
-  };
-  belt.append(b);
+  if(data.chain){
+    var row = B.new('div');
+    row.className = 'chain';
+    row.id = 'ch-' + name;
+    data.chain.forEach(function(c){
+      var s = B.new('button');
+      s.textContent = c[0];
+      s.style.display = 'none';
+      s.onclick = function(e){
+        e.stopPropagation();
+        kit.say(c[1], 'prompt');
+        row.querySelectorAll('button').forEach(function(x){
+          if(x !== b) x.style.display = 'none';
+        });
+        b.classList.remove('live');
+      };
+      row.append(s);
+    });
+    row.append(b);
+    b.onclick = function(){
+      var subs = row.querySelectorAll('button');
+      var open = subs[0] && subs[0].style.display !== 'none';
+      B.all('.kit .chain').forEach(function(g){
+        g.querySelectorAll('button').forEach(function(x){
+          if(x === g.lastElementChild) return;
+          x.style.display = 'none';
+        });
+        if(g.lastElementChild) g.lastElementChild.classList.remove('live');
+      });
+      if(!open){
+        subs.forEach(function(x){ x.style.display = '' });
+        b.classList.add('live');
+      }
+    };
+    belt.append(row);
+  } else {
+    b.onclick = function(){
+      if(data.key){ tapKey(name); return; }
+      kit.say(data.prompt||data[1], 'prompt');
+    };
+    belt.append(b);
+  }
 });
 ais.forEach(function(k){ kit.say([k, k+' '], 'belt') });
 kit.say(['exit','exit'], 'belt');
@@ -562,10 +653,12 @@ prompt.onfocus = function(eve){
 
 autoGrow(prompt);
 
-window.addEventListener('scroll', function() {
+window.addEventListener('scroll', function(e) {
   if(low() && scrollBtn) {
     scrollBtn.classList.remove('show');
   }
+  if(e.target && e.target.closest && e.target.closest('.kit')) return;
+  kitEl.classList.remove('open');
 }, true);
 scrollBtn.onclick = function(){ go(); scrollBtn.classList.remove('show'); };
 
