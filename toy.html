@@ -1,0 +1,259 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TOY</title>
+</head>
+<body>
+<textarea id="code" spellcheck="false">var x = 1 + 2;
+the.view = [ "Hey your name (1,2,3) is ", {a:1}, "!"] + 1;</textarea>
+<div id="bar"><span id="stat"></span></div>
+<div id="view"></div>
+<div class="hide">
+	<span id="mod" class="node"></span>
+	<span id="tre" class="tree"></span>
+	<span id="kid" class="kid"></span>
+	<span id="dep" class="deep"></span>
+</div>
+<style>
+html,body{box-sizing:border-box;margin:0;min-height:100%;background:#14110f;color:#f7f2e8;font:18px/1.35 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+*{box-sizing:inherit}
+body{display:flex;flex-direction:column}
+#top{display:flex;gap:.5rem;align-items:center;padding:.6rem;background:#202624;border-bottom:1px solid #3b4743;flex-wrap:wrap}
+#top button{min-height:2.8rem;border:0;border-radius:.4rem;padding:0 .8rem;background:#314c60;color:#f6fbff;font:inherit}
+#top button:nth-child(2){background:#5b3f70}
+#top button:nth-child(3){background:#646227}
+#top button:nth-child(4){background:#5a3d32}
+#code{width:100%;min-height:7rem;resize:vertical;border:0;border-bottom:1px solid #3b4743;background:#0b0d0c;color:#b8ffba;padding:.8rem;font:inherit;outline:0}
+#bar{display:flex;gap:.7rem;align-items:center;padding:.5rem .8rem;background:#181b1a;color:#c9d2cf;flex-wrap:wrap}
+#view{padding:.8rem;overflow-y:auto;overflow-x:hidden;flex:1;max-width:100vw}
+.line{display:flex;align-items:center;gap:.25rem;flex-wrap:wrap;margin:.25rem 0 .8rem;max-width:100%}
+.node{display:inline-flex;align-items:center;gap:.25rem;max-width:100%;min-width:0;margin:.14rem;padding:.28rem .38rem;border-radius:.35rem;border:1px solid rgba(255,255,255,.25);box-shadow:inset 0 -.18rem rgba(0,0,0,.18);white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;outline:0 solid transparent;transition:transform .08s,box-shadow .08s}
+.logic{background:#1f8a70}
+.math{background:#a54d48}
+.pick{background:#6e5fa8}
+.join{background:#b2782b}
+.nest{background:#28638b}
+.text{background:#446a35}
+.decor{background:#555b61;opacity:.5}
+.note{display:inline-flex;align-items:center;max-width:100%;min-width:0;margin:.14rem;padding:.28rem .45rem;border-radius:.35rem;color:#b8c4bf;background:rgba(0,0,0,.24);border:1px solid rgba(255,255,255,.08);box-shadow:inset 0 .18rem .35rem rgba(0,0,0,.55);white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;opacity:.78}
+.mark{opacity:.5;padding:.18rem .08rem;white-space:pre-wrap;overflow-wrap:anywhere;border-radius:.25rem;outline:0 solid transparent}
+.miss{background:#812f44}
+.tree{display:inline-flex;align-items:center;gap:.22rem;flex-wrap:wrap;max-width:100%;min-width:0;margin:.1rem;padding:.24rem;border-radius:.35rem;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);overflow-wrap:anywhere;word-break:break-word;outline:0 solid transparent;transition:transform .08s,box-shadow .08s,background .08s}
+.tree[data-open]::before{content:attr(data-open);opacity:.5;padding:.18rem .08rem}
+.tree[data-close]::after{content:attr(data-close);opacity:.5;padding:.18rem .08rem}
+.kid{display:inline-flex;align-items:center;gap:.18rem;flex-wrap:wrap;max-width:100%;min-width:0}
+.head{display:inline-flex;align-items:center;gap:.18rem;flex-wrap:nowrap;max-width:100%;min-width:0}
+.flow{display:contents}
+.deep{display:inline-flex;align-items:center;gap:.18rem;flex-wrap:wrap;max-width:100%;min-width:0;padding:.12rem}
+.node:hover,.tree:hover:not(:has(.tree:hover,.node:hover,.mark:hover)){transform:translateY(-.12rem);box-shadow:inset 0 -.18rem rgba(0,0,0,.18),0 .22rem .42rem rgba(0,0,0,.38);background-image:linear-gradient(rgba(255,255,255,.06),rgba(255,255,255,.06));position:relative;z-index:2}
+.mark:hover{opacity:.85;background:rgba(255,255,255,.08)}
+.runon,.kid:has(> .mark:hover){transform:translateY(-.12rem);background:rgba(255,255,255,.07);border-radius:.35rem;box-shadow:0 .18rem .42rem rgba(0,0,0,.32);filter:brightness(1.08);position:relative;z-index:2}
+.hide{display:none}
+</style>
+<script src="./gun/mug-codex.js"></script>
+<script>
+/*
+Brick view:
+Core expressions become solid bricks. Syntax, separators, declarations, and
+other decorators stay visually quiet. MUG keeps one linked list for the whole
+source, so the view must ask for shallow tokens at each nesting level and render
+child blocks from their own down/end range.
+*/
+var APP={};
+APP.code=document.getElementById('code');APP.view=document.getElementById('view');APP.stat=document.getElementById('stat');
+APP.mod=document.getElementById('mod');APP.tre=document.getElementById('tre');APP.kid=document.getElementById('kid');APP.dep=document.getElementById('dep');
+APP.ops={'=':1,'+=':1,'-=':1,'*=':1,'/=':1,'%=':1,'=>':1,'||':2,'&&':3,'|':4,'^':5,'&':6,'==':7,'===':7,'!=':7,'!==':7,'>':8,'<':8,'>=':8,'<=':8,'in':8,'of':8,'instanceof':8,'<<':9,'>>':9,'>>>':9,'+':10,'-':10,'*':11,'/':11,'%':11,'**':12};
+APP.stop={';':1,',':1};
+APP.skip={};
+APP.syn={';':1,',':1};
+APP.say={var:1,let:1,const:1,function:1,return:1,if:1,else:1,for:1,while:1,do:1,class:1,static:1,get:1,set:1,async:1,await:1,break:1,continue:1,switch:1,case:1,default:1,try:1,catch:1,finally:1,throw:1};
+APP.decl={var:1,let:1,const:1};
+APP.one={typeof:1,new:1,delete:1,void:1,await:1,yield:1};
+APP.hue={logic:'logic',math:'math',pick:'pick',join:'join',nest:'nest',text:'text',decor:'decor',miss:'miss'};
+APP.span=function(raw,kind){var el=APP.mod.cloneNode(false);el.removeAttribute('id');el.className='node '+(kind||'decor');el.textContent=raw;return el}
+APP.note=function(raw){var el=document.createElement('span');el.className='note';el.textContent=raw;return el}
+APP.mark=function(raw){var el=document.createElement('span');el.className='mark';el.textContent=raw;return el}
+APP.bind=function(el,box){
+	el.onmouseenter=function(){ box.classList.add('runon') };
+	el.onmouseleave=function(){ box.classList.remove('runon') };
+	return el;
+}
+APP.box=function(kind){var el=APP.tre.cloneNode(false);el.removeAttribute('id');el.className='tree '+(kind||'logic');return el}
+APP.hold=function(kind){var el=APP.kid.cloneNode(false);el.removeAttribute('id');el.className=kind||'kid';return el}
+APP.head=function(n,box){
+	box=APP.hold('head');
+	box.appendChild(APP.mark(n.name?'function ':'function'));
+	if(n.name){box.appendChild(APP.draw(n.name))}
+	box.appendChild(APP.args(n.args));
+	box.appendChild(APP.mark('{'));
+	return box;
+}
+APP.add=function(arr,as,raw){
+	raw=as.raw;
+	if(as.escape&&as.escape.start=='//'&&raw[raw.length-1]=='\n'){
+		arr.push(Object.assign({},as,{raw:raw.slice(0,-1)}));
+		arr.push({raw:'\n',mark:1});
+		return;
+	}
+	arr.push(as);
+}
+APP.tok=function(as,end,arr){
+	arr=[];while(as&&as!==end){
+		if(as.raw){APP.add(arr,as)}
+		as=as.form&&as.end?as.end.next:as.next;
+	}
+	return arr;
+}
+APP.clean=function(tok,out,t,n){
+	out=[];tok.forEach(t=>{if(!/^\s+$/.test(t.raw)){out.push(t)}});
+	tok=[];for(var i=0;i<out.length;i++){
+		t=out[i];
+		if((t.raw=='.'||t.raw=='?.')&&tok.length&&out[i+1]){n=out[++i];tok.push({raw:tok.pop().raw+t.raw+n.raw,node:n});continue}
+		tok.push(t);
+	}
+	return tok;
+}
+APP.cut=function(tok,at,op){return APP.see({type:'op',op:op.raw,left:APP.parse(tok.slice(0,at)),right:APP.parse(tok.slice(at+1)),raw:op.raw},op)}
+APP.pair=function(tok,at){return APP.see({type:'pair',left:APP.parse(tok.slice(0,at)),right:APP.parse(tok.slice(at+1)),raw:':'},tok[at])}
+APP.func=function(tok){
+	if(tok[0]&&tok[0].raw=='function'){
+		if(tok[1]&&tok[1].raw=='('){return APP.see({type:'func',args:APP.parse([tok[1]]),body:tok[2]&&tok[2].raw=='{'?APP.parse([tok[2]]):APP.parse(tok.slice(2)),rest:tok.slice(3)},tok[0])}
+		if(tok[1]&&tok[2]&&tok[2].raw=='('){return APP.see({type:'func',name:APP.parse([tok[1]]),args:APP.parse([tok[2]]),body:tok[3]&&tok[3].raw=='{'?APP.parse([tok[3]]):APP.parse(tok.slice(3)),rest:tok.slice(4)},tok[0])}
+	}
+}
+APP.unary=function(tok){
+	if(tok[0]&&APP.one[tok[0].raw]&&tok[1]){return APP.see({type:'one',op:tok[0].raw,right:APP.parse(tok.slice(1))},tok[0])}
+}
+APP.meth=function(tok){
+	if(tok[0]&&(tok[0].raw=='get'||tok[0].raw=='set')&&tok[1]&&tok[2]&&tok[2].raw=='('){
+		return APP.see({type:'meth',kind:tok[0].raw,name:APP.parse([tok[1]]),args:APP.parse([tok[2]]),body:tok[3]&&tok[3].raw=='{'?APP.parse([tok[3]]):APP.parse(tok.slice(3)),rest:tok.slice(4)},tok[0])
+	}
+}
+APP.ctrl=function(tok){
+	if(tok[0]&&(tok[0].raw=='if'||tok[0].raw=='while'||tok[0].raw=='for'||tok[0].raw=='switch'||tok[0].raw=='catch')&&tok[1]&&tok[1].raw=='('){
+		return APP.see({type:'ctrl',op:tok[0].raw,args:APP.parse([tok[1]]),body:tok[2]&&tok[2].raw=='{'?APP.parse([tok[2]]):APP.parse(tok.slice(2)),rest:tok.slice(3)},tok[0])
+	}
+}
+APP.list=function(tok,out,buf,t){
+	out=[];buf=[];for(var i=0;i<tok.length;i++){t=tok[i];if(t.raw==','){if(buf.length){out.push(APP.parse(buf));buf=[]}out.push({type:'mark',raw:t.raw});continue}buf.push(t)}
+	if(buf.length){out.push(APP.parse(buf))}return{type:'run',kids:out}
+}
+APP.declare=function(tok){
+	if(tok[0]&&APP.decl[tok[0].raw]&&tok[1]){return APP.see({type:'decl',op:tok[0].raw,right:APP.list(tok.slice(1))},tok[0])}
+}
+APP.parse=function(tok,best,at,op,n){
+	tok=APP.clean(tok);if(!tok.length){return{type:'none',raw:''}}
+	while(tok.length>1&&tok[0].raw=='('&&tok[tok.length-1]===tok[0].end){tok=APP.clean(APP.tok(tok[0].next,tok[0].end))}
+	if(n=APP.declare(tok)){return n}
+	if(n=APP.func(tok)){return n.rest&&n.rest.length?{type:'run',kids:[n,APP.parse(n.rest)]}:n}
+	if(n=APP.meth(tok)){return n.rest&&n.rest.length?{type:'run',kids:[n,APP.parse(n.rest)]}:n}
+	if(n=APP.ctrl(tok)){return n.rest&&n.rest.length?{type:'run',kids:[n,APP.parse(n.rest)]}:n}
+	for(var i=0;i<tok.length;i++){op=tok[i].raw;if(APP.ops[op]&&(!best||APP.ops[op]<=best)){best=APP.ops[op];at=i}}
+	if(at!=null){return APP.cut(tok,at,tok[at])}
+	if(n=APP.unary(tok)){return n}
+	if(tok.length>1&&APP.say[tok[0].raw]){return APP.see({type:'run',flow:1,kids:[{type:'mark',raw:tok[0].raw+' '},APP.parse(tok.slice(1))]},tok[0])}
+	for(i=0;i<tok.length;i++){if(tok[i].raw==':'){return APP.pair(tok,i)}}
+	if(tok.length==1){
+		n=tok[0];if(n.form){return APP.see({type:'nest',open:n.raw,close:n.end?n.end.raw:'',kids:APP.line(APP.tok(n.next,n.end)),raw:n.raw},n)}
+		return APP.see({type:'leaf',raw:n.raw,node:n},n)
+	}
+	return{type:'run',kids:tok.map(t=>APP.parse([t]))}
+}
+APP.line=function(tok,out,buf,t){
+	out=[];buf=[];for(var i=0;i<tok.length;i++){t=tok[i];if(t.raw==';'||t.raw=='\n'){if(buf.length){out.push(APP.parse(buf));buf=[]}out.push({type:'mark',raw:t.raw});continue}buf.push(t)}
+	if(buf.length){out.push(APP.parse(buf))}return out;
+}
+APP.kind=function(n){
+	if(!n){return'decor'}if(n.type=='op'){return APP.ops[n.op]>9?'math':APP.ops[n.op]>3?'pick':'logic'}
+	if(n.type=='nest'){return'nest'}if(n.type=='leaf'&&(/^['"`]/.test(n.raw)||n.node.escape&&n.node.escape.start[0]!='/')){return'text'}return n.type=='mark'||APP.syn[n.raw]||APP.say[n.raw]||/^\s+$/.test(n.raw)||n.type=='leaf'&&n.node.escape?'decor':'join';
+}
+APP.easy=function(n){
+	if(!n||n.type=='none'||n.type=='mark'){return 1}
+	if(n.type=='leaf'){return 1}
+	if(n.type=='run'){return !n.kids.some(k=>k.type=='mark')&&n.kids.every(APP.easy)}
+	return 0;
+}
+APP.atom=function(n){
+	return APP.easy(n)||n&&n.type=='nest'&&n.kids&&n.kids.length<4&&n.kids.every(APP.easy);
+}
+APP.text=function(n){
+	if(!n||n.type=='none'||n.type=='mark'){return''}
+	if(n.type=='leaf'){return n.raw}
+	if(n.type=='run'){return n.kids.map(APP.text).filter(Boolean).reduce((a,b)=>a+(APP.gap(a,b)?' ':'')+b,'')}
+	if(n.type=='one'){return n.op+' '+APP.text(n.right)}
+	return'';
+}
+APP.gap=function(a,b){
+	return /[A-Za-z0-9_$]$/.test(a)&&/^[A-Za-z0-9_$]/.test(b);
+}
+APP.see=function(n,as){
+	if(as&&as.raw){as.see=n}
+	return n;
+}
+APP.body=function(n,box){
+	if(!n||n.type!='nest'||n.open!='{'){return APP.draw(n)}
+	box=APP.hold();
+	n.kids.forEach(k=>box.appendChild(APP.draw(k)));
+	box.appendChild(APP.mark('}'));
+	return box;
+}
+APP.args=function(n,box){
+	if(!n||n.type!='nest'||n.open!='('){return APP.draw(n)}
+	box=APP.hold('head');
+	box.appendChild(APP.mark('('));
+	n.kids.forEach(k=>box.appendChild(APP.draw(k)));
+	box.appendChild(APP.mark(')'));
+	return box;
+}
+APP.part=function(box,n){
+	box.appendChild(APP.bind(APP.mark(n.open),box));
+	n.kids.forEach(k=>box.appendChild(APP.draw(k)));
+	box.appendChild(APP.bind(APP.mark(n.close),box));
+}
+APP.run=function(n,box,kid,next){
+	box=APP.hold(n.flow?'kid flow':0);
+	for(var i=0;i<n.kids.length;i++){
+		kid=n.kids[i];
+		box.appendChild(APP.draw(kid));
+		while((next=n.kids[i+1])&&next.type=='nest'&&(next.open=='('||next.open=='[')){
+			APP.part(box,next); i++;
+		}
+	}
+	return box;
+}
+APP.draw=function(n,box,a,b,c){
+	if(!n){return APP.span('', 'miss')}
+	if(n.type=='none'){return document.createTextNode('')}
+	if(n.type=='mark'||APP.skip[n.raw]){return APP.mark(n.raw)}
+	if(n.type=='leaf'&&n.node.escape&&n.node.escape.start[0]=='/'){return APP.note(n.raw)}
+	if(n.type=='leaf'&&(APP.syn[n.raw]||APP.say[n.raw])){return APP.mark(n.raw)}
+	if(n.type=='pair'&&APP.easy(n.left)&&APP.easy(n.right)){return APP.span(APP.text(n.left)+': '+APP.text(n.right),'join')}
+	if(n.type=='pair'){box=APP.box('join');a=APP.hold();c=APP.hold();a.appendChild(APP.easy(n.left)?APP.span(APP.text(n.left),'join'):APP.draw(n.left));c.appendChild(APP.easy(n.right)?APP.span(APP.text(n.right),'join'):APP.draw(n.right));box.appendChild(a);box.appendChild(APP.mark(':'));box.appendChild(c);return box}
+	if(n.type=='op'&&APP.easy(n.left)&&APP.easy(n.right)){return APP.span(APP.text(n.left)+' '+n.op+' '+APP.text(n.right),APP.kind(n))}
+	if(n.type=='op'){box=APP.box(APP.kind(n));a=APP.hold();b=APP.hold('deep');c=APP.hold();a.appendChild(APP.atom(n.left)?APP.span(APP.text(n.left),'join'):APP.draw(n.left));b.appendChild(APP.mark(' '+n.op+' '));c.appendChild(APP.atom(n.right)?APP.span(APP.text(n.right),'join'):APP.draw(n.right));box.appendChild(a);box.appendChild(b);box.appendChild(c);return box}
+	if(n.type=='decl'){box=APP.hold();box.appendChild(APP.mark(n.op+' '));box.appendChild(APP.draw(n.right));return box}
+	if(n.type=='one'){box=APP.box('pick');box.appendChild(APP.mark(n.op+' '));box.appendChild(APP.atom(n.right)?APP.span(APP.text(n.right),'join'):APP.draw(n.right));return box}
+	if(n.type=='func'){box=APP.box('logic');box.appendChild(APP.head(n));box.appendChild(APP.body(n.body));return box}
+	if(n.type=='meth'){box=APP.box('logic');box.appendChild(APP.mark(n.kind+' '));box.appendChild(APP.draw(n.name));box.appendChild(APP.args(n.args));box.appendChild(APP.mark('{'));box.appendChild(APP.body(n.body));return box}
+	if(n.type=='ctrl'){box=APP.box('logic');box.appendChild(APP.mark(n.op));box.appendChild(APP.args(n.args));box.appendChild(APP.mark('{'));box.appendChild(APP.body(n.body));return box}
+	if(n.type=='nest'){box=APP.box('nest');box.dataset.open=n.open;box.dataset.close=n.close;n.kids.forEach(k=>box.appendChild(APP.draw(k)));return box}
+	if(n.type=='run'){return APP.run(n)}
+	return APP.span(n.raw,APP.kind(n));
+}
+APP.drawall=function(list){
+	APP.view.textContent='';list.forEach(n=>APP.view.appendChild(APP.draw(n)));
+}
+APP.go=function(){
+	var at=performance.now(), ast=mug(APP.code.value), tok=APP.tok(ast), list=APP.line(tok), ms=performance.now()-at;
+	console.log('mug', ast);
+	APP.drawall(list);APP.stat.textContent=tok.length+' bricks in '+ms.toFixed(2)+'ms';
+	try{localStorage.mugbrick=APP.code.value}catch(e){}
+}
+APP.code.oninput=APP.go;
+try{APP.code.value=localStorage.mugbrick||APP.code.value}catch(e){}
+APP.go();
+</script>
+</body>
+</html>
