@@ -38,6 +38,7 @@ mug.link = function(as, raw, add, tmp){
 	tmp.raw = mug.raw(raw); tmp.top = as; tmp.mug = as.mug; tmp.up = as.up; mug.set(tmp, add);
 	if(as.tail){ tmp.back = as.tail; as.tail.next = tmp }
 	as.tail = tmp;
+	as.num = (as.num || 0) + 1;
 	if(tmp.up && !tmp.up.nest && !tmp.shut){ tmp.up.nest = tmp }
 	return tmp;
 }
@@ -52,7 +53,7 @@ mug.re = function(as, raw){
 	return !raw || as && as.key && as.key.pre || as && as.sep && /^[({[=,:;!&|?+\-*%^~<>]$/.test(raw) || as && as.rule;
 }
 mug.read = function(as, text, g, i, l, buf, hit, top, end, raw){
-	text = mug.txt(as); g = as.mug || mug.JS; as.mug = g; as.top = as; as.raw = mug.raw(''); as.tail = 0; buf = ''; top = [];
+	text = mug.txt(as); g = as.mug || mug.JS; as.mug = g; as.top = as; as.raw = mug.raw(''); as.tail = 0; as.num = 0; buf = ''; top = [];
 	for(i = 0, l = text.length; i < l;){
 		if(hit = mug.start(g.escape, text, i)){
 			if(hit.start == '/' && text[i+1] != '/' && text[i+1] != '*' && !mug.re(as.tail)){ hit = 0 }
@@ -89,6 +90,7 @@ mug.read = function(as, text, g, i, l, buf, hit, top, end, raw){
 mug.drop = function(as){
 	if(as.back){ as.back.next = as.next }
 	if(as.next){ as.next.back = as.back }
+	(as.top || as).num--;
 	return as.next;
 }
 mug.space = function(as, raw, next, back){
@@ -118,20 +120,6 @@ mug.tok = function(as, end, a){
 	}
 	return a;
 }
-mug.clean = function(tok, a, t, raw, n){
-	a = [];
-	for(var i = 0; i < tok.length; i++){
-		t = tok[i]; raw = mug.txt(t);
-		if(!/^\s+$/.test(raw) && !(t.escape && (t.escape.start == '//' || t.escape.start == '/*'))){ a.push(t) }
-	}
-	tok = [];
-	for(i = 0; i < a.length; i++){
-		t = a[i]; raw = mug.txt(t);
-		if((mug.sym(t) == '.' || mug.sym(t) == '?.') && tok.length && a[i+1]){ n = a[++i]; tok.push({type: 'val', raw: mug.raw(mug.text(tok.pop()) + mug.sym(t) + mug.txt(n)), node: n}); continue }
-		tok.push(t);
-	}
-	return tok;
-}
 mug.node = function(type, raw, add){
 	var n = type == 'run'? [] : {};
 	n.type = type; n.raw = mug.raw(raw || '');
@@ -139,107 +127,103 @@ mug.node = function(type, raw, add){
 }
 mug.text = function(n, a){
 	if(!n){ return '' }
+	if(n.type == 'op' && (n.op == '.' || n.op == '?.')){ return mug.text(n.L) + n.op + mug.text(n.J) }
 	if(n.type == 'op'){ return (mug.text(n.L) + ' ' + n.op + ' ' + mug.text(n.J)).trim() }
 	if(n.type == 'run'){ a = []; for(var i = 0; i < n.length; i++){ if(mug.text(n[i])){ a.push(mug.text(n[i])) } } return a.join(' ') }
-	if(n.type == 'nest'){ return mug.txt(n) + mug.text(n.run) + (n.shut || '') }
+	if(n.type == 'nest'){ return mug.txt(n) + mug.text(n.run) + (n.end? mug.txt(n.end) : '') }
 	if(n.raw){ return mug.txt(n) }
 	return '';
 }
 mug.mark = function(as){ as.type = 'mark'; return as }
 mug.val = function(as){
 	as.type = as.form? 'nest' : 'val';
-	if(as.form){ as.run = as.run || mug.run(as.next, as.end, as.form.start == '{'? 0 : ',') }
+	if(as.form){ as.run = as.run || mug.run(as.next, as.end, ',') }
 	return as;
 }
-mug.part = function(tok, by, out, buf, t, raw, n){
-	out = mug.node('run', '', {by: by}); buf = [];
-	for(var i = 0; i < tok.length; i++){
-		t = tok[i]; raw = mug.txt(t);
-		if(mug.sym(t) == by){ if(buf.length){ n = mug.expr(buf); if(mug.text(n)){ out.push(n) } buf = [] } continue }
-		buf.push(t);
+mug.skip = function(t){ return !t || /^\s+$/.test(mug.txt(t)) || t.escape && (t.escape.start == '//' || t.escape.start == '/*') }
+mug.first = function(tok, b, e){ while(b < e && mug.skip(tok[b])){ b++ } return b }
+mug.last = function(tok, b, e){ while(e > b && mug.skip(tok[e - 1])){ e-- } return e }
+mug.putrun = function(out, tok, b, e){
+	b = mug.first(tok, b, e); e = mug.last(tok, b, e);
+	if(b < e){ out.push(mug.expr(tok, b, e)) }
+}
+mug.part = function(tok, b, e, by, out, at, t){
+	if('string' == typeof b){ by = b; b = 0; e = tok.length }
+	out = mug.node('run', '', {by: by}); at = b;
+	for(var i = b; i < e; i++){
+		t = tok[i];
+		if(mug.sym(t) == by){ mug.putrun(out, tok, at, i); at = i + 1 }
 	}
-	if(buf.length){ n = mug.expr(buf); if(mug.text(n)){ out.push(n) } }
+	mug.putrun(out, tok, at, e);
 	return out;
 }
-mug.run = function(as, end, by, out, buf, t, raw, n){
-	out = mug.node('run', '', {by: by || ';'}); buf = [];
-	for(var tok = mug.tok(as, end), i = 0; i < tok.length; i++){
+mug.run = function(as, end, by, out, tok, at, t, raw){
+	out = mug.node('run', '', {by: by || ';'}); tok = mug.tok(as, end); at = 0;
+	for(var i = 0; i < tok.length; i++){
 		t = tok[i]; raw = mug.txt(t);
-		if(mug.sym(t) == (by || ';') || (!by && raw == '\n')){
-			if(buf.length){ n = mug.expr(buf); if(mug.text(n)){ out.push(n) } buf = [] }
-			continue;
-		}
-		buf.push(t);
+		if(mug.sym(t) == (by || ';') || (!by && raw == '\n')){ mug.putrun(out, tok, at, i); at = i + 1 }
 	}
-	if(buf.length){ n = mug.expr(buf); if(mug.text(n)){ out.push(n) } }
+	mug.putrun(out, tok, at, tok.length);
 	return out;
 }
-mug.pre = function(n, tok, i, raw){
-	for(i = 0; i < tok.length; i++){
-		raw = mug.sym(tok[i]);
-		if(!tok[i].key || !tok[i].key.pre){ break }
-		(n.pre || (n.pre = [])).push(mug.mark(tok[i]));
-	}
-	return tok.slice(i);
-}
-mug.bin = function(tok, best, at, op, raw, rule){
-	for(var i = 0; i < tok.length; i++){
+mug.bin = function(tok, b, e, best, at, op, raw, rule){
+	for(var i = b; i < e; i++){
 		raw = mug.sym(tok[i]); rule = tok[i].rule || tok[i].key && tok[i].key.op;
 		if(rule && rule.rank && (!best || rule.rank < best || rule.rank == best && rule.side != 'right')){
 			best = rule.rank; at = i; op = raw;
 		}
 	}
-	if(at != null){ return mug.set(tok[at], {type: 'op', L: mug.expr(tok.slice(0, at)), op: op, J: mug.expr(tok.slice(at + 1)), rule: tok[at].rule || tok[at].key && tok[at].key.op}) }
+	if(at != null){ return mug.set(tok[at], {type: 'op', L: mug.expr(tok, b, at), op: op, J: mug.expr(tok, at + 1, e), rule: tok[at].rule || tok[at].key && tok[at].key.op}) }
 }
-mug.call = function(tok, n){
-	if(tok.length > 1 && tok[1].form && mug.sym(tok[1]) == '('){
-		return mug.set(tok[0], {type: 'op', L: mug.node('val', ''), op: mug.sym(tok[0]), J: tok[1].run || mug.run(tok[1].next, tok[1].end, ','), aft: tok.slice(2).length? mug.expr(tok.slice(2)) : 0});
+mug.call = function(tok, b, e, n){
+	if(b + 1 < e && tok[b + 1].form && mug.sym(tok[b + 1]) == '('){
+		return mug.set(tok[b], {type: 'op', L: mug.node('val', ''), op: mug.sym(tok[b]), J: tok[b + 1].run || mug.run(tok[b + 1].next, tok[b + 1].end, ','), aft: b + 2 < e? mug.expr(tok, b + 2, e) : 0});
 	}
 }
-mug.ctrl = function(tok, raw, n){
-	raw = mug.sym(tok[0]);
-	if(tok[0] && tok[0].key && tok[0].key.ctrl && tok[1] && tok[1].form){
-		n = mug.set(tok[0], {type: 'op', L: tok[1].run || mug.run(tok[1].next, tok[1].end, ','), op: raw, J: tok[2] && tok[2].form? tok[2].run || mug.run(tok[2].next, tok[2].end) : mug.expr(tok.slice(2))});
-		if(tok[3]){ n.aft = mug.expr(tok.slice(3)) }
+mug.ctrl = function(tok, b, e, raw, n){
+	raw = mug.sym(tok[b]);
+	if(tok[b] && tok[b].key && tok[b].key.ctrl && tok[b + 1] && tok[b + 1].form){
+		n = mug.set(tok[b], {type: 'op', L: tok[b + 1].run || mug.run(tok[b + 1].next, tok[b + 1].end, ','), op: raw, J: tok[b + 2] && tok[b + 2].form? tok[b + 2].run || mug.run(tok[b + 2].next, tok[b + 2].end) : mug.expr(tok, b + 2, e)});
+		if(tok[b + 3]){ n.aft = mug.expr(tok, b + 3, e) }
 		return n;
 	}
 }
-mug.func = function(tok, raw, at, n){
-	if(!tok[0]){ return }
-	raw = mug.sym(tok[0]); at = raw == 'async'? 1 : 0;
+mug.func = function(tok, b, e, raw, at, n){
+	if(!tok[b]){ return }
+	raw = mug.sym(tok[b]); at = raw == 'async'? b + 1 : b;
 	if(tok[at] && mug.sym(tok[at]) == 'function'){
 		n = mug.set(tok[at], {type: 'op', L: mug.node('run', ''), op: 'function', J: mug.node('run', '')});
-		if(at){ n.pre = [mug.mark(tok[0])] }
-		if(tok[at+1] && !tok[at+1].form){ n.name = mug.val(tok[at+1]); at++ }
-		if(tok[at+1] && tok[at+1].form){ n.L = tok[at+1].run || mug.run(tok[at+1].next, tok[at+1].end, ',') }
-		if(tok[at+2] && tok[at+2].form){ n.J = tok[at+2].run || mug.run(tok[at+2].next, tok[at+2].end) }
-		if(tok[at+3]){ n.aft = mug.expr(tok.slice(at+3)) }
+		if(at > b){ n.pre = [mug.mark(tok[b])] }
+		if(tok[at + 1] && !tok[at + 1].form){ n.name = mug.val(tok[at + 1]); at++ }
+		if(tok[at + 1] && tok[at + 1].form){ n.L = tok[at + 1].run || mug.run(tok[at + 1].next, tok[at + 1].end, ',') }
+		if(tok[at + 2] && tok[at + 2].form){ n.J = tok[at + 2].run || mug.run(tok[at + 2].next, tok[at + 2].end) }
+		if(at + 3 < e){ n.aft = mug.expr(tok, at + 3, e) }
 		return n;
 	}
 }
-mug.decl = function(tok, raw, n, run){
-	raw = mug.sym(tok[0]);
-	if(tok[0] && tok[0].key && tok[0].key.dec){
-		run = mug.part(tok.slice(1), ',');
-		for(var i = 0; i < run.length; i++){ (run[i].pre || (run[i].pre = [])).push(mug.mark(tok[0])) }
+mug.decl = function(tok, b, e, raw, n, run){
+	raw = mug.sym(tok[b]);
+	if(tok[b] && tok[b].key && tok[b].key.dec){
+		run = mug.part(tok, b + 1, e, ',');
+		for(var i = 0; i < run.length; i++){ (run[i].pre || (run[i].pre = [])).push(mug.mark(tok[b])) }
 		return run.length == 1? run[0] : run;
 	}
 }
-mug.expr = function(tok, n, raw){
-	tok = mug.clean(tok);
-	if(!tok.length){ return mug.node('val', '') }
-	if(tok.length > 1 && mug.sym(tok[0]) == '(' && tok[tok.length - 1] === tok[0].end){ return mug.expr(mug.tok(tok[0].next, tok[0].end)) }
-	if(n = mug.decl(tok)){ return n }
-	if(n = mug.func(tok)){ return n }
-	if(n = mug.ctrl(tok)){ return n }
-	raw = mug.sym(tok[0]);
-	if(tok[0].key && tok[0].key.pre && tok[1]){ return mug.set(tok[0], {type: 'op', L: mug.node('val', ''), op: raw, J: mug.expr(tok.slice(1))}) }
-	if(n = mug.bin(tok)){ return n }
-	for(var i = 0; i < tok.length; i++){ if(mug.sym(tok[i]) == ':'){ return mug.set(tok[i], {type: 'op', L: mug.expr(tok.slice(0, i)), op: ':', J: mug.expr(tok.slice(i + 1))}) } }
-	if(n = mug.call(tok)){ return n }
-	if(tok.length == 1){ return tok[0].type? tok[0] : mug.val(tok[0]) }
+mug.expr = function(tok, b, e, n, raw){
+	b = mug.first(tok, b || 0, e == null? tok.length : e); e = mug.last(tok, b, e == null? tok.length : e);
+	if(b >= e){ return mug.node('val', '') }
+	if(e - b > 1 && mug.sym(tok[b]) == '(' && tok[e - 1] === tok[b].end){ return mug.expr(mug.tok(tok[b].next, tok[b].end)) }
+	if(n = mug.decl(tok, b, e)){ return n }
+	if(n = mug.func(tok, b, e)){ return n }
+	if(n = mug.ctrl(tok, b, e)){ return n }
+	raw = mug.sym(tok[b]);
+	if(tok[b].key && tok[b].key.pre && b + 1 < e){ return mug.set(tok[b], {type: 'op', L: mug.node('val', ''), op: raw, J: mug.expr(tok, b + 1, e)}) }
+	for(var i = b; i < e; i++){ if(mug.sym(tok[i]) == ':'){ return mug.set(tok[i], {type: 'op', L: mug.expr(tok, b, i), op: ':', J: mug.expr(tok, i + 1, e)}) } }
+	if(n = mug.bin(tok, b, e)){ return n }
+	if(n = mug.call(tok, b, e)){ return n }
+	if(e - b == 1){ return tok[b].type? tok[b] : mug.val(tok[b]) }
 	n = mug.node('run', '');
-	for(i = 0; i < tok.length; i++){ n.push(tok[i].type? tok[i] : mug.val(tok[i])) }
+	for(i = b; i < e; i++){ if(!mug.skip(tok[i])){ n.push(tok[i].type? tok[i] : mug.val(tok[i])) } }
 	return n;
 }
 mug.esc = function(as){ return mug.read(as) };
@@ -250,7 +234,7 @@ mug.JS = {
 	escape: {"'": {}, '"': {}, '`': {}, '//': {end: '\n'}, '/*': {end: '*/'}, '/': {}},
 	nest: {'{': {end: '}'}, '(': {end: ')'}, '[': {end: ']'}},
 	separate: {'\n': {}, '\t': {}, ' ': {}, '...': {}, '>>>': {}, '===': {}, '!==': {}, '**=': {}, '==': {}, '+=': {}, '-=': {}, '*=': {}, '/=': {}, '%=': {}, '>=': {}, '<=': {}, '=>': {}, '++': {}, '--': {}, '**': {}, '&&': {}, '||': {}, '<<': {}, '>>': {}, '?.': {}, ';': {}, ',': {}, ':': {}, '.': {}, '!': {}, '=': {}, '>': {}, '<': {}, '-': {}, '+': {}, '*': {}, '/': {}, '?': {}, '%': {}, '^': {}, '&': {}, '|': {}, '~': {}},
-	op: {'=': {rank: 1, side: 'right'}, '+=': {rank: 1, side: 'right'}, '-=': {rank: 1, side: 'right'}, '*=': {rank: 1, side: 'right'}, '/=': {rank: 1, side: 'right'}, '%=': {rank: 1, side: 'right'}, '=>': {rank: 1, side: 'right'}, '||': {rank: 2}, '&&': {rank: 3}, '|': {rank: 4}, '^': {rank: 5}, '&': {rank: 6}, '==': {rank: 7}, '===': {rank: 7}, '!=': {rank: 7}, '!==': {rank: 7}, '>': {rank: 8}, '<': {rank: 8}, '>=': {rank: 8}, '<=': {rank: 8}, 'in': {rank: 8}, 'of': {rank: 8}, 'instanceof': {rank: 8}, '<<': {rank: 9}, '>>': {rank: 9}, '>>>': {rank: 9}, '+': {rank: 10}, '-': {rank: 10}, '*': {rank: 11}, '/': {rank: 11}, '%': {rank: 11}, '**': {rank: 12, side: 'right'}},
+	op: {'=': {rank: 1, side: 'right'}, '+=': {rank: 1, side: 'right'}, '-=': {rank: 1, side: 'right'}, '*=': {rank: 1, side: 'right'}, '/=': {rank: 1, side: 'right'}, '%=': {rank: 1, side: 'right'}, '=>': {rank: 1, side: 'right'}, '||': {rank: 2}, '&&': {rank: 3}, '|': {rank: 4}, '^': {rank: 5}, '&': {rank: 6}, '==': {rank: 7}, '===': {rank: 7}, '!=': {rank: 7}, '!==': {rank: 7}, '>': {rank: 8}, '<': {rank: 8}, '>=': {rank: 8}, '<=': {rank: 8}, 'in': {rank: 8}, 'of': {rank: 8}, 'instanceof': {rank: 8}, '<<': {rank: 9}, '>>': {rank: 9}, '>>>': {rank: 9}, '+': {rank: 10}, '-': {rank: 10}, '*': {rank: 11}, '/': {rank: 11}, '%': {rank: 11}, '**': {rank: 12, side: 'right'}, '.': {rank: 13}, '?.': {rank: 13}},
 	key: {'import': {pre: 1}, 'from': {}, 'as': {}, 'function': {op: {rank: 0}}, 'return': {pre: 1}, 'async': {pre: 1}, 'await': {pre: 1}, 'yield': {pre: 1}, 'case': {pre: 1}, 'break': {pre: 1}, 'switch': {ctrl: 1}, 'default': {pre: 1}, 'continue': {pre: 1}, 'var': {dec: 1, pre: 1}, 'let': {dec: 1, pre: 1}, 'const': {dec: 1, pre: 1}, 'undefined': {}, 'null': {}, 'else': {pre: 1}, 'if': {ctrl: 1}, 'do': {ctrl: 1}, 'for': {ctrl: 1}, 'while': {ctrl: 1}, 'throw': {pre: 1}, 'finally': {pre: 1}, 'catch': {ctrl: 1}, 'try': {pre: 1}, 'instanceof': {op: {rank: 8}}, 'typeof': {pre: 1}, 'constructor': {}, 'extends': {op: {rank: 8}}, 'static': {pre: 1}, 'super': {}, 'class': {pre: 1}, 'this': {}, 'get': {pre: 1}, 'set': {pre: 1}, 'new': {pre: 1}, 'delete': {pre: 1}, 'in': {op: {rank: 8}}, 'of': {op: {rank: 8}}, 'void': {pre: 1}}
 }
 root.mug = root.MUG = mug;

@@ -67,6 +67,17 @@ APP.bind=function(el,box){
 }
 APP.box=function(kind){var el=APP.tre.cloneNode(false);el.removeAttribute('id');el.className='tree '+(kind||'logic');return el}
 APP.hold=function(kind){var el=APP.kid.cloneNode(false);el.removeAttribute('id');el.className=kind||'kid';return el}
+APP.wait=function(job){
+	var q=[],run=0,at=0,go=function(){
+		at=performance.now();
+		while(job=q.shift()){
+			job();
+			if(performance.now()-at>9){setTimeout(go,0);return}
+		}
+		run=0;
+	};
+	return function(job){q.push(job);if(!run){run=1;setTimeout(go,0)}};
+}();
 APP.raw=function(n){return MUG.txt(n)}
 APP.sym=function(n){return MUG.sym(n)}
 APP.open=function(n){return APP.sym(n)}
@@ -92,6 +103,7 @@ APP.text=function(n,a,s){
 	if(!n||n.type=='mark'){return''}
 	if(n.type=='val'){return APP.raw(n)}
 	if(n.type=='nest'){return APP.open(n)+(n.run?APP.text(n.run):'')+APP.shut(n)}
+	if(n.type=='op'&&(n.op=='.'||n.op=='?.')){return APP.text(n.L)+n.op+APP.text(n.J)}
 	if(n.type=='op'){s=(APP.text(n.L)+' '+n.op+' '+APP.text(n.J)).trim();return n.pre?APP.text(n.pre)+' '+s:s}
 	if(n.type=='run'){a=[];for(var i=0;i<n.length;i++){s=APP.text(n[i]);if(s){a.push(s)}}return a.join(n.by==','?', ':'; ')}
 	if(Array.isArray(n)){a=[];for(i=0;i<n.length;i++){s=APP.text(n[i]);if(s){a.push(s)}}return a.join(' ')}
@@ -106,13 +118,13 @@ APP.pre=function(n,box){
 }
 APP.body=function(n,box){
 	box=APP.hold();
-	if(n&&n.type=='run'){for(var i=0;i<n.length;i++){box.appendChild(APP.draw(n[i]))}}
+	if(n&&n.type=='run'){APP.kids(box,n)}
 	return box;
 }
 APP.args=function(n,box){
 	box=APP.hold('head');
 	box.appendChild(APP.mark('('));
-	if(n&&n.type=='run'){for(var i=0;i<n.length;i++){if(i){box.appendChild(APP.mark(', '))}box.appendChild(APP.draw(n[i]))}}
+	if(n&&n.type=='run'){APP.kids(box,n,', ')}
 	box.appendChild(APP.mark(')'));
 	return box;
 }
@@ -130,7 +142,28 @@ APP.run=function(n,box,kid,next){
 			APP.part(box,next); i++;
 		}
 		if(i<n.length-1){box.appendChild(APP.mark(n.by==','?', ':'; '))}
+		if(performance.now()-APP.at>9){APP.later(box,function(box){APP.at=performance.now();APP.more(box,n,i+1)});return box}
 	}
+	return box;
+}
+APP.more=function(box,n,i,kid,next){
+	for(;i<n.length;i++){
+		kid=n[i];box.appendChild(APP.draw(kid));
+		while((next=n[i+1])&&next.type=='nest'&&(APP.open(next)=='('||APP.open(next)=='[')){APP.part(box,next);i++}
+		if(i<n.length-1){box.appendChild(APP.mark(n.by==','?', ':'; '))}
+		if(performance.now()-APP.at>9){APP.later(box,function(box){APP.at=performance.now();APP.more(box,n,i+1)});return}
+	}
+}
+APP.later=function(box,fn,ver){ver=APP.ver;APP.wait(function(){if(ver==APP.ver){fn(box)}})}
+APP.each=function(box,n,i,sep){
+	for(i=i||0;i<n.length;i++){
+		box.appendChild(APP.draw(n[i]));
+		if(i<n.length-1&&sep){box.appendChild(APP.mark(sep))}
+		if(performance.now()-APP.at>9){APP.later(box,function(box){APP.at=performance.now();APP.each(box,n,i+1,sep)});return}
+	}
+}
+APP.kids=function(box,n,sep){
+	if(n&&n.type=='run'){APP.each(box,n,0,sep||'')}
 	return box;
 }
 APP.draw=function(n,box,a,b,c){
@@ -138,22 +171,22 @@ APP.draw=function(n,box,a,b,c){
 	if(n.type=='mark'){return APP.mark(APP.raw(n))}
 	if(n.type=='val'&&n.escape&&n.escape.start[0]=='/'){return APP.note(APP.raw(n))}
 	if(n.type=='val'){return APP.span(APP.raw(n),APP.kind(n))}
-	if(n.type=='nest'){box=APP.box('nest');box.dataset.open=APP.open(n);box.dataset.close=APP.shut(n);if(n.run){for(var i=0;i<n.run.length;i++){if(i&&n.run.by==','){box.appendChild(APP.mark(', '))}box.appendChild(APP.draw(n.run[i]))}}return box}
-	if(n.type=='op'&&n.op=='function'){box=APP.box('logic');APP.pre(n,box);if(n.name){box.appendChild(APP.draw(n.name))}box.appendChild(APP.mark('function'));box.appendChild(APP.args(n.L));box.appendChild(APP.mark('{'));box.appendChild(APP.body(n.J));box.appendChild(APP.mark('}'));if(n.aft){box.appendChild(APP.draw(n.aft))}return box}
-	if(n.type=='op'&&n.key&&n.key.ctrl){box=APP.box('logic');box.appendChild(APP.mark(n.op));box.appendChild(APP.args(n.L));box.appendChild(APP.mark('{'));box.appendChild(APP.body(n.J));box.appendChild(APP.mark('}'));if(n.aft){box.appendChild(APP.draw(n.aft))}return box}
+	if(n.type=='nest'){box=APP.box('nest');box.dataset.open=APP.open(n);box.dataset.close=APP.shut(n);if(n.run){APP.kids(box,n.run,n.run.by==','?', ':'')}return box}
+	if(n.type=='op'&&n.op=='function'){box=APP.box('logic');APP.pre(n,box);if(n.name){box.appendChild(APP.draw(n.name))}box.appendChild(APP.mark('function'));box.appendChild(APP.args(n.L));box.appendChild(APP.mark('{'));APP.kids(box,n.J);box.appendChild(APP.mark('}'));if(n.aft){box.appendChild(APP.draw(n.aft))}return box}
+	if(n.type=='op'&&n.key&&n.key.ctrl){box=APP.box('logic');box.appendChild(APP.mark(n.op));box.appendChild(APP.args(n.L));box.appendChild(APP.mark('{'));APP.kids(box,n.J);box.appendChild(APP.mark('}'));if(n.aft){box.appendChild(APP.draw(n.aft))}return box}
 	if(n.type=='op'&&!APP.text(n.L)){box=APP.box(APP.kind(n));APP.pre(n,box);box.appendChild(APP.mark(n.op+' '));box.appendChild(APP.atom(n.J)?APP.span(APP.text(n.J),'join'):APP.draw(n.J));return box}
+	if(n.type=='op'&&(n.op=='.'||n.op=='?.')){return APP.span(APP.text(n),'join')}
 	if(n.type=='op'&&APP.easy(n.L)&&APP.easy(n.J)){return APP.span((n.pre?APP.text(n.pre)+' ':'')+APP.text(n.L)+(APP.text(n.L)?' ':'')+n.op+(APP.text(n.J)?' '+APP.text(n.J):''),APP.kind(n))}
 	if(n.type=='op'){box=APP.box(APP.kind(n));APP.pre(n,box);a=APP.hold();b=APP.hold('deep');c=APP.hold();if(n.name){a.appendChild(APP.draw(n.name))}else{a.appendChild(APP.atom(n.L)?APP.span(APP.text(n.L),'join'):APP.draw(n.L))}b.appendChild(APP.mark(' '+n.op+' '));c.appendChild(APP.atom(n.J)?APP.span(APP.text(n.J),'join'):APP.draw(n.J));box.appendChild(a);box.appendChild(b);box.appendChild(c);if(n.aft){box.appendChild(APP.draw(n.aft))}return box}
 	if(n.type=='run'){return APP.run(n)}
 	return APP.span(n.raw,APP.kind(n));
 }
 APP.drawall=function(list){
-	APP.view.textContent='';APP.view.appendChild(APP.draw(list));
+	APP.ver=(APP.ver||0)+1;APP.view.textContent='';APP.at=performance.now();APP.view.appendChild(APP.draw(list));
 }
 APP.go=function(){
 	var at=performance.now(), ast=mug(APP.code.value), ms=performance.now()-at;
-	console.log('mug', ast);
-	APP.drawall(ast.run);APP.stat.textContent=MUG.flat(ast).length+' bits in '+ms.toFixed(2)+'ms';
+	APP.drawall(ast.run);APP.stat.textContent=ast.num+' bits in '+ms.toFixed(2)+'ms';
 	try{localStorage.mugbrick=APP.code.value}catch(e){}
 }
 APP.code.oninput=APP.go;
