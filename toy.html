@@ -6,8 +6,7 @@
 <title>TOY</title>
 </head>
 <body>
-<textarea id="code" spellcheck="false">var x = 1 + 2;
-the.view = [ "Hey your name (1,2,3) is ", {a:1}, "!"] + 1;</textarea>
+<textarea id="code" spellcheck="false">the.view = [ "Hey your name (1,2,3) is ", {a:1}, "!"] + 1;</textarea>
 <div id="bar"><span id="stat"></span></div>
 <div id="view"></div>
 <div class="hide">
@@ -54,24 +53,10 @@ body{display:flex;flex-direction:column}
 </style>
 <script src="./gun/mug-codex.js"></script>
 <script>
-/*
-Brick view:
-Core expressions become solid bricks. Syntax, separators, declarations, and
-other decorators stay visually quiet. MUG keeps one linked list for the whole
-source, so the view must ask for shallow tokens at each nesting level and render
-child blocks from their own down/end range.
-*/
 var APP={};
 APP.code=document.getElementById('code');APP.view=document.getElementById('view');APP.stat=document.getElementById('stat');
 APP.mod=document.getElementById('mod');APP.tre=document.getElementById('tre');APP.kid=document.getElementById('kid');APP.dep=document.getElementById('dep');
-APP.ops={'=':1,'+=':1,'-=':1,'*=':1,'/=':1,'%=':1,'=>':1,'||':2,'&&':3,'|':4,'^':5,'&':6,'==':7,'===':7,'!=':7,'!==':7,'>':8,'<':8,'>=':8,'<=':8,'in':8,'of':8,'instanceof':8,'<<':9,'>>':9,'>>>':9,'+':10,'-':10,'*':11,'/':11,'%':11,'**':12};
-APP.stop={';':1,',':1};
-APP.skip={};
-APP.syn={';':1,',':1};
-APP.say={var:1,let:1,const:1,function:1,return:1,if:1,else:1,for:1,while:1,do:1,class:1,static:1,get:1,set:1,async:1,await:1,break:1,continue:1,switch:1,case:1,default:1,try:1,catch:1,finally:1,throw:1};
-APP.decl={var:1,let:1,const:1};
-APP.one={typeof:1,new:1,delete:1,void:1,await:1,yield:1};
-APP.hue={logic:'logic',math:'math',pick:'pick',join:'join',nest:'nest',text:'text',decor:'decor',miss:'miss'};
+APP.hue={logic:'logic',math:'math',pick:'pick',join:'join',nest:'nest',text:'text',decor:'decor',miss:'miss'}
 APP.span=function(raw,kind){var el=APP.mod.cloneNode(false);el.removeAttribute('id');el.className='node '+(kind||'decor');el.textContent=raw;return el}
 APP.note=function(raw){var el=document.createElement('span');el.className='note';el.textContent=raw;return el}
 APP.mark=function(raw){var el=document.createElement('span');el.className='mark';el.textContent=raw;return el}
@@ -82,173 +67,93 @@ APP.bind=function(el,box){
 }
 APP.box=function(kind){var el=APP.tre.cloneNode(false);el.removeAttribute('id');el.className='tree '+(kind||'logic');return el}
 APP.hold=function(kind){var el=APP.kid.cloneNode(false);el.removeAttribute('id');el.className=kind||'kid';return el}
-APP.head=function(n,box){
-	box=APP.hold('head');
-	box.appendChild(APP.mark(n.name?'function ':'function'));
-	if(n.name){box.appendChild(APP.draw(n.name))}
-	box.appendChild(APP.args(n.args));
-	box.appendChild(APP.mark('{'));
-	return box;
-}
-APP.add=function(arr,as,raw){
-	raw=as.raw;
-	if(as.escape&&as.escape.start=='//'&&raw[raw.length-1]=='\n'){
-		arr.push(Object.assign({},as,{raw:raw.slice(0,-1)}));
-		arr.push({raw:'\n',mark:1});
-		return;
-	}
-	arr.push(as);
-}
-APP.tok=function(as,end,arr){
-	arr=[];while(as&&as!==end){
-		if(as.raw){APP.add(arr,as)}
-		as=as.form&&as.end?as.end.next:as.next;
-	}
-	return arr;
-}
-APP.clean=function(tok,out,t,n){
-	out=[];tok.forEach(t=>{if(!/^\s+$/.test(t.raw)){out.push(t)}});
-	tok=[];for(var i=0;i<out.length;i++){
-		t=out[i];
-		if((t.raw=='.'||t.raw=='?.')&&tok.length&&out[i+1]){n=out[++i];tok.push({raw:tok.pop().raw+t.raw+n.raw,node:n});continue}
-		tok.push(t);
-	}
-	return tok;
-}
-APP.cut=function(tok,at,op){return APP.see({type:'op',op:op.raw,left:APP.parse(tok.slice(0,at)),right:APP.parse(tok.slice(at+1)),raw:op.raw},op)}
-APP.pair=function(tok,at){return APP.see({type:'pair',left:APP.parse(tok.slice(0,at)),right:APP.parse(tok.slice(at+1)),raw:':'},tok[at])}
-APP.func=function(tok){
-	if(tok[0]&&tok[0].raw=='function'){
-		if(tok[1]&&tok[1].raw=='('){return APP.see({type:'func',args:APP.parse([tok[1]]),body:tok[2]&&tok[2].raw=='{'?APP.parse([tok[2]]):APP.parse(tok.slice(2)),rest:tok.slice(3)},tok[0])}
-		if(tok[1]&&tok[2]&&tok[2].raw=='('){return APP.see({type:'func',name:APP.parse([tok[1]]),args:APP.parse([tok[2]]),body:tok[3]&&tok[3].raw=='{'?APP.parse([tok[3]]):APP.parse(tok.slice(3)),rest:tok.slice(4)},tok[0])}
-	}
-}
-APP.unary=function(tok){
-	if(tok[0]&&APP.one[tok[0].raw]&&tok[1]){return APP.see({type:'one',op:tok[0].raw,right:APP.parse(tok.slice(1))},tok[0])}
-}
-APP.meth=function(tok){
-	if(tok[0]&&(tok[0].raw=='get'||tok[0].raw=='set')&&tok[1]&&tok[2]&&tok[2].raw=='('){
-		return APP.see({type:'meth',kind:tok[0].raw,name:APP.parse([tok[1]]),args:APP.parse([tok[2]]),body:tok[3]&&tok[3].raw=='{'?APP.parse([tok[3]]):APP.parse(tok.slice(3)),rest:tok.slice(4)},tok[0])
-	}
-}
-APP.ctrl=function(tok){
-	if(tok[0]&&(tok[0].raw=='if'||tok[0].raw=='while'||tok[0].raw=='for'||tok[0].raw=='switch'||tok[0].raw=='catch')&&tok[1]&&tok[1].raw=='('){
-		return APP.see({type:'ctrl',op:tok[0].raw,args:APP.parse([tok[1]]),body:tok[2]&&tok[2].raw=='{'?APP.parse([tok[2]]):APP.parse(tok.slice(2)),rest:tok.slice(3)},tok[0])
-	}
-}
-APP.list=function(tok,out,buf,t){
-	out=[];buf=[];for(var i=0;i<tok.length;i++){t=tok[i];if(t.raw==','){if(buf.length){out.push(APP.parse(buf));buf=[]}out.push({type:'mark',raw:t.raw});continue}buf.push(t)}
-	if(buf.length){out.push(APP.parse(buf))}return{type:'run',kids:out}
-}
-APP.declare=function(tok){
-	if(tok[0]&&APP.decl[tok[0].raw]&&tok[1]){return APP.see({type:'decl',op:tok[0].raw,right:APP.list(tok.slice(1))},tok[0])}
-}
-APP.parse=function(tok,best,at,op,n){
-	tok=APP.clean(tok);if(!tok.length){return{type:'none',raw:''}}
-	while(tok.length>1&&tok[0].raw=='('&&tok[tok.length-1]===tok[0].end){tok=APP.clean(APP.tok(tok[0].next,tok[0].end))}
-	if(n=APP.declare(tok)){return n}
-	if(n=APP.func(tok)){return n.rest&&n.rest.length?{type:'run',kids:[n,APP.parse(n.rest)]}:n}
-	if(n=APP.meth(tok)){return n.rest&&n.rest.length?{type:'run',kids:[n,APP.parse(n.rest)]}:n}
-	if(n=APP.ctrl(tok)){return n.rest&&n.rest.length?{type:'run',kids:[n,APP.parse(n.rest)]}:n}
-	for(var i=0;i<tok.length;i++){op=tok[i].raw;if(APP.ops[op]&&(!best||APP.ops[op]<=best)){best=APP.ops[op];at=i}}
-	if(at!=null){return APP.cut(tok,at,tok[at])}
-	if(n=APP.unary(tok)){return n}
-	if(tok.length>1&&APP.say[tok[0].raw]){return APP.see({type:'run',flow:1,kids:[{type:'mark',raw:tok[0].raw+' '},APP.parse(tok.slice(1))]},tok[0])}
-	for(i=0;i<tok.length;i++){if(tok[i].raw==':'){return APP.pair(tok,i)}}
-	if(tok.length==1){
-		n=tok[0];if(n.form){return APP.see({type:'nest',open:n.raw,close:n.end?n.end.raw:'',kids:APP.line(APP.tok(n.next,n.end)),raw:n.raw},n)}
-		return APP.see({type:'leaf',raw:n.raw,node:n},n)
-	}
-	return{type:'run',kids:tok.map(t=>APP.parse([t]))}
-}
-APP.line=function(tok,out,buf,t){
-	out=[];buf=[];for(var i=0;i<tok.length;i++){t=tok[i];if(t.raw==';'||t.raw=='\n'){if(buf.length){out.push(APP.parse(buf));buf=[]}out.push({type:'mark',raw:t.raw});continue}buf.push(t)}
-	if(buf.length){out.push(APP.parse(buf))}return out;
-}
+APP.raw=function(n){return MUG.txt(n)}
+APP.sym=function(n){return MUG.sym(n)}
+APP.open=function(n){return APP.sym(n)}
+APP.shut=function(n){return n&&n.end?APP.sym(n.end):''}
 APP.kind=function(n){
-	if(!n){return'decor'}if(n.type=='op'){return APP.ops[n.op]>9?'math':APP.ops[n.op]>3?'pick':'logic'}
-	if(n.type=='nest'){return'nest'}if(n.type=='leaf'&&(/^['"`]/.test(n.raw)||n.node.escape&&n.node.escape.start[0]!='/')){return'text'}return n.type=='mark'||APP.syn[n.raw]||APP.say[n.raw]||/^\s+$/.test(n.raw)||n.type=='leaf'&&n.node.escape?'decor':'join';
+	var r=n&&n.rule||n&&n.key&&n.key.op,rank=r&&r.rank,raw=APP.raw(n);
+	if(!n||n.type=='mark'){return'decor'}
+	if(n.type=='nest'){return'nest'}
+	if(n.type=='val'&&n.escape&&n.escape.start[0]!='/'){return'text'}
+	if(n.type=='op'){return rank>9?'math':rank>3?'pick':'logic'}
+	return /^\s*$/.test(raw)?'decor':'join';
 }
 APP.easy=function(n){
-	if(!n||n.type=='none'||n.type=='mark'){return 1}
-	if(n.type=='leaf'){return 1}
-	if(n.type=='run'){return !n.kids.some(k=>k.type=='mark')&&n.kids.every(APP.easy)}
+	if(!n||n.type=='mark'){return 1}
+	if(n.type=='val'){return 1}
+	if(n.type=='run'){return n.length<4&&n.every(APP.easy)}
 	return 0;
 }
 APP.atom=function(n){
-	return APP.easy(n)||n&&n.type=='nest'&&n.kids&&n.kids.length<4&&n.kids.every(APP.easy);
+	return APP.easy(n)||n&&n.type=='nest'&&n.run&&n.run.length<4&&n.run.every(APP.easy);
 }
-APP.text=function(n){
-	if(!n||n.type=='none'||n.type=='mark'){return''}
-	if(n.type=='leaf'){return n.raw}
-	if(n.type=='run'){return n.kids.map(APP.text).filter(Boolean).reduce((a,b)=>a+(APP.gap(a,b)?' ':'')+b,'')}
-	if(n.type=='one'){return n.op+' '+APP.text(n.right)}
-	return'';
+APP.text=function(n,a,s){
+	if(!n||n.type=='mark'){return''}
+	if(n.type=='val'){return APP.raw(n)}
+	if(n.type=='nest'){return APP.open(n)+(n.run?APP.text(n.run):'')+APP.shut(n)}
+	if(n.type=='op'){s=(APP.text(n.L)+' '+n.op+' '+APP.text(n.J)).trim();return n.pre?APP.text(n.pre)+' '+s:s}
+	if(n.type=='run'){a=[];for(var i=0;i<n.length;i++){s=APP.text(n[i]);if(s){a.push(s)}}return a.join(n.by==','?', ':'; ')}
+	if(Array.isArray(n)){a=[];for(i=0;i<n.length;i++){s=APP.text(n[i]);if(s){a.push(s)}}return a.join(' ')}
+	return APP.raw(n);
 }
 APP.gap=function(a,b){
 	return /[A-Za-z0-9_$]$/.test(a)&&/^[A-Za-z0-9_$]/.test(b);
 }
-APP.see=function(n,as){
-	if(as&&as.raw){as.see=n}
-	return n;
+APP.pre=function(n,box){
+	if(!n||!n.pre){return}
+	for(var i=0;i<n.pre.length;i++){box.appendChild(APP.mark(APP.raw(n.pre[i])+' '))}
 }
 APP.body=function(n,box){
-	if(!n||n.type!='nest'||n.open!='{'){return APP.draw(n)}
 	box=APP.hold();
-	n.kids.forEach(k=>box.appendChild(APP.draw(k)));
-	box.appendChild(APP.mark('}'));
+	if(n&&n.type=='run'){for(var i=0;i<n.length;i++){box.appendChild(APP.draw(n[i]))}}
 	return box;
 }
 APP.args=function(n,box){
-	if(!n||n.type!='nest'||n.open!='('){return APP.draw(n)}
 	box=APP.hold('head');
 	box.appendChild(APP.mark('('));
-	n.kids.forEach(k=>box.appendChild(APP.draw(k)));
+	if(n&&n.type=='run'){for(var i=0;i<n.length;i++){if(i){box.appendChild(APP.mark(', '))}box.appendChild(APP.draw(n[i]))}}
 	box.appendChild(APP.mark(')'));
 	return box;
 }
 APP.part=function(box,n){
-	box.appendChild(APP.bind(APP.mark(n.open),box));
-	n.kids.forEach(k=>box.appendChild(APP.draw(k)));
-	box.appendChild(APP.bind(APP.mark(n.close),box));
+	box.appendChild(APP.bind(APP.mark(APP.open(n)),box));
+	if(n.run){for(var i=0;i<n.run.length;i++){if(i&&n.run.by==','){box.appendChild(APP.mark(', '))}box.appendChild(APP.draw(n.run[i]))}}
+	box.appendChild(APP.bind(APP.mark(APP.shut(n)),box));
 }
 APP.run=function(n,box,kid,next){
 	box=APP.hold(n.flow?'kid flow':0);
-	for(var i=0;i<n.kids.length;i++){
-		kid=n.kids[i];
+	for(var i=0;i<n.length;i++){
+		kid=n[i];
 		box.appendChild(APP.draw(kid));
-		while((next=n.kids[i+1])&&next.type=='nest'&&(next.open=='('||next.open=='[')){
+		while((next=n[i+1])&&next.type=='nest'&&(APP.open(next)=='('||APP.open(next)=='[')){
 			APP.part(box,next); i++;
 		}
+		if(i<n.length-1){box.appendChild(APP.mark(n.by==','?', ':'; '))}
 	}
 	return box;
 }
 APP.draw=function(n,box,a,b,c){
 	if(!n){return APP.span('', 'miss')}
-	if(n.type=='none'){return document.createTextNode('')}
-	if(n.type=='mark'||APP.skip[n.raw]){return APP.mark(n.raw)}
-	if(n.type=='leaf'&&n.node.escape&&n.node.escape.start[0]=='/'){return APP.note(n.raw)}
-	if(n.type=='leaf'&&(APP.syn[n.raw]||APP.say[n.raw])){return APP.mark(n.raw)}
-	if(n.type=='pair'&&APP.easy(n.left)&&APP.easy(n.right)){return APP.span(APP.text(n.left)+': '+APP.text(n.right),'join')}
-	if(n.type=='pair'){box=APP.box('join');a=APP.hold();c=APP.hold();a.appendChild(APP.easy(n.left)?APP.span(APP.text(n.left),'join'):APP.draw(n.left));c.appendChild(APP.easy(n.right)?APP.span(APP.text(n.right),'join'):APP.draw(n.right));box.appendChild(a);box.appendChild(APP.mark(':'));box.appendChild(c);return box}
-	if(n.type=='op'&&APP.easy(n.left)&&APP.easy(n.right)){return APP.span(APP.text(n.left)+' '+n.op+' '+APP.text(n.right),APP.kind(n))}
-	if(n.type=='op'){box=APP.box(APP.kind(n));a=APP.hold();b=APP.hold('deep');c=APP.hold();a.appendChild(APP.atom(n.left)?APP.span(APP.text(n.left),'join'):APP.draw(n.left));b.appendChild(APP.mark(' '+n.op+' '));c.appendChild(APP.atom(n.right)?APP.span(APP.text(n.right),'join'):APP.draw(n.right));box.appendChild(a);box.appendChild(b);box.appendChild(c);return box}
-	if(n.type=='decl'){box=APP.hold();box.appendChild(APP.mark(n.op+' '));box.appendChild(APP.draw(n.right));return box}
-	if(n.type=='one'){box=APP.box('pick');box.appendChild(APP.mark(n.op+' '));box.appendChild(APP.atom(n.right)?APP.span(APP.text(n.right),'join'):APP.draw(n.right));return box}
-	if(n.type=='func'){box=APP.box('logic');box.appendChild(APP.head(n));box.appendChild(APP.body(n.body));return box}
-	if(n.type=='meth'){box=APP.box('logic');box.appendChild(APP.mark(n.kind+' '));box.appendChild(APP.draw(n.name));box.appendChild(APP.args(n.args));box.appendChild(APP.mark('{'));box.appendChild(APP.body(n.body));return box}
-	if(n.type=='ctrl'){box=APP.box('logic');box.appendChild(APP.mark(n.op));box.appendChild(APP.args(n.args));box.appendChild(APP.mark('{'));box.appendChild(APP.body(n.body));return box}
-	if(n.type=='nest'){box=APP.box('nest');box.dataset.open=n.open;box.dataset.close=n.close;n.kids.forEach(k=>box.appendChild(APP.draw(k)));return box}
+	if(n.type=='mark'){return APP.mark(APP.raw(n))}
+	if(n.type=='val'&&n.escape&&n.escape.start[0]=='/'){return APP.note(APP.raw(n))}
+	if(n.type=='val'){return APP.span(APP.raw(n),APP.kind(n))}
+	if(n.type=='nest'){box=APP.box('nest');box.dataset.open=APP.open(n);box.dataset.close=APP.shut(n);if(n.run){for(var i=0;i<n.run.length;i++){if(i&&n.run.by==','){box.appendChild(APP.mark(', '))}box.appendChild(APP.draw(n.run[i]))}}return box}
+	if(n.type=='op'&&n.op=='function'){box=APP.box('logic');APP.pre(n,box);if(n.name){box.appendChild(APP.draw(n.name))}box.appendChild(APP.mark('function'));box.appendChild(APP.args(n.L));box.appendChild(APP.mark('{'));box.appendChild(APP.body(n.J));box.appendChild(APP.mark('}'));if(n.aft){box.appendChild(APP.draw(n.aft))}return box}
+	if(n.type=='op'&&n.key&&n.key.ctrl){box=APP.box('logic');box.appendChild(APP.mark(n.op));box.appendChild(APP.args(n.L));box.appendChild(APP.mark('{'));box.appendChild(APP.body(n.J));box.appendChild(APP.mark('}'));if(n.aft){box.appendChild(APP.draw(n.aft))}return box}
+	if(n.type=='op'&&!APP.text(n.L)){box=APP.box(APP.kind(n));APP.pre(n,box);box.appendChild(APP.mark(n.op+' '));box.appendChild(APP.atom(n.J)?APP.span(APP.text(n.J),'join'):APP.draw(n.J));return box}
+	if(n.type=='op'&&APP.easy(n.L)&&APP.easy(n.J)){return APP.span((n.pre?APP.text(n.pre)+' ':'')+APP.text(n.L)+(APP.text(n.L)?' ':'')+n.op+(APP.text(n.J)?' '+APP.text(n.J):''),APP.kind(n))}
+	if(n.type=='op'){box=APP.box(APP.kind(n));APP.pre(n,box);a=APP.hold();b=APP.hold('deep');c=APP.hold();if(n.name){a.appendChild(APP.draw(n.name))}else{a.appendChild(APP.atom(n.L)?APP.span(APP.text(n.L),'join'):APP.draw(n.L))}b.appendChild(APP.mark(' '+n.op+' '));c.appendChild(APP.atom(n.J)?APP.span(APP.text(n.J),'join'):APP.draw(n.J));box.appendChild(a);box.appendChild(b);box.appendChild(c);if(n.aft){box.appendChild(APP.draw(n.aft))}return box}
 	if(n.type=='run'){return APP.run(n)}
 	return APP.span(n.raw,APP.kind(n));
 }
 APP.drawall=function(list){
-	APP.view.textContent='';list.forEach(n=>APP.view.appendChild(APP.draw(n)));
+	APP.view.textContent='';APP.view.appendChild(APP.draw(list));
 }
 APP.go=function(){
-	var at=performance.now(), ast=mug(APP.code.value), tok=APP.tok(ast), list=APP.line(tok), ms=performance.now()-at;
+	var at=performance.now(), ast=mug(APP.code.value), ms=performance.now()-at;
 	console.log('mug', ast);
-	APP.drawall(list);APP.stat.textContent=tok.length+' bricks in '+ms.toFixed(2)+'ms';
+	APP.drawall(ast.run);APP.stat.textContent=MUG.flat(ast).length+' bits in '+ms.toFixed(2)+'ms';
 	try{localStorage.mugbrick=APP.code.value}catch(e){}
 }
 APP.code.oninput=APP.go;

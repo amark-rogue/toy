@@ -1,28 +1,11 @@
-/*
-GEMINI: MUG stands for "Mathematical Universal Grammar", it is a library that takes a programming language definition (see the javascript language example later in this file) and some text code of that language and returns a parsed generic linked list graph abstract syntax tree that reuses the following structure at every point:
-
-{
-	mug: mug, // a reference to `top.mug` language definition, see JS language example later on
-	top: top, // every sub/object has a reference to the top root
-	raw: text, // the raw substring for this portion of the parsed text's code, for example "var x = 2;" we'd have "var ", "x", " = ", "2", ";" as raw pieces.
-	back: back, // in the prior example, the "x" object's back would be the "var " object.
-	next: next, // in the prior example, the "x" object's next would be the " = " object.
-	up: up, // for "var l = [1,2,3];" the "2" object's up would be the "[" object.
-	end: end, // in the prior example, the "[" object's end would be the "]" object.
-	down: down, // in the prior example, the "[" object's down would be the "1" object (also happens to be the next object also).
-}
-
-So far we have a mostly working start to our parser, please re-use the same coding style (compact, concise, mathematical, follow ./contributing.md guidelines) and extremely optimize for speed & performance in the code (try to do everything in as close to O(log N) time or faster, DO NOT loop over a list multiple times when it can be done together in 1 loop).
-
-Please also generate tests in a mug.html file that start with super simple JS text code examples and progress into complicated examples including parsing this file mug.js itself.
-*/
+;(function(){
 function mug(as, g, tmp){
 	if('string' == typeof as){ as = {raw: as, mug: g||mug.JS} }
 	mug.esc(as = as || {raw: text, mug: g||mug.JS});
 	mug.down(as);
 	mug.sep(as);
 	return as;
-};
+}; MUG = mug;
 mug.start = function(list, text, is){
 	if(!list.__re){
 		var q = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -239,3 +222,5 @@ var Text = {prototype:{}}; Text.prototype.cut = function(f, e, c){ e = e||{}, c 
   for(;m = R.exec(this);){ if(m[1]){ return [this.slice(0,m.index), m[1], this.slice(m.index+m[1].length)] } }
   return ['','',''+this];
 };
+
+}());
