@@ -81,7 +81,7 @@ APP.wait=function(job){
 APP.raw=function(n){return MUG.txt(n)}
 APP.sym=function(n){return MUG.sym(n)}
 APP.open=function(n){return APP.sym(n)}
-APP.shut=function(n){return n&&n.end?APP.sym(n.end):''}
+APP.shut=function(n){return n&&n.shut?APP.sym(n.shut):''}
 APP.kind=function(n){
 	var r=n&&n.rule||n&&n.key&&n.key.op,rank=r&&r.rank,raw=APP.raw(n);
 	if(!n||n.type=='mark'){return'decor'}

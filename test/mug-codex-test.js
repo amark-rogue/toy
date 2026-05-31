@@ -2,12 +2,12 @@ const fs = require('fs');
 const vm = require('vm');
 const perf = require('perf_hooks').performance;
 
-const root = __dirname + '/..';
+const dir = __dirname + '/..';
 
 function load(){
 	const as = {console, performance: perf};
 	vm.createContext(as);
-	vm.runInContext(fs.readFileSync(root + '/gun/mug-codex.js', 'utf8'), as);
+	vm.runInContext(fs.readFileSync(dir + '/gun/mug-codex.js', 'utf8'), as);
 	return as;
 }
 
@@ -29,7 +29,7 @@ function ok(msg, yes, got, want){
 
 function no(fn, key){
 	return function(k, v){
-		if(k == 'top' || k == 'back' || k == 'next' || k == 'up' || k == 'end' || k == 'nest' || k == 'mug' || k == 'map'){ return }
+		if(k == 'top' || k == 'back' || k == 'next' || k == 'open' || k == 'up' || k == 'shut' || k == 'nest' || k == 'mug' || k == 'map'){ return }
 		return fn? fn(k, v) : v;
 	}
 }
@@ -46,7 +46,8 @@ function link(src){
 	let last, yes = true;
 	for(let n = ast; n; n = n.next){
 		if(n.back !== last){ yes = false }
-		if(n.form && !n.end){ yes = false }
+		if(n.form && !n.shut){ yes = false }
+		if(n.open && !n.open.form){ yes = false }
 		last = n;
 	}
 	return {ast, yes};
@@ -57,6 +58,8 @@ function link(src){
 	ok('space fuses into operator', same(MUG.flat(ast), ['a', ' = ', '2']), MUG.flat(ast), ['a', ' = ', '2']);
 	ok('space fused num matches flat', ast.num === 3, ast.num, 3);
 	ok('space fused text', MUG.text(ast.run) == 'a = 2', MUG.text(ast.run), 'a = 2');
+	ok('grammar node top points to top', ast.next.top === ast, !!ast.next.top, true);
+	ok('only top stores grammar', !ast.next.mug && ast.top.mug, !!ast.next.mug, false);
 }());
 
 (function(){
@@ -94,16 +97,31 @@ function link(src){
 	ok('function sample has two top runs', ast.run.length == 2, ast.run.length, 2);
 	ok('function assignment top op', ast.run[0].op == '=', ast.run[0].op, '=');
 	ok('call op is function name', ast.run[1].op == 'add', ast.run[1].op, 'add');
+	ok('run item has abstract up', ast.run[1].up === ast.run, !!ast.run[1].up, true);
+	ok('top run has top', ast.run.top === ast, !!ast.run.top, true);
+	ok('argument run has top', ast.run[1].J.top === ast, !!ast.run[1].J.top, true);
 }());
 
 (function(){
 	const got = link('arr = [1,2,{a:3}]');
-	ok('linked graph back/end integrity', got.yes);
+	ok('linked graph back/shut integrity', got.yes);
 	ok('array literal keeps three items', got.ast.run[0].J.run.length == 3, got.ast.run[0].J.run.length, 3);
+	ok('nested item open points to opener', got.ast.run[0].J.nest.open === got.ast.run[0].J, !!got.ast.run[0].J.nest.open, true);
 }());
 
 (function(){
-	const src = fs.readFileSync(root + '/gun/mug-codex.js', 'utf8');
+	const g = {
+		escape: {},
+		nest: {},
+		term: {' ': {sep: 1}, '=': {rank: 1, side: 'right'}}
+	};
+	const ast = as.mug('a = b', g);
+	ok('compact term grammar works', ast.run[0].op == '=', ast.run[0].op, '=');
+	ok('compact term grammar fuses space', same(MUG.flat(ast), ['a', ' = ', 'b']), MUG.flat(ast), ['a', ' = ', 'b']);
+}());
+
+(function(){
+	const src = fs.readFileSync(dir + '/gun/mug-codex.js', 'utf8');
 	const t = perf.now();
 	const ast = mug(src);
 	const ms = perf.now() - t;
@@ -124,7 +142,7 @@ function link(src){
 }());
 
 (function(done){
-	const html = fs.readFileSync(root + '/toy.html', 'utf8');
+	const html = fs.readFileSync(dir + '/toy.html', 'utf8');
 	const src = html.match(/<script>\n([\s\S]*)\n<\/script>/)[1];
 	const el = () => ({
 		value: 'as = {raw: {js: as}, mug: g||mug.JS}',
@@ -138,7 +156,7 @@ function link(src){
 	});
 	const win = {document: {getElementById: id => el(), createElement: () => el(), createTextNode: s => ({textContent: s})}, console, performance: {now: () => Date.now()}, localStorage: {}, setTimeout};
 	vm.createContext(win);
-	vm.runInContext(fs.readFileSync(root + '/gun/mug-codex.js', 'utf8'), win);
+	vm.runInContext(fs.readFileSync(dir + '/gun/mug-codex.js', 'utf8'), win);
 	vm.runInContext(src, win);
 	setTimeout(() => {
 		ok('toy html script smoke', true);
