@@ -85,28 +85,9 @@ function move(e, t, now, dx, dy, dt, ax, ay){
 	st.lx = t.clientX; st.ly = t.clientY; st.t = now;
 }
 
-function snapX(b){
-	if(!b || !b.draw){ return }
-	var railPx = rail * parseFloat(getComputedStyle(D.documentElement).fontSize || 16);
-	var target = b.pos + railPx;
-	var bestPos = b.pos;
-	var minDiff = Infinity;
-	var btns = b.draw.children;
-	for(var i=0; i<btns.length; i++){
-		var btn = btns[i];
-		var btnRight = btn.offsetLeft + btn.offsetWidth;
-		var diff = Math.abs(btnRight - target);
-		if(diff < minDiff){
-			minDiff = diff;
-			bestPos = btnRight - railPx;
-		}
-	}
-	setX(b, bestPos, 250);
-}
-
 function glideX(b, v){
 	if(!b){ return }
-	if(Math.abs(v) < 0.02){ return snapX(b) }
+	if(Math.abs(v) < 0.02){ return }
 	setX(b, b.pos + v * 16);
 	v *= 0.94;
 	if((b.pos <= 0 && v < 0) || (b.pos >= b.max && v > 0)){ v *= -0.35 }
