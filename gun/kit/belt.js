@@ -26,14 +26,14 @@ function clamp(v, max){ return Math.max(0, Math.min(max || 0, v || 0)) }
 
 function setX(b, v, d){
 	if(!b || !b.draw){ return }
-	b.pos = v;
+	b.pos = clamp(v, b.max);
 	b.draw.style.transition = d ? 'transform '+d+'ms cubic-bezier(.16,.8,.2,1)' : 'none';
 	b.draw.style.transform = 'translate3d('+(-b.pos)+'px,0,0)';
 }
 
 function setY(k, v, d){
 	if(!k || !k.tin){ return }
-	k.pos = v;
+	k.pos = clamp(v, k.max);
 	k.tin.style.transition = d ? 'transform '+d+'ms cubic-bezier(.16,.8,.2,1)' : 'none';
 	k.tin.style.transform = 'translate3d(0,'+(-k.pos)+'px,0)';
 }
@@ -73,16 +73,12 @@ function move(e, t, now, dx, dy, dt, ax, ay){
 	ax = Math.abs(t.clientX - st.x); ay = Math.abs(t.clientY - st.y);
 	if(!st.axis && (ax > cut || ay > cut)){ st.axis = ax > ay ? 'x' : 'y' }
 	if(st.axis == 'x' && st.belt){
-		var p = st.belt.pos - dx;
-		if(p < 0 || p > st.belt.max){ dx *= 0.3; p = st.belt.pos - dx; }
-		setX(st.belt, p);
+		setX(st.belt, st.belt.pos - dx);
 		st.vx = -dx / dt;
 		st.move = 1; e.preventDefault();
 	}
 	else if(st.axis == 'y' && st.kit){
-		var p = st.kit.pos - dy;
-		if(p < 0 || p > st.kit.max){ dy *= 0.3; p = st.kit.pos - dy; }
-		setY(st.kit, p);
+		setY(st.kit, st.kit.pos - dy);
 		st.vy = -dy / dt;
 		st.move = 1; e.preventDefault();
 	}
@@ -91,61 +87,19 @@ function move(e, t, now, dx, dy, dt, ax, ay){
 
 function glideX(b, v){
 	if(!b){ return }
-	var out = 0;
-	if(b.pos < 0){ out = 0 - b.pos }
-	else if(b.pos > b.max){ out = b.max - b.pos }
-
-	var v_frame = v * 16;
-	if(out !== 0){
-		v_frame += out * 0.03;
-		v_frame *= 0.85;
-	} else {
-		v_frame *= 0.94;
-	}
-	v = v_frame / 16;
-
-	var nextPos = b.pos + v_frame;
-
-	if(out !== 0){
-		if((b.pos > b.max && nextPos <= b.max) || (b.pos < 0 && nextPos >= 0)){
-			nextPos = b.pos > b.max ? b.max : 0;
-			v = 0;
-		}
-	}
-
-	setX(b, nextPos);
-
-	if(Math.abs(v) < 0.01 && nextPos >= 0 && nextPos <= b.max){ return }
+	if(Math.abs(v) < 0.02){ return }
+	setX(b, b.pos + v * 16);
+	v *= 0.94;
+	if((b.pos <= 0 && v < 0) || (b.pos >= b.max && v > 0)){ v *= -0.35 }
 	b.ani = W.requestAnimationFrame(function(){ glideX(b, v) });
 }
 
 function glideY(k, v){
 	if(!k){ return }
-	var out = 0;
-	if(k.pos < 0){ out = 0 - k.pos }
-	else if(k.pos > k.max){ out = k.max - k.pos }
-
-	var v_frame = v * 16;
-	if(out !== 0){
-		v_frame += out * 0.03;
-		v_frame *= 0.85;
-	} else {
-		v_frame *= 0.94;
-	}
-	v = v_frame / 16;
-
-	var nextPos = k.pos + v_frame;
-
-	if(out !== 0){
-		if((k.pos > k.max && nextPos <= k.max) || (k.pos < 0 && nextPos >= 0)){
-			nextPos = k.pos > k.max ? k.max : 0;
-			v = 0;
-		}
-	}
-
-	setY(k, nextPos);
-
-	if(Math.abs(v) < 0.01 && nextPos >= 0 && nextPos <= k.max){ return }
+	if(Math.abs(v) < 0.02){ return }
+	setY(k, k.pos + v * 16);
+	v *= 0.94;
+	if((k.pos <= 0 && v < 0) || (k.pos >= k.max && v > 0)){ v *= -0.35 }
 	k.ani = W.requestAnimationFrame(function(){ glideY(k, v) });
 }
 
