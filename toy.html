@@ -58,6 +58,15 @@ kit tin > button {
 	touch-action: auto;
 	-webkit-overflow-scrolling: touch;
 }
+@supports (-webkit-touch-callout: none) {
+	@media (hover: none) and (pointer: coarse) {
+		kit,
+		kit tin,
+		.belt {
+			pointer-events: auto;
+		}
+	}
+}
 </style>
 <kit><tin>
 	<div class="belt"><div class="drawer"><button>new</button>
