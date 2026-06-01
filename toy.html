@@ -23,7 +23,8 @@
 	width: 100vw;
 	max-width: none;
 	pointer-events: none;
-	touch-action: pan-x;
+	touch-action: auto;
+	-webkit-overflow-scrolling: touch;
 	animation: none !important;
 	-ms-overflow-style: none;
 }
@@ -43,7 +44,7 @@
 	width: max-content;
 	max-width: none;
 	pointer-events: auto;
-	touch-action: pan-x;
+	touch-action: auto;
 	animation: none !important;
 }
 .belt::-webkit-scrollbar { display: none; }
@@ -52,6 +53,11 @@ kit tin > button,
 .belt .drawer,
 .belt button { pointer-events: auto; }
 .belt button { scroll-snap-align: end; }
+kit,
+kit tin > button {
+	touch-action: auto;
+	-webkit-overflow-scrolling: touch;
+}
 </style>
 <kit><tin>
 	<div class="belt"><div class="drawer"><button>new</button>
