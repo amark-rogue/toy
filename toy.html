@@ -58,41 +58,6 @@ kit tin > button {
 	touch-action: auto;
 	-webkit-overflow-scrolling: touch;
 }
-@supports (-webkit-touch-callout: none) {
-	@media (hover: none) and (pointer: coarse) {
-		kit,
-		kit tin {
-			pointer-events: auto;
-		}
-		kit {
-			width: 7em;
-			overflow-x: visible;
-		}
-		.belt {
-			width: 7em;
-			overflow-x: visible;
-			overflow-y: visible;
-			pointer-events: none;
-			scroll-snap-type: none;
-		}
-		.belt::before {
-			display: none;
-			flex-basis: 0;
-			width: 0;
-		}
-		.belt .drawer {
-			position: relative;
-			right: auto;
-			transform: translateX(calc(100% - 7em));
-			transition: transform var(--time);
-			z-index: 102;
-		}
-		.belt .drawer:active,
-		.belt:focus-within .drawer {
-			transform: translateX(0);
-		}
-	}
-}
 </style>
 <kit><tin>
 	<div class="belt"><div class="drawer"><button>new</button>

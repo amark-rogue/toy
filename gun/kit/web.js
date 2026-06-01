@@ -13,6 +13,7 @@ function MAP(scroll, screen){ return (scroll / screen)>>0 }; // scroll, screen
 kit = function(){};
 kit.ears = kit.ears || {};
 kit.q = kit.q || {};
+if(kit.ios = /iP(ad|hone|od)/.test(navigator.userAgent) || navigator.platform == 'MacIntel' && navigator.maxTouchPoints > 1){ LOAD(((D.currentScript||'').src||'').replace('web.js','belt.js')) }
 // dip, dive, into, eat, lid, tin, key, face
 //kit.ear = function(h,e,v){ (v=v||W)[ON](e=(h.call?(h.where=e):(e.where=h,(h=e).where))||'',h); h.off = function(){ v.removeEventListener(e,h) }; W===v&&kit.up(e,'ear'); return h; };
 //kit.say = function(d,e,v,s){ (v=v||W).dispatchEvent(new CustomEvent(e=e||'',{detail:d,bubbles:true})); !s&&(W===v)&&kit.up(d,e) };
