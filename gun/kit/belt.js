@@ -1,11 +1,9 @@
 ;(function(){
-var W = window, D = document, on = 'addEventListener', st, no, cut = 6;
-function hit(e, n){
-	n = e.target;
-	while(n && n !== D){
-		if(n.matches && (n.matches('kit tin > button') || n.matches('.belt button') || n.matches('.belt .drawer'))){ return n }
-		n = n.parentNode;
-	}
+var W = window, D = document, on = 'addEventListener', st, no, cut = 6, rail = 7, side = 0.5;
+function css(){
+	var s = D.createElement('style');
+	s.textContent = 'kit{width:'+rail+'em!important;overflow-x:visible!important;pointer-events:auto!important}kit tin{pointer-events:auto!important}.belt{width:'+rail+'em!important;overflow:visible!important;pointer-events:auto!important;scroll-snap-type:none!important}.belt:before{display:none!important}.belt .drawer{will-change:transform;touch-action:none!important}.belt button{touch-action:none!important}';
+	D.head.appendChild(s);
 }
 function up(n, q){
 	while(n && n !== D){
@@ -13,65 +11,71 @@ function up(n, q){
 		n = n.parentNode;
 	}
 }
-function begin(e, t, n){
+function hit(e, n){
+	n = e.target;
+	while(n && n !== D){
+		if(n.matches && (n.matches('kit tin > button') || n.matches('.belt button') || n.matches('.belt .drawer'))){ return n }
+		n = n.parentNode;
+	}
+}
+function clamp(v, max){ return Math.max(0, Math.min(max || 0, v || 0)) }
+function set(b, v, d){
+	if(!b || !b.draw){ return }
+	b.pos = clamp(v, b.max);
+	b.draw.style.transition = d ? 'transform '+d+'ms cubic-bezier(.16,.8,.2,1)' : 'none';
+	b.draw.style.transform = 'translate3d('+(-b.pos)+'px,0,0)';
+}
+function prep(b){
+	if(!b || b.ready){ return b }
+	b.draw = b.querySelector('.drawer'); if(!b.draw){ return b }
+	b.ready = 1; b.pos = 0;
+	b.max = Math.max(0, b.draw.scrollWidth - rail * parseFloat(getComputedStyle(D.documentElement).fontSize || 16));
+	b.draw.style.transform = 'translate3d(0,0,0)';
+	return b;
+}
+function begin(e, t, n, b){
 	if(!(n = hit(e))){ return }
 	t = e.touches && e.touches[0]; if(!t){ return }
-	st = {
-		x: t.clientX, y: t.clientY,
-		lx: t.clientX, ly: t.clientY,
-		belt: up(n, '.belt'),
-		draw: up(n, '.drawer'),
-		kit: up(n, 'kit'),
-		axis: '',
-		move: 0,
-		pos: 0,
-		max: 0
-	};
-	if(st.belt){
-		st.pos = st.belt.__belt || st.belt.scrollLeft || 0;
-		st.max = Math.max(0, st.belt.scrollWidth - st.belt.clientWidth, st.draw && st.draw.scrollWidth - st.belt.clientWidth);
-		if(st.draw){ st.draw.style.transition = 'none' }
-	}
+	b = prep(up(n, '.belt'));
+	st = {x:t.clientX, y:t.clientY, lx:t.clientX, ly:t.clientY, t:Date.now(), vx:0, vy:0, axis:'', move:0, belt:b, kit:up(n, 'kit')};
+	if(b && b.ani){ W.cancelAnimationFrame(b.ani); b.ani = 0 }
 }
-function show(){
-	if(!st || !st.belt){ return }
-	st.belt.__belt = st.pos = Math.max(0, Math.min(st.max, st.pos));
-	st.belt.scrollLeft = st.pos;
-	if(st.draw){
-		st.draw.style.transform = Math.abs(st.belt.scrollLeft - st.pos) < 1 ? '' : 'translate3d(' + (-st.pos) + 'px,0,0)';
-	}
-}
-function move(e, t, dx, dy, ax, ay){
+function move(e, t, now, dx, dy, dt, ax, ay){
 	if(!st){ return }
 	t = e.touches && e.touches[0]; if(!t){ return }
-	dx = t.clientX - st.lx; dy = t.clientY - st.ly;
+	now = Date.now(); dx = t.clientX - st.lx; dy = t.clientY - st.ly; dt = Math.max(1, now - st.t);
 	ax = Math.abs(t.clientX - st.x); ay = Math.abs(t.clientY - st.y);
 	if(!st.axis && (ax > cut || ay > cut)){ st.axis = ax > ay ? 'x' : 'y' }
 	if(st.axis == 'x' && st.belt){
-		st.pos -= dx;
-		show();
-		st.move = 1;
-		e.preventDefault();
+		set(st.belt, st.belt.pos - dx);
+		st.vx = -dx / dt;
+		st.move = 1; e.preventDefault();
 	}
 	if(st.axis == 'y' && st.kit){
 		st.kit.scrollTop -= dy;
-		st.move = 1;
-		e.preventDefault();
+		st.vy = -dy / dt;
+		st.move = 1; e.preventDefault();
 	}
-	st.lx = t.clientX; st.ly = t.clientY;
+	st.lx = t.clientX; st.ly = t.clientY; st.t = now;
+}
+function glide(b, v){
+	if(!b || Math.abs(v) < 0.02){ return }
+	set(b, b.pos + v * 16);
+	v *= 0.94;
+	if((b.pos <= 0 && v < 0) || (b.pos >= b.max && v > 0)){ v *= -0.35 }
+	b.ani = W.requestAnimationFrame(function(){ glide(b, v) });
 }
 function end(){
 	if(st && st.move){ no = 1; setTimeout(function(){ no = 0 }, 450) }
+	if(st && st.axis == 'x'){ glide(st.belt, st.vx) }
 	st = 0;
 }
 function tap(e){
-	if(no){
-		e.preventDefault();
-		e.stopPropagation();
-	}
+	if(no){ e.preventDefault(); e.stopPropagation() }
 }
+css();
 D[on]('touchstart', begin, true);
-D[on]('touchmove', move, {capture: true, passive: false});
+D[on]('touchmove', move, {capture:true, passive:false});
 D[on]('touchend', end, true);
 D[on]('touchcancel', end, true);
 D[on]('click', tap, true);
