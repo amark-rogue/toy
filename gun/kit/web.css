@@ -44,7 +44,7 @@ main, .page {
   position: absolute; inset: 0;
   width: 100%; min-height: 100vh; min-height: 100dvh;
 }
-div, ul, ol, li, a, p, form, button, input, textarea, img, dialog[open], frame, iframe {
+div, ul, ol, li, a, p, form, button, input, textarea, img, dialog[open], frame, iframe, kit, tin {
   border: 0;
   margin: 0;
   padding: 0;
@@ -62,6 +62,67 @@ div, ul, ol, li, a, p, form, button, input, textarea, img, dialog[open], frame, 
   font: inherit;
 }
 a, p { display: inline-block; }
+
+kit {
+  padding: 0;
+  margin-right: 0.5em;
+  background: transparent;
+  z-index: 101;
+  overflow-y: auto;
+  overflow-x: visible;
+  scrollbar-width: none;
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  width: max-content;
+  animation: none !important;
+  height: 100vh;
+  pointer-events: none;
+  -ms-overflow-style: none;
+}
+kit::before {
+  content: " ";
+  height: calc(100vh - 2.5em);
+  width: 100%;
+}
+kit tin {
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  animation: none !important;
+}
+kit::-webkit-scrollbar { display: none; }
+kit button {
+  scroll-snap-align: start;
+  flex: 0 0 auto;
+  text-align: right;
+  -webkit-backdrop-filter: blur(var(--blur) );
+  backdrop-filter: blur(var(--blur));
+  background: rgba(0,0,0,0.2);
+
+  border: 1px solid var(--pop);
+  box-shadow: 0 0 0.1em var(--pop);
+  animation: none !important;
+  padding: 0.5em 1em;
+  border-radius: 0.5em;
+  font-size: 1.1em;
+  font-weight: 900;
+  cursor: pointer;
+  white-space: nowrap;
+  text-shadow: 0 0 5px var(--pop);
+}
+kit button:active {
+  background: var(--pop);
+  color: var(--mood);
+  transform: scale(0.92);
+  text-shadow: none;
+}
+kit button.live {
+  background: var(--pop);
+  color: var(--mood);
+  text-shadow: none;
+}
 
 .ani {
   animation: stage linear both;

@@ -1,11 +1,5 @@
-<!doctype html>
-<html>
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>TOY</title>
-</head>
-<body>
+<link rel="stylesheet" href="./gun/kit/web.css"><script src="./gun/kit/web.js"></script>
+
 <textarea id="code" spellcheck="false">the.view = [ "Hey your name (1,2,3) is ", {a:1}, "!"] + 1;</textarea>
 <div id="bar"><span id="stat"></span></div>
 <div id="view"></div>
@@ -15,6 +9,70 @@
 	<span id="kid" class="kid"></span>
 	<span id="dep" class="deep"></span>
 </div>
+<style>
+.belt {
+	background: transparent;
+	display: flex;
+	flex-direction: row;
+	align-items: flex-end;
+	overflow-x: auto;
+	overflow-y: visible;
+	overscroll-behavior-x: contain;
+	scroll-snap-type: x proximity;
+	scrollbar-width: none;
+	width: 100vw;
+	max-width: none;
+	pointer-events: none;
+	touch-action: pan-x;
+	animation: none !important;
+	-ms-overflow-style: none;
+}
+.belt::before {
+	content: " ";
+	display: block;
+	flex: 0 0 calc(100vw - 6em);
+	width: calc(100vw - 6em);
+	height: 1px;
+	pointer-events: none;
+}
+.belt .drawer {
+	display: flex;
+	flex-direction: row;
+	align-items: flex-end;
+	justify-content: flex-end;
+	width: max-content;
+	max-width: none;
+	pointer-events: auto;
+	touch-action: pan-x;
+	animation: none !important;
+}
+.belt::-webkit-scrollbar { display: none; }
+kit tin { pointer-events: none; }
+kit tin > button,
+.belt .drawer,
+.belt button { pointer-events: auto; }
+.belt button { scroll-snap-align: end; }
+</style>
+<kit><tin>
+	<div class="belt"><div class="drawer"><button>new</button>
+	<button>asdf</button>
+	<button>fdsa</button>
+	<button>qwer</button>
+	<button>req</button></div></div>
+	<div class="belt"><div class="drawer"><button>set</button>
+	<button>raw</button>
+	<button>run</button>
+	<button>nest</button>
+	<button>shut</button></div></div>
+	<div class="belt"><div class="drawer"><button>top</button>
+	<button>open</button>
+	<button>back</button>
+	<button>next</button>
+	<button>link</button></div></div>
+	<button>asx</button>
+	<button>awe</button>
+	<button>tez</button>
+</tin></kit>
 <style>
 html,body{box-sizing:border-box;margin:0;min-height:100%;background:#14110f;color:#f7f2e8;font:18px/1.35 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
 *{box-sizing:inherit}
@@ -193,5 +251,3 @@ APP.code.oninput=APP.go;
 try{APP.code.value=localStorage.mugbrick||APP.code.value}catch(e){}
 APP.go();
 </script>
-</body>
-</html>
