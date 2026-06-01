@@ -61,9 +61,21 @@ kit tin > button {
 @supports (-webkit-touch-callout: none) {
 	@media (hover: none) and (pointer: coarse) {
 		kit,
-		kit tin,
-		.belt {
+		kit tin {
 			pointer-events: auto;
+		}
+		kit {
+			width: 7em;
+			overflow-x: visible;
+		}
+		.belt {
+			width: 7em;
+			overflow-x: auto;
+			pointer-events: auto;
+		}
+		.belt::before {
+			flex-basis: 0;
+			width: 0;
 		}
 	}
 }
