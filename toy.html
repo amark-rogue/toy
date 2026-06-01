@@ -70,12 +70,26 @@ kit tin > button {
 		}
 		.belt {
 			width: 7em;
-			overflow-x: auto;
-			pointer-events: auto;
+			overflow-x: visible;
+			overflow-y: visible;
+			pointer-events: none;
+			scroll-snap-type: none;
 		}
 		.belt::before {
+			display: none;
 			flex-basis: 0;
 			width: 0;
+		}
+		.belt .drawer {
+			position: fixed;
+			right: 0.5em;
+			transform: translateX(calc(100% - 7em));
+			transition: transform var(--time);
+			z-index: 102;
+		}
+		.belt .drawer:active,
+		.belt:focus-within .drawer {
+			transform: translateX(0);
 		}
 	}
 }
