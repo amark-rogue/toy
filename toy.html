@@ -1,7 +1,7 @@
-<link rel="stylesheet" href="./gun/kit/web.css"><script src="./gun/kit/web.js"></script>
+<link rel="stylesheet" href="./gun/kit/web.css"><script src="./gun/kit/web.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content">
 
-<textarea id="code" spellcheck="false">the.view = [ "Hey your name (1,2,3) is ", {a:1}, "!"] + 1;</textarea>
-<div id="bar"><span id="stat"></span></div>
+</head><body class="main page" id="toy.html"><textarea id="code" spellcheck="false">the.view = [ "Hey your name (1,2,3) is ", {a:1}, "!"] + 1;</textarea>
+<div id="bar"><span id="stat">82 bits in 1.10ms</span></div>
 <div id="view"></div>
 <div class="hide">
 	<span id="mod" class="node"></span>
@@ -60,24 +60,15 @@ kit tin > button {
 }
 </style>
 <kit><tin>
-	<div class="belt"><div class="drawer"><button>new</button>
-	<button>asdf</button>
-	<button>fdsa</button>
-	<button>qwer</button>
-	<button>req</button></div></div>
-	<div class="belt"><div class="drawer"><button>set</button>
-	<button>raw</button>
-	<button>run</button>
-	<button>nest</button>
-	<button>shut</button></div></div>
-	<div class="belt"><div class="drawer"><button>top</button>
-	<button>open</button>
-	<button>back</button>
-	<button>next</button>
-	<button>link</button></div></div>
-	<button>asx</button>
-	<button>awe</button>
-	<button>tez</button>
+	<div class="belt"><div class="drawer">
+		<button id="btn-new">new</button>
+		<button id="btn-undo">undo</button>
+		<button id="btn-redo">redo</button>
+		<button id="btn-copy">copy</button>
+		<button id="btn-paste">paste</button>
+		<button id="btn-del">delete</button>
+		<button id="btn-find">find</button>
+	</div></div>
 </tin></kit>
 <style>
 html,body{box-sizing:border-box;margin:0;min-height:100%;background:#14110f;color:#f7f2e8;font:18px/1.35 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
@@ -113,7 +104,11 @@ body{display:flex;flex-direction:column}
 .node:hover,.tree:hover:not(:has(.tree:hover,.node:hover,.mark:hover)){transform:translateY(-.12rem);box-shadow:inset 0 -.18rem rgba(0,0,0,.18),0 .22rem .42rem rgba(0,0,0,.38);background-image:linear-gradient(rgba(255,255,255,.06),rgba(255,255,255,.06));position:relative;z-index:2}
 .mark:hover{opacity:.85;background:rgba(255,255,255,.08)}
 .runon,.kid:has(> .mark:hover){transform:translateY(-.12rem);background:rgba(255,255,255,.07);border-radius:.35rem;box-shadow:0 .18rem .42rem rgba(0,0,0,.32);filter:brightness(1.08);position:relative;z-index:2}
-.hide{display:none}
+.active{box-shadow:0 0 0 .15rem #BF00FF !important; z-index:3; position:relative;}
+.multi{box-shadow:0 0 0 .15rem #FFBF00 !important; z-index:3; position:relative;}
+.brick-add{background:#BF00FF;color:white;border-radius:50%;width:1.5rem;height:1.5rem;text-align:center;line-height:1.5rem;cursor:pointer;z-index:11;font-weight:900;border:0;padding:0;box-shadow:0 0 .2rem rgba(0,0,0,.5);transition:opacity .2s;}
+.brick-add:active{transform:scale(.9);}
+.hide{display:none !important;opacity:0;pointer-events:none;}
 </style>
 <script src="./gun/mug-codex.js"></script>
 <script>
@@ -255,5 +250,260 @@ APP.go=function(){
 }
 APP.code.oninput=APP.go;
 try{APP.code.value=localStorage.mugbrick||APP.code.value}catch(e){}
+APP.history = [];
+APP.historyPos = -1;
+APP.saveHistory = function(code) {
+	if (APP.history[APP.historyPos] === code) return;
+	APP.history.length = APP.historyPos + 1;
+	APP.history.push(code);
+	APP.historyPos++;
+};
+var oldGo = APP.go;
+APP.go = function() {
+	oldGo();
+	APP.saveHistory(APP.code.value);
+};
 APP.go();
+
+document.getElementById('btn-new').onclick = function() {
+	var nextVar = APP.vars[APP.varCount % APP.vars.length]; APP.varCount++;
+	APP.code.value += ' ' + nextVar + ' = "";';
+	APP.go();
+};
+document.getElementById('btn-undo').onclick = function() {
+	if (APP.historyPos > 0) {
+		APP.historyPos--;
+		APP.code.value = APP.history[APP.historyPos];
+		oldGo();
+	}
+};
+document.getElementById('btn-redo').onclick = function() {
+	if (APP.historyPos < APP.history.length - 1) {
+		APP.historyPos++;
+		APP.code.value = APP.history[APP.historyPos];
+		oldGo();
+	}
+};
+document.getElementById('btn-copy').onclick = function() {
+	var text = '';
+	if (APP.multiSelect.size > 0) {
+		APP.multiSelect.forEach(n => text += APP.getText(n) + ' ');
+	} else {
+		var active = document.querySelector('.active');
+		if(active) text = APP.getText(active);
+	}
+	navigator.clipboard.writeText(text);
+};
+document.getElementById('btn-paste').onclick = async function() {
+	var active = document.querySelector('.active');
+	if(!active) return;
+	try {
+		var text = await navigator.clipboard.readText();
+		var textNode = document.createTextNode(' ' + text + ' ');
+		active.parentNode.insertBefore(textNode, active.nextSibling);
+		APP.code.value = APP.getText(APP.view);
+		APP.go();
+	} catch(e) {}
+};
+document.getElementById('btn-del').onclick = function() {
+	var didDel = false;
+	if (APP.multiSelect.size > 0) {
+		APP.multiSelect.forEach(n => { n.parentNode.removeChild(n); });
+		APP.multiSelect.clear();
+		didDel = true;
+	} else {
+		var active = document.querySelector('.active');
+		if(active) { active.parentNode.removeChild(active); didDel = true; }
+	}
+	if (didDel) {
+		APP.code.value = APP.getText(APP.view);
+		APP.go();
+	}
+};
+document.getElementById('btn-find').onclick = function() {
+	var term = prompt("Find:");
+	if(!term) return;
+	document.querySelectorAll('.node, .tree').forEach(n => {
+		if (n.textContent.includes(term)) {
+			n.style.boxShadow = '0 0 0 .15rem yellow';
+			setTimeout(() => n.style.boxShadow = '', 2000);
+		}
+	});
+};
+
+window.addEventListener('resize', APP.updateAddButtons);
+
+APP.getText = function(node) {
+	var t = '';
+	if (node.dataset && node.dataset.open) t += node.dataset.open;
+	for (var i = 0; i < node.childNodes.length; i++) {
+		var child = node.childNodes[i];
+		if (child.nodeType === 3) t += child.textContent;
+		else t += APP.getText(child);
+	}
+	if (node.dataset && node.dataset.close) t += node.dataset.close;
+	return t;
+};
+
+APP.vars = 'abcdefghijklmnopqrstuvwxyz'.split('');
+APP.varCount = 0;
+
+var addL = document.createElement('button'); addL.className = 'brick-add left hide'; addL.textContent = '+';
+var addR = document.createElement('button'); addR.className = 'brick-add right hide'; addR.textContent = '+';
+document.body.appendChild(addL);
+document.body.appendChild(addR);
+
+APP.updateAddButtons = function() {
+	var active = document.querySelector('.active');
+	if(!active) {
+		addL.classList.add('hide');
+		addR.classList.add('hide');
+		return;
+	}
+	addL.classList.remove('hide');
+	addR.classList.remove('hide');
+	var rect = active.getBoundingClientRect();
+	addL.style.position = 'absolute'; addR.style.position = 'absolute';
+	addL.style.top = (rect.top + rect.height/2 - 12) + 'px';
+	addL.style.left = (rect.left - 24) + 'px';
+	addR.style.top = (rect.top + rect.height/2 - 12) + 'px';
+	addR.style.left = rect.right + 'px';
+};
+
+var pressTimer;
+APP.multiSelect = new Set();
+
+APP.view.addEventListener('mousedown', function(e){
+	var el = e.target.closest('.node, .tree');
+	if(!el) return;
+	pressTimer = setTimeout(function(){
+		// Long press
+		el.classList.add('multi');
+		APP.multiSelect.add(el);
+		navigator.clipboard.writeText(APP.getText(el)); // Copy it
+		pressTimer = null;
+	}, 600);
+});
+APP.view.addEventListener('mouseup', function(){ if(pressTimer) clearTimeout(pressTimer); });
+APP.view.addEventListener('mouseleave', function(){ if(pressTimer) clearTimeout(pressTimer); });
+
+APP.view.addEventListener('click', function(e){
+	if(!pressTimer && APP.multiSelect.has(e.target.closest('.node, .tree'))) {
+		// It was a long press that just finished, don't trigger click
+		return;
+	}
+	if(pressTimer) clearTimeout(pressTimer);
+	var el = e.target.closest('.node, .tree');
+	if(!el) return;
+	e.stopPropagation();
+
+	if (APP.multiSelect.size > 0) {
+		if (el.classList.contains('multi')) {
+			el.classList.remove('multi');
+			APP.multiSelect.delete(el);
+		} else {
+			APP.multiSelect.forEach(n => n.classList.remove('multi'));
+			APP.multiSelect.clear();
+		}
+		return;
+	}
+
+	var prev = document.querySelector('.active');
+	if(prev && prev !== el) prev.classList.remove('active');
+	el.classList.toggle('active');
+	APP.updateAddButtons();
+	
+	if(el.classList.contains('active') && el.classList.contains('node')) {
+		if (el.textContent.trim() === '___') {
+			el.textContent = '';
+			el.dataset.empty = 'true';
+			el.contentEditable = 'true';
+			el.focus();
+		} else {
+			el.dataset.empty = 'false';
+			el.contentEditable = 'true';
+			el.focus();
+		}
+	}
+});
+
+APP.view.addEventListener('focus', function(e){
+	var el = e.target;
+	if (el.contentEditable === 'true') {
+		el.dataset.oldVal = el.textContent;
+	}
+}, true);
+
+APP.view.addEventListener('blur', function(e){
+	var el = e.target;
+	if (el.contentEditable === 'true') {
+		el.contentEditable = 'false';
+		var t = el.textContent;
+		var oldV = el.dataset.oldVal || '';
+		var isVarRename = false;
+		
+		if (el.dataset.empty === 'true') {
+			var val = t.toLowerCase().trim();
+			if(val === 'whi' || val === 'while') t = 'while(___) { ___ }';
+			else if(val === 'if') t = 'if(___) { ___ }';
+			else if(val === 'for') t = 'for(___; ___; ___) { ___ }';
+			else t = t || '___';
+			document.querySelectorAll('.belt button').forEach(b => b.style.display = '');
+		} else {
+			if (t.startsWith('"') && !t.endsWith('"')) t += '"';
+			if (t.startsWith("'") && !t.endsWith("'")) t += "'";
+			if (t.startsWith("`") && !t.endsWith("`")) t += "`";
+			if (t.startsWith("{") && !t.endsWith("}")) t += "}";
+			if (t.startsWith("[") && !t.endsWith("]")) t += "]";
+			if (t.startsWith("(") && !t.endsWith(")")) t += ")";
+			if (!/^['"`]/.test(t)) {
+				if (/^\d/.test(t)) t = t.replace(/[^0-9.]/g, '');
+				else if (/^[A-Za-z_$]/.test(oldV) && /^[A-Za-z_$]/.test(t) && oldV !== t) {
+					isVarRename = true;
+				}
+			}
+		}
+		el.textContent = t;
+		var code = APP.getText(APP.view);
+		if (isVarRename) {
+			var regex = new RegExp('\\b' + oldV + '\\b', 'g');
+			code = code.replace(regex, t);
+		}
+		APP.code.value = code;
+		APP.go();
+	}
+}, true);
+document.addEventListener('click', function(e){
+	if(e.target.closest('.brick-add') || e.target.closest('kit')) return;
+	var prev = document.querySelector('.active');
+	if(prev) { prev.classList.remove('active'); APP.updateAddButtons(); }
+});
+
+APP.insertNew = function(side) {
+	var active = document.querySelector('.active');
+	if(!active) return;
+	var newCode = (side === 'left' ? ' ' : '') + '___' + (side === 'right' ? ' ' : '');
+	var textNode = document.createTextNode(newCode);
+	if (side === 'left') active.parentNode.insertBefore(textNode, active);
+	else active.parentNode.insertBefore(textNode, active.nextSibling);
+	
+	APP.code.value = APP.getText(APP.view);
+	APP.go();
+};
+addL.onclick = function() { APP.insertNew('left'); };
+addR.onclick = function() { APP.insertNew('right'); };
+
+APP.view.addEventListener('input', function(e){
+	var el = e.target;
+	if (el.contentEditable === 'true' && el.dataset.empty === 'true') {
+		var val = el.textContent.toLowerCase();
+		var btns = document.querySelectorAll('.belt button');
+		btns.forEach(b => {
+			if(b.textContent.toLowerCase().includes(val)) b.style.display = '';
+			else b.style.display = 'none';
+		});
+	}
+});
+
+window.addEventListener('resize', APP.updateAddButtons);
 </script>
