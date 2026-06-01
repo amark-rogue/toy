@@ -2,7 +2,7 @@
 var W = window, D = document, on = 'addEventListener', st, no, cut = 6, rail = 7, side = 0.5;
 function css(){
 	var s = D.createElement('style');
-	s.textContent = 'kit{width:'+rail+'em!important;overflow-x:visible!important;pointer-events:none!important}kit tin{pointer-events:none!important}.belt{width:'+rail+'em!important;overflow:visible!important;pointer-events:none!important;scroll-snap-type:none!important}.belt:before{display:none!important}.belt .drawer{will-change:transform;touch-action:none!important;pointer-events:auto!important}.belt button{touch-action:none!important;pointer-events:auto!important}kit tin > button{pointer-events:auto!important}';
+	s.textContent = 'kit{width:100%!important;overflow-x:visible!important;pointer-events:none!important}kit tin{pointer-events:none!important}.belt{width:100%!important;overflow:visible!important;pointer-events:none!important;scroll-snap-type:none!important}.belt:before{display:none!important}.belt .drawer{will-change:transform;touch-action:none!important;pointer-events:auto!important}.belt button{touch-action:none!important;pointer-events:auto!important}kit tin > button{pointer-events:auto!important}';
 	D.head.appendChild(s);
 }
 function up(n, q){
