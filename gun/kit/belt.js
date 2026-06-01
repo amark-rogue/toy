@@ -48,7 +48,7 @@ function prepK(k){
 	if(!k){ return k }
 	k.tin = k.querySelector('tin'); if(!k.tin){ return k }
 	if(!k.ready){ k.ready = 1; k.pos = 0; }
-	k.max = Math.max(0, k.scrollHeight - W.innerHeight);
+	k.max = Math.max(0, k.tin.scrollHeight - W.innerHeight);
 	return k;
 }
 
