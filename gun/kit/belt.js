@@ -3,7 +3,7 @@ var W = window, D = document, on = 'addEventListener', st, no, cut = 6, rail = 7
 
 function css(){
 	var s = D.createElement('style');
-	s.textContent = 'kit{width:'+rail+'em!important;overflow:visible!important;pointer-events:none!important;touch-action:none!important}kit tin{pointer-events:none!important;will-change:transform;touch-action:none!important}.belt{width:'+rail+'em!important;overflow:visible!important;pointer-events:none!important;scroll-snap-type:none!important;touch-action:none!important}.belt:before{display:none!important}.belt .drawer{will-change:transform;pointer-events:auto!important;touch-action:none!important}.belt button{pointer-events:auto!important;touch-action:none!important}kit tin > button{pointer-events:auto!important;touch-action:none!important}';
+	s.textContent = 'kit, kit tin, .belt { overflow: visible !important; pointer-events: none !important; touch-action: none !important; scroll-snap-type: none !important; overscroll-behavior: none !important; } .belt .drawer, kit button { pointer-events: auto !important; touch-action: none !important; will-change: transform; }';
 	D.head.appendChild(s);
 }
 
@@ -22,18 +22,16 @@ function hit(e, n){
 	}
 }
 
-function clamp(v, max){ return Math.max(0, Math.min(max || 0, v || 0)) }
-
 function setX(b, v, d){
 	if(!b || !b.draw){ return }
-	b.pos = clamp(v, b.max);
+	b.pos = v;
 	b.draw.style.transition = d ? 'transform '+d+'ms cubic-bezier(.16,.8,.2,1)' : 'none';
 	b.draw.style.transform = 'translate3d('+(-b.pos)+'px,0,0)';
 }
 
 function setY(k, v, d){
 	if(!k || !k.tin){ return }
-	k.pos = clamp(v, k.max);
+	k.pos = v;
 	k.tin.style.transition = d ? 'transform '+d+'ms cubic-bezier(.16,.8,.2,1)' : 'none';
 	k.tin.style.transform = 'translate3d(0,'+(-k.pos)+'px,0)';
 }
@@ -72,13 +70,18 @@ function move(e, t, now, dx, dy, dt, ax, ay){
 	now = Date.now(); dx = t.clientX - st.lx; dy = t.clientY - st.ly; dt = Math.max(1, now - st.t);
 	ax = Math.abs(t.clientX - st.x); ay = Math.abs(t.clientY - st.y);
 	if(!st.axis && (ax > cut || ay > cut)){ st.axis = ax > ay ? 'x' : 'y' }
+	
 	if(st.axis == 'x' && st.belt){
-		setX(st.belt, st.belt.pos - dx);
+		var p = st.belt.pos - dx;
+		if(p < 0 || p > st.belt.max){ dx *= 0.3; p = st.belt.pos - dx; }
+		setX(st.belt, p);
 		st.vx = -dx / dt;
 		st.move = 1; e.preventDefault();
 	}
 	else if(st.axis == 'y' && st.kit){
-		setY(st.kit, st.kit.pos - dy);
+		var p = st.kit.pos - dy;
+		if(p < 0 || p > st.kit.max){ dy *= 0.3; p = st.kit.pos - dy; }
+		setY(st.kit, p);
 		st.vy = -dy / dt;
 		st.move = 1; e.preventDefault();
 	}
@@ -87,19 +90,45 @@ function move(e, t, now, dx, dy, dt, ax, ay){
 
 function glideX(b, v){
 	if(!b){ return }
-	if(Math.abs(v) < 0.02){ return }
-	setX(b, b.pos + v * 16);
-	v *= 0.94;
-	if((b.pos <= 0 && v < 0) || (b.pos >= b.max && v > 0)){ v *= -0.35 }
+	var out = 0;
+	if(b.pos < 0){ out = 0 - b.pos }
+	else if(b.pos > b.max){ out = b.max - b.pos }
+
+	if(out !== 0){
+		v += out * 0.005;
+		v *= 0.8;
+	} else {
+		v *= 0.94;
+	}
+	var next = b.pos + v * 16;
+	if(out !== 0 && ((b.pos > b.max && next <= b.max) || (b.pos < 0 && next >= 0))){
+		next = b.pos > b.max ? b.max : 0;
+		v = 0;
+	}
+	setX(b, next);
+	if(Math.abs(v) < 0.02 && next >= 0 && next <= b.max){ return }
 	b.ani = W.requestAnimationFrame(function(){ glideX(b, v) });
 }
 
 function glideY(k, v){
 	if(!k){ return }
-	if(Math.abs(v) < 0.02){ return }
-	setY(k, k.pos + v * 16);
-	v *= 0.94;
-	if((k.pos <= 0 && v < 0) || (k.pos >= k.max && v > 0)){ v *= -0.35 }
+	var out = 0;
+	if(k.pos < 0){ out = 0 - k.pos }
+	else if(k.pos > k.max){ out = k.max - k.pos }
+
+	if(out !== 0){
+		v += out * 0.005;
+		v *= 0.8;
+	} else {
+		v *= 0.94;
+	}
+	var next = k.pos + v * 16;
+	if(out !== 0 && ((k.pos > k.max && next <= k.max) || (k.pos < 0 && next >= 0))){
+		next = k.pos > k.max ? k.max : 0;
+		v = 0;
+	}
+	setY(k, next);
+	if(Math.abs(v) < 0.02 && next >= 0 && next <= k.max){ return }
 	k.ani = W.requestAnimationFrame(function(){ glideY(k, v) });
 }
 
