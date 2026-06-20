@@ -44,7 +44,7 @@ main, .page {
   position: absolute; inset: 0;
   width: 100%; min-height: 100vh; min-height: 100dvh;
 }
-div, ul, ol, li, a, p, form, button, input, textarea, img, dialog[open], frame, iframe, kit, tin {
+div, ul, ol, li, a, p, form, button, input, textarea, img, dialog[open], frame, iframe, kit, tin, belt, tray {
   border: 0;
   margin: 0;
   padding: 0;
@@ -92,7 +92,44 @@ kit tin {
   align-items: flex-end;
   animation: none !important;
 }
-kit .belt::-webkit-scrollbar { display: none; }
+kit belt {
+  background: transparent;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  overflow-x: auto;
+  overflow-y: visible;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+  width: 100vw;
+  max-width: none;
+  pointer-events: none;
+  touch-action: auto;
+  -webkit-overflow-scrolling: touch;
+  animation: none !important;
+  -ms-overflow-style: none;
+}
+kit belt::before {
+  content: " ";
+  display: block;
+  flex: 0 0 calc(100vw - 6em);
+  width: calc(100vw - 6em);
+  height: 1px;
+  pointer-events: none;
+}
+kit tray {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  justify-content: flex-end;
+  width: max-content;
+  max-width: none;
+  pointer-events: auto;
+  touch-action: auto;
+  animation: none !important;
+}
+kit belt::-webkit-scrollbar { display: none; }
 kit::-webkit-scrollbar { display: none; }
 kit button {
   scroll-snap-align: end;
@@ -340,4 +377,3 @@ p + p {
   50% {opacity: 0.5;}
   100% {opacity: 1;}
 }
-
