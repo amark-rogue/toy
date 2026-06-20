@@ -3,7 +3,7 @@ var W = window, D = document, on = 'addEventListener', st, no, cut = 6, rail = 7
 
 function css(){
 	var s = D.createElement('style');
-	s.textContent = 'kit, kit tin, .belt { overflow: visible !important; pointer-events: none !important; touch-action: none !important; scroll-snap-type: none !important; overscroll-behavior: none !important; } .belt .drawer, kit button { pointer-events: auto !important; touch-action: none !important; will-change: transform; }';
+	s.textContent = 'kit, kit tin, kit belt, kit .belt { overflow: visible !important; pointer-events: none !important; touch-action: none !important; scroll-snap-type: none !important; overscroll-behavior: none !important; } kit tray, kit .belt .drawer, kit button { pointer-events: auto !important; touch-action: none !important; will-change: transform; }';
 	D.head.appendChild(s);
 }
 
@@ -17,7 +17,7 @@ function up(n, q){
 function hit(e, n){
 	n = e.target;
 	while(n && n !== D){
-		if(n.matches && (n.matches('kit tin > button') || n.matches('.belt button') || n.matches('.belt .drawer'))){ return n }
+		if(n.matches && (n.matches('kit tin > button') || n.matches('kit belt button') || n.matches('kit .belt button') || n.matches('kit tray') || n.matches('kit .belt .drawer'))){ return n }
 		n = n.parentNode;
 	}
 }
@@ -38,7 +38,7 @@ function setY(k, v, d){
 
 function prepB(b){
 	if(!b){ return b }
-	b.draw = b.querySelector('.drawer'); if(!b.draw){ return b }
+	b.draw = b.querySelector('tray') || b.querySelector('.drawer'); if(!b.draw){ return b }
 	if(!b.ready){ b.ready = 1; b.pos = 0; }
 	b.max = Math.max(0, b.draw.scrollWidth - rail * parseFloat(getComputedStyle(D.documentElement).fontSize || 16));
 	return b;
@@ -55,7 +55,7 @@ function prepK(k){
 function begin(e, t, n, b, k){
 	if(!(n = hit(e))){ return }
 	t = e.touches && e.touches[0]; if(!t){ return }
-	b = prepB(up(n, '.belt'));
+	b = prepB(up(n, 'belt') || up(n, '.belt'));
 	k = prepK(up(n, 'kit'));
 	st = {x:t.clientX, y:t.clientY, lx:t.clientX, ly:t.clientY, t:Date.now(), vx:0, vy:0, axis:'', move:0, belt:b, kit:k};
 	if(b && b.ani){ W.cancelAnimationFrame(b.ani); b.ani = 0 }
