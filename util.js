@@ -127,7 +127,7 @@ Tool.done = function(v){
 
 }());
 
-window.buzz = function(ms) {
+window.buzz = screen.buzz = function(ms) {
   try { if (navigator.vibrate) navigator.vibrate(ms || 9); } catch(e) {}
 };
 window.shellReply = window.shellReply || {
@@ -157,8 +157,8 @@ document.addEventListener('pointerdown', function(e) { return;
   }
 });
 
-String.prototype.splitPrompts = function() {
-    const rawText = '' + this;
+String.prompts = function(t){
+    const rawText = '' + t;
     const ansiRegex = /[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g;
     
     let flatToRaw = [];
@@ -240,4 +240,8 @@ String.prototype.splitPrompts = function() {
     }
     
     return chunks;
+};
+
+String.prototype.splitPrompts = function(){
+  return String.prompts(this);
 };

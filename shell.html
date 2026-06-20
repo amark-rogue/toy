@@ -64,6 +64,11 @@ fit { display: none; }
 ::selection { background: var(--pop); color: var(--fill); }
 fit { display: none; }
 
+iframe {
+  height: 0;
+  width: 100%;
+}
+
 bo-dy::before {
   content: "";
   position: fixed;
@@ -81,7 +86,42 @@ bo-dy::before {
 </style>
 <script src="util.js"></script>
 <script>;(function(shell){ shell();
-(shell.$ = document.body.all('prompt')[0]).focus();
+var root = document.body.all('shell')[0];
+var task = root.all('task')[0];
+var model = task.cloneNode(1);
+(shell.$ = task.all('prompt')[0]).focus();
+
+function up(n, q){
+  while(n && n !== document){
+    if(n.matches && n.matches(q)){ return n }
+    n = n.parentNode;
+  }
+}
+
+function text(v, s){
+  v.textContent = s || '';
+  if(!s){ v.append(document.createElement('br')) }
+  return v;
+}
+
+function fresh(t){
+  t = model.cloneNode(1);
+  text(t.all('symbol')[0], '$ ');
+  text(t.all('prompt')[0], '');
+  t.all('prompt')[0].setAttribute('contenteditable', 'true');
+  text(t.all('help')[0], '');
+  text(t.all('raw')[0], '');
+  t.all('iframe')[0].removeAttribute('src');
+  return t;
+}
+
+function next(t){
+  if((root.lastElementChild || {}).all && root.lastElementChild.all('prompt[contenteditable=true]')[0]){ return }
+  t = fresh();
+  root.append(t);
+  shell.$ = t.all('prompt')[0];
+  shell.$.focus();
+}
 
 kit.ear('chat',(eve)=>{ var d = eve.detail || eve.data || '';
   if('{'==d[0]){ try{
@@ -92,7 +132,6 @@ kit.ear('chat',(eve)=>{ var d = eve.detail || eve.data || '';
 });
 
 document.body.ear('keydown',function(eve){
-  // FIX: this code should work correctly already? It should detect from any shell task prompt a submit / enter / carriage return that then propagates the shell terminal prompt command chat to the prompt event that kit.ear hears and then says / sends up to the pty shell host.
   if(!eve.target.matches('prompt')){ return }
   shell.$ = eve.target;
   if('enter' == eve.key.toLowerCase() && !eve.shiftKey){
@@ -104,27 +143,72 @@ document.body.ear('keydown',function(eve){
 kit.ear('prompt',(eve)=>{
   var cmd = eve.detail||eve.data;
   cmd = cmd || shell.$.textContent;
+  cmd = (cmd || '').trim();
+  if(!cmd){ text(shell.$, ''); return }
+  text(shell.$, cmd);
+  //shell.$.removeAttribute('contenteditable');
+  CMD.live = up(shell.$, 'task');
+  console.log("PROMPT SAY", cmd);
   kit.say(cmd+'\r','host');
-  shell.$.textContent = "\n";
   screen.buzz();
 });
 
-var task = document.body.all('task')[0];
-function stream2(s){
-  console.log('>>>',s);return;
-  stream2.raw += s;
-  var prompts = String.prompts(stream2.raw);
-  stream2.raw = prompts.slice(-1)[0];
-  prompts.forEach(CMD.bash);
-}; stream2.raw = '';
 var CMD = {};
+CMD.raw = '';
 CMD.stream = function(raw){
-  // FIX: this should receive raw pty text streams and use utility methods to detect where different bash commands are and separate them (check ./test & ./test/samples and fix or refactor anything in ./util.js to handle it correctly, ascii flattening, etc.) and then call to CMD.bash
+  var clean, part, done, i;
+  (window.shellReply || {}).maybeContinue && window.shellReply.maybeContinue(raw, {state: CMD, send: function(c){ kit.say(c, 'host') }});
+  CMD.raw += raw || '';
+  clean = (window.shellReply || {}).clean ? window.shellReply.clean(CMD.raw) : CMD.raw;
+  part = (String.prototype.splitPrompts ? clean.splitPrompts() : String.prompts(clean));
+  if(part.length > 1){
+    done = part.slice(0, -1);
+    CMD.raw = part[part.length - 1];
+    for(i = 0; i < done.length; i += 1){ CMD.bash(done[i]) }
+  }
+  if(CMD.live){ text(CMD.live.all('raw')[0], ((window.shellReply || {}).clean ? window.shellReply.clean(CMD.raw) : CMD.raw).flat()) }
 }
-CMD.bash = function(raw){
-  // FIX: this should then clone the UI components into place, fill them with the data, and try to kit iframe the src of the matching ./cmd/*.html & kit say to them the finished data + option for them to receive the live data stream (if the task / process is long running) and make the task be minimizable and ability to start a new prompt task below it.
-  console.log('>>>', raw);
+CMD.head = function(raw, flat, line, hit, cmd){
+  flat = (raw || '').flat();
+  line = flat.split(/\r\n|\n|\r/)[0] || '';
+  hit = line.match(/^(.*?)(\$|#|>|%|~%|PS>)\s*([\s\S]*)$/);
+  cmd = hit ? hit[3].trim() : line.trim();
+  return {
+    path: hit ? hit[1].trim() : '',
+    sign: hit ? hit[2].trim() : '$',
+    line: line,
+    cmd: cmd,
+    bin: (cmd.split(/\s+/)[0] || '').trim()
+  };
 }
+CMD.bash = function(raw, t, h, r, i){
+  h = CMD.head(raw);
+  if(!h.cmd){ return }
+  t = CMD.live || fresh();
+  CMD.live = null;
+  text(t.all('symbol')[0], h.sign + ' ');
+  text(t.all('prompt')[0], h.cmd);
+  t.all('prompt')[0].removeAttribute('contenteditable');
+  r = t.all('raw')[0];
+  text(r, (raw || '').flat());
+  if(!t.parentNode){ root.append(t) }
+  if(h.bin){
+    i = t.all('iframe')[0];
+    i.onload = function(){
+      if(!i.readyState){ return i.remove() }
+      kit.say(raw, h.bin, i);
+      r.remove();
+    };
+    i.src = './cmd/' + h.bin + '.html';
+  }
+  next();
+}
+
+document.body.ear('click', function(eve, b){
+  b = eve.target.closest('kit button');
+  if(!b){ return }
+  kit.say(b.textContent, 'prompt');
+});
  
 }(window.shell = function(){
 
