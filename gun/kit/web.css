@@ -65,7 +65,6 @@ a, p { display: inline-block; }
 
 kit {
   padding: 0;
-  margin-right: 0.5em;
   background: transparent;
   z-index: 101;
   overflow-y: auto;
