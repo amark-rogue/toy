@@ -38,6 +38,11 @@
 
 <style>
 :root { --fill: var(--mood); --font: 'Courier New', monospace; }
+html,
+body {
+  scroll-timeline-name: --top;
+  scroll-timeline-axis: block;
+}
 body { display: block; background: var(--fill); }
 shell {
   width: 100%;
@@ -86,7 +91,7 @@ body::before {
   z-index: 99;
   pointer-events: none;
   animation: veil linear both;
-  animation-timeline: scroll(root block);
+  animation-timeline: --top;
   animation-range: 0 7em;
 }
 
