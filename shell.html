@@ -73,10 +73,10 @@ iframe {
   width: 100%;
 }
 
-bo-dy::before {
+body::before {
   content: "";
   position: fixed;
-  top: 0;
+  top: -5em;
   left: 0;
   right: 0;
   height: 7em;
@@ -85,6 +85,13 @@ bo-dy::before {
   mask-image: linear-gradient(to bottom, #000 0%, transparent 100%);
   z-index: 99;
   pointer-events: none;
+  animation: veil linear both;
+  animation-timeline: scroll(root block);
+  animation-range: 0 7em;
+}
+
+@keyframes veil {
+  to { top: 0; }
 }
 
 </style>
@@ -214,7 +221,7 @@ function next(t){
   t = fresh();
   root.append(t);
   shell.$ = t.all('prompt')[0];
-  shell.$.focus();
+  //shell.$.focus();
 }
 
 //kit.ear('clear',eve=>{ root.innerHTML = ""; next(); });
