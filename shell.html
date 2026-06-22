@@ -95,8 +95,29 @@ body::before {
   animation-range: 0 7em;
 }
 
+body::after {
+  content: "";
+  position: fixed;
+  bottom: -7em;
+  left: 0;
+  right: 0;
+  height: 7em;
+  background: var(--fill);
+  -webkit-mask-image: linear-gradient(to top, #000 0%, transparent 100%);
+  mask-image: linear-gradient(to top, #000 0%, transparent 100%);
+  z-index: 99;
+  pointer-events: none;
+  animation: foot linear both reverse;
+  animation-timeline: --top;
+  animation-range: calc(100% - 7em) 100%;
+}
+
 @keyframes veil {
   to { top: 0; }
+}
+
+@keyframes foot {
+  to { bottom: 0; }
 }
 
 </style>
