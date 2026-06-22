@@ -269,6 +269,10 @@ window.AI = {
   async spell(w){
     return this.ask('TEXT ONLY NO HTML spell correct & add next predicted word to this sentence: '+w);
   },
+  doc(a){
+    a = new DOMParser().parseFromString(a, 'text/html');
+    return (a=a.body||a).all('.a')[0]||a;
+  },
   async code(q, code, path, res, data, one, msg){ console.log("ask OR", q, code, path);
       res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST", headers: { "Authorization": "Bearer "+await AI.key(), "Content-Type": "application/json",

@@ -38,6 +38,7 @@ html, body /*, main, .page*/ {
   background-size: cover;
   scrollbar-width: thin;
   scrollbar-color: var(--pop) transparent;
+  touch-action: manipulation;
 } body, main { display: grid; place-items: var(--drip); }
 /*.page { dis-play:none } .page:target { display:grid; }*/
 main, .page {

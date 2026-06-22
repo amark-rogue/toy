@@ -62,6 +62,7 @@ prompt {
 }
 help {
   filter: hue-rotate(220deg) brightness(2);
+  touch-action: manipulation;
 }
 fit { display: none; }
 ::selection { background: var(--pop); color: var(--fill); }
@@ -89,7 +90,8 @@ bo-dy::before {
 </style>
 <script src="util.js"></script>
 <script>;(function(shell){ shell();
-var root = document.body.all('shell')[0];
+face = document.body;
+var root = face.all('shell')[0];
 var task = root.all('task')[0];
 var model = task.cloneNode(1);
 (shell.$ = task.all('prompt')[0]).focus();
@@ -102,7 +104,7 @@ kit.ear('chat',(eve)=>{ var d = eve.detail || eve.data || '';
   CMD.stream(d);
 });
 
-document.body.ear('keydown',function(eve){
+face.ear('keydown',function(eve){
   if(!eve.target.matches('prompt')){ return }
   shell.$ = eve.target;
   if('enter' == eve.key.toLowerCase() && !eve.shiftKey){
@@ -114,12 +116,10 @@ document.body.ear('keydown',function(eve){
 });
 kit.ear('prompt',(eve)=>{
   var cmd = eve.detail||eve.data;
-  cmd = cmd || shell.$.textContent;
-  cmd = (cmd || '').trim();
-  if(!cmd){ text(shell.$, ''); return }
-  text(shell.$, cmd);
+  cmd = (cmd || shell.$.textContent || '').trim();
+  shell.$.textContent = cmd;
   //shell.$.removeAttribute('contenteditable');
-  CMD.live = shell.$.up('task');
+  CMD.live = shell.$.up('task')[0];
   kit.say(cmd+'\r','host');
   screen.buzz();
 });
@@ -137,7 +137,7 @@ CMD.stream = function(raw){
     CMD.raw = part[part.length - 1];
     for(i = 0; i < done.length; i += 1){ CMD.bash(done[i]) }
   }
-  if(CMD.live){ text(CMD.live.all('raw')[0], ((window.shellReply || {}).clean ? window.shellReply.clean(CMD.raw) : CMD.raw).flat()) }
+  if(CMD.live && CMD.live.all){ text(CMD.live.all('raw')[0], ((window.shellReply || {}).clean ? window.shellReply.clean(CMD.raw) : CMD.raw).flat()) }
 }
 CMD.head = function(raw, flat, line, hit, cmd){
   flat = (raw || '').flat();
@@ -177,13 +177,19 @@ CMD.bash = function(raw, t, h, r, i){
 CMD.help = function(eve){ var $ = shell.$;
   if(CMD.help.wait){ clearTimeout(CMD.help.wait) }
   CMD.help.wait = setTimeout(async function(){try{
-    ask = $.textContent;
+    var ask = $.textContent;
     var answer = await AI.ask("1 sentence reply for terminal shell or code help:" + ask);
-    var doc = new DOMParser().parseFromString(answer, 'text/html');
-    var v = doc.querySelector('.a') || doc.body;
-    $.up().all('help')[0].textContent = v.textContent;
+    var a = AI.doc(answer), help = $.up().all('help')[0];
+    help.textContent = a.textContent + " Tap to execute suggestion.";
+    help.cmd = (a.all('code')[0]||a.all('b')[0]||'').textContent||'';
   }catch(e){}},99+(Math.random()*250));
 }
+face.ear('click', function(eve, help){
+  if(!(help = eve.target.up('help')[0])){ return }
+  if(!help.cmd){ return }
+  shell.$ = help.up().all('prompt')[0];
+  kit.say(help.cmd, 'prompt');
+});
 
 function text(v, s){
   v.textContent = s || '';
@@ -197,6 +203,7 @@ function fresh(t){
   text(t.all('prompt')[0], '');
   t.all('prompt')[0].setAttribute('contenteditable', 'true');
   text(t.all('help')[0], ' ');
+  t.all('help')[0].cmd = '';
   text(t.all('raw')[0], '');
   t.all('iframe')[0].removeAttribute('src');
   return t;
@@ -210,13 +217,7 @@ function next(t){
   shell.$.focus();
 }
 
-document.body.ear('click', function(eve, b){
-  b = eve.target.closest('kit button');
-  if(!b){ return }
-  kit.say(b.textContent, 'prompt');
-});
-
-kit.ear('clear',eve=>{ root.innerHTML = ""; next(); });
+//kit.ear('clear',eve=>{ root.innerHTML = ""; next(); });
 
 }(window.shell = function(){
 
