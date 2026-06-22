@@ -60,6 +60,9 @@ prompt {
   caret-shape: block;
   white-space: pre-wrap;
 }
+help {
+  filter: hue-rotate(220deg) brightness(2);
+}
 fit { display: none; }
 ::selection { background: var(--pop); color: var(--fill); }
 fit { display: none; }
@@ -91,38 +94,6 @@ var task = root.all('task')[0];
 var model = task.cloneNode(1);
 (shell.$ = task.all('prompt')[0]).focus();
 
-function up(n, q){
-  while(n && n !== document){
-    if(n.matches && n.matches(q)){ return n }
-    n = n.parentNode;
-  }
-}
-
-function text(v, s){
-  v.textContent = s || '';
-  if(!s){ v.append(document.createElement('br')) }
-  return v;
-}
-
-function fresh(t){
-  t = model.cloneNode(1);
-  text(t.all('symbol')[0], '$ ');
-  text(t.all('prompt')[0], '');
-  t.all('prompt')[0].setAttribute('contenteditable', 'true');
-  text(t.all('help')[0], '');
-  text(t.all('raw')[0], '');
-  t.all('iframe')[0].removeAttribute('src');
-  return t;
-}
-
-function next(t){
-  if((root.lastElementChild || {}).all && root.lastElementChild.all('prompt[contenteditable=true]')[0]){ return }
-  t = fresh();
-  root.append(t);
-  shell.$ = t.all('prompt')[0];
-  shell.$.focus();
-}
-
 kit.ear('chat',(eve)=>{ var d = eve.detail || eve.data || '';
   if('{'==d[0]){ try{
 
@@ -139,6 +110,7 @@ document.body.ear('keydown',function(eve){
     kit.say('', 'prompt');
     return;
   }
+  CMD.help(eve);
 });
 kit.ear('prompt',(eve)=>{
   var cmd = eve.detail||eve.data;
@@ -147,8 +119,7 @@ kit.ear('prompt',(eve)=>{
   if(!cmd){ text(shell.$, ''); return }
   text(shell.$, cmd);
   //shell.$.removeAttribute('contenteditable');
-  CMD.live = up(shell.$, 'task');
-  console.log("PROMPT SAY", cmd);
+  CMD.live = shell.$.up('task');
   kit.say(cmd+'\r','host');
   screen.buzz();
 });
@@ -203,13 +174,50 @@ CMD.bash = function(raw, t, h, r, i){
   }
   next();
 }
+CMD.help = function(eve){ var $ = shell.$;
+  if(CMD.help.wait){ clearTimeout(CMD.help.wait) }
+  CMD.help.wait = setTimeout(async function(){try{
+    ask = $.textContent;
+    var answer = await AI.ask("1 sentence reply for terminal shell or code help:" + ask);
+    var doc = new DOMParser().parseFromString(answer, 'text/html');
+    var v = doc.querySelector('.a') || doc.body;
+    $.up().all('help')[0].textContent = v.textContent;
+  }catch(e){}},99+(Math.random()*250));
+}
+
+function text(v, s){
+  v.textContent = s || '';
+  if(!s){ v.append(document.createElement('br')) }
+  return v;
+}
+
+function fresh(t){
+  t = model.cloneNode(1);
+  text(t.all('symbol')[0], '$ ');
+  text(t.all('prompt')[0], '');
+  t.all('prompt')[0].setAttribute('contenteditable', 'true');
+  text(t.all('help')[0], ' ');
+  text(t.all('raw')[0], '');
+  t.all('iframe')[0].removeAttribute('src');
+  return t;
+}
+
+function next(t){
+  if((root.lastElementChild || {}).all && root.lastElementChild.all('prompt[contenteditable=true]')[0]){ return }
+  t = fresh();
+  root.append(t);
+  shell.$ = t.all('prompt')[0];
+  shell.$.focus();
+}
 
 document.body.ear('click', function(eve, b){
   b = eve.target.closest('kit button');
   if(!b){ return }
   kit.say(b.textContent, 'prompt');
 });
- 
+
+kit.ear('clear',eve=>{ root.innerHTML = ""; next(); });
+
 }(window.shell = function(){
 
 }));

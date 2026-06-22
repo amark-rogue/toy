@@ -4,6 +4,13 @@ dom.new = function(t){ return (this.all(t)[0]||document.createElement(t)).cloneN
 dom.ear =doms.ear= function(e,h){ return all(this,v=>{v.addEventListener(e,h)}) };
 dom.tag =doms.tag= function(c,s){ return all(this,v=>{v.classList[s?(s>0?'add':'remove'):'toggle'](c)}) };
 
+dom.up = function(q,l){ if(!q){ return this.parentNode };
+  l = []; all(this,v=>{ while(v && v !== document){
+    if(v.matches && v.matches(q)){ break }
+    v = v.parentNode;
+  }; l.push(v);
+}); return l };
+
 String.prototype.cut = function(f, e, c){ e = e||{}, c = c||'\\';
   var q = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), L = v => ('string' == typeof v)?[v]:v,
     P = Object.entries(e).map(([k, v]) => q(k)+'[^]*?(?:'+L(v.end||v||k).map(q).join('|')+'|$)').concat(c? q(c)+'[^]' : []),
@@ -245,3 +252,42 @@ String.prompts = function(t){
 String.prototype.splitPrompts = function(){
   return String.prompts(this);
 };
+
+
+
+
+
+
+window.AI = {
+  async txt(url, res){
+    res = await fetch(url);
+    return await res.text();
+  },
+  async ask(q){
+    return this.txt("https://ch.at/"+encodeURIComponent(q));
+  },
+  async spell(w){
+    return this.ask('TEXT ONLY NO HTML spell correct & add next predicted word to this sentence: '+w);
+  },
+  async code(q, code, path, res, data, one, msg){ console.log("ask OR", q, code, path);
+      res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST", headers: { "Authorization": "Bearer "+await AI.key(), "Content-Type": "application/json",
+        //'HTTP-Referer': window.location.href, // be ranked?
+        'X-Title': 'Code on Phone'
+      }, body: JSON.stringify({
+        model: "openrouter/free",
+        messages: [{role:'system',content:"IMPORTANT: REPLY WITH ONLY CODE, NO EXPLAIN!!! You are a super genius John Carmack but of "+(path||"performance coding")+", it has 10M+ monthly users on decade+ old low end netbooks, so help me with blazing fast, low dependency, simple clean code for: ```"+code},{ role: "user", content: q }],
+        max_tokens: 100_000,
+        temperature: 0.7,
+        stream: false
+      }),
+    });
+    data = await res.json();
+    one = (((data || {}).choices || [])[0] || {});
+    msg = (one.message || {}).content;
+    return msg || JSON.stringify(data);
+  },
+  async key(){
+    return key || (key = localStorage.ork || (localStorage.ork = await UI.prompt(`openrouter key?`)));
+  }
+}
