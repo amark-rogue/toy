@@ -193,6 +193,32 @@ body::before {
   text-shadow: none;
 }
 
+@media (max-width: 640px) {
+  .kit {
+    position: fixed;
+    bottom: 3.5em;
+    left: 0;
+    right: 0;
+    width: 100%;
+    height: auto;
+    overflow-x: auto;
+    overflow-y: hidden;
+    pointer-events: auto;
+  }
+  .kit::before { display: none; }
+  .kit .tin {
+    flex-direction: row;
+    gap: 0.3em;
+    padding: 0.3em;
+    justify-content: flex-start;
+  }
+  .kit button {
+    padding: 0.4em 0.7em;
+    font-size: 0.8em;
+  }
+  #shell { padding-bottom: 8em; }
+}
+
 form {
   position: fixed;
   bottom: 0;
@@ -312,8 +338,11 @@ var card = function(val, kind, sid){
   v.append(p);
   i.src = './cmd/'+kind+'.html';
   shell.append(v);
+  var sent;
   i.onload = function(e){
     if(!i.readyState){ return i.remove() }
+    if(sent) return;
+    sent = 1;
     var msg = {prompt:val, cwd:(localStorage.cwd || '')};
     if(sid) msg[sidKey(kind)] = sid;
     kit.say(msg, kind, i);
@@ -351,8 +380,9 @@ kit.ear('style',()=>{ tip(); });
 kit.ear('scroll',()=>{ go(); });
 
 kit.ear('host',(eve)=>{
-  if(eve.target === window){ return }
-  kit.up(eve.detail || eve.data, 'host');
+  var d = eve.detail || eve.data;
+  if(eve.target === window && typeof d === 'string'){ return }
+  kit.up(d, 'host');
 });
 
 kit.ear('chat',(eve)=>{ var d = eve.detail || eve.data || '';
@@ -513,10 +543,12 @@ kit.ear('belt', function(eve, data, b){
 
   b.onclick = function(){
     if(data.key){ tapKey(name); return; }
+    if(name === 'mic'){ try{ window.parent.mic() }catch(e){} b.tag('live'); return; }
     kit.say(data.prompt||data[1], 'prompt');
   };
   belt.append(b);
 });
+kit.say({name:'mic', prompt:'mic'}, 'belt');
 ais.forEach(function(k){ kit.say([k, k+' '], 'belt') });
 kit.say(['exit','exit'], 'belt');
 setTimeout(()=>{
@@ -531,7 +563,30 @@ setTimeout(()=>{
 });
 
 },999);
-                         
+
+// --- Voice: status + TTS ---
+;(function(){
+kit.ear('help', function(eve){
+  var msg = eve.detail || eve.data || '';
+  help.textContent = msg;
+});
+kit.ear('voice', function(eve){
+  var txt = eve.detail || eve.data;
+  if (!txt) return;
+  if (txt.length > 800) txt = txt.slice(0, 800);
+  var u = new SpeechSynthesisUtterance(txt);
+  u.rate = 1.1;
+  speechSynthesis.speak(u);
+});
+kit.ear('mic', function(eve){
+  var txt = eve.detail || eve.data;
+  if (!txt) return;
+  prompt.value = txt;
+  autoGrow(prompt);
+  kit.say('', 'prompt');
+});
+}());
+
 prompt.oninput = function(eve){
   autoGrow(prompt);
   //console.log("oninput?", prompt.value, eve);
@@ -642,11 +697,17 @@ CMD.bash = function(S, cmdl, cmd, tmp){
     var lines = t.split(/[\r\n]+/);
     var cmdLine = lines[0].replace(/^.*(?:\$|#|>|PS>)\s*/,'').trim();
     if(/^pwd\b/.test(cmdLine)){
-      // pwd output is the last non-empty line before prompt
       for(var li = lines.length-1; li >= 1; li--){
         var ln = lines[li].trim();
         if(ln && ln.charAt(0) === '/'){ localStorage.cwd = ln; break; }
       }
+    }
+    if(/^cd\b/.test(cmdLine)){
+      var cdArg = cmdLine.replace(/^cd\s+/,'').replace(/['"]/g,'').trim();
+      if(cdArg === '~' || cdArg === '') localStorage.cwd = '';
+      else if(cdArg === '..') localStorage.cwd = (localStorage.cwd||'').replace(/\/[^\/]*$/,'') || '/';
+      else if(cdArg.charAt(0) === '/') localStorage.cwd = cdArg;
+      else if(localStorage.cwd) localStorage.cwd = localStorage.cwd + '/' + cdArg;
     }
     var cmdFull = t.cut(['\r\n','\n','\r'],ESC)[0].trim().replace(/^.*(?:\$|#|>|PS>)\s*/, '');
     var cmd = cmdFull.trim().split(/\s+/)[0].trim();
