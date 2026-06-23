@@ -38,13 +38,14 @@ html, body /*, main, .page*/ {
   background-size: cover;
   scrollbar-width: thin;
   scrollbar-color: var(--pop) transparent;
+  touch-action: manipulation;
 } body, main { display: grid; place-items: var(--drip); }
 /*.page { dis-play:none } .page:target { display:grid; }*/
 main, .page {
   position: absolute; inset: 0;
   width: 100%; min-height: 100vh; min-height: 100dvh;
 }
-div, ul, ol, li, a, p, form, button, input, textarea, img, dialog[open], frame, iframe {
+div, ul, ol, li, a, p, form, button, input, textarea, img, dialog[open], frame, iframe, kit, tin, belt, tray {
   border: 0;
   margin: 0;
   padding: 0;
@@ -62,6 +63,107 @@ div, ul, ol, li, a, p, form, button, input, textarea, img, dialog[open], frame, 
   font: inherit;
 }
 a, p { display: inline-block; }
+
+kit {
+  padding: 0;
+  background: transparent;
+  z-index: 101;
+  overflow-y: auto;
+  overflow-x: visible;
+  scrollbar-width: none;
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  width: max-content;
+  animation: none !important;
+  height: 100vh;
+  pointer-events: none;
+  -ms-overflow-style: none;
+}
+kit::before {
+  content: " ";
+  height: calc(100vh - 4.5em);
+  width: 100%;
+}
+kit tin {
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  animation: none !important;
+}
+kit belt {
+  background: transparent;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  overflow-x: auto;
+  overflow-y: visible;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+  width: 100vw;
+  max-width: none;
+  pointer-events: none;
+  touch-action: auto;
+  -webkit-overflow-scrolling: touch;
+  animation: none !important;
+  -ms-overflow-style: none;
+}
+kit belt::before {
+  content: " ";
+  display: block;
+  flex: 0 0 calc(100vw - 6em);
+  width: calc(100vw - 6em);
+  height: 1px;
+  pointer-events: none;
+}
+kit tray {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  justify-content: flex-end;
+  width: max-content;
+  max-width: none;
+  pointer-events: auto;
+  touch-action: auto;
+  animation: none !important;
+}
+kit belt::-webkit-scrollbar { display: none; }
+kit::-webkit-scrollbar { display: none; }
+kit button {
+  scroll-snap-align: end;
+  pointer-events: auto;
+  touch-action: auto;
+  -webkit-overflow-scrolling: touch;
+  flex: 0 0 auto;
+  text-align: right;
+  -webkit-backdrop-filter: blur(var(--blur) );
+  backdrop-filter: blur(var(--blur));
+  background: rgba(0,0,0,0.2);
+
+  border: 1px solid var(--pop);
+  box-shadow: 0 0 0.1em var(--pop);
+  animation: none !important;
+  padding: 0.5em 1em;
+  border-radius: 0.5em;
+  font-size: 1.1em;
+  font-weight: 900;
+  cursor: pointer;
+  white-space: nowrap;
+  text-shadow: 0 0 5px var(--pop);
+}
+kit button:active {
+  background: var(--pop);
+  color: var(--mood);
+  transform: scale(0.92);
+  text-shadow: none;
+}
+kit button.live {
+  background: var(--pop);
+  color: var(--mood);
+  text-shadow: none;
+}
 
 .ani {
   animation: stage linear both;
@@ -275,4 +377,3 @@ p + p {
   50% {opacity: 0.5;}
   100% {opacity: 1;}
 }
-

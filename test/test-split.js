@@ -1,7 +1,9 @@
 const fs = require('fs');
+const path = require('path');
 
 // Load the util.js function manually for testing (since it's meant for browser)
-const utilCode = fs.readFileSync('/data/data/com.termux/files/home/node_modules/toy/util.js', 'utf8');
+const root = path.resolve(__dirname, '..');
+const utilCode = fs.readFileSync(path.join(root, 'util.js'), 'utf8');
 
 // A minimal mock of DOM so util.js can execute without crashing
 global.HTMLElement = function(){};
@@ -21,12 +23,14 @@ global.window = {
   Tool: {}
 };
 global.Tool = {};
+global.screen = {};
+global.navigator = {};
 
 // Evaluate the util.js code in this context
 eval(utilCode);
 
 function testLog(name) {
-  const logPath = `/data/data/com.termux/files/home/node_modules/toy/test/samples/${name}`;
+  const logPath = path.join(__dirname, 'samples', name);
   if (!fs.existsSync(logPath)) {
     console.log(`Log file not found: ${name}`);
     return;
