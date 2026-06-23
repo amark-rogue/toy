@@ -61,13 +61,27 @@ kit tin > button {
 </style>
 <kit><tin>
 	<div class="belt"><div class="drawer">
-		<button id="btn-new">new</button>
+		<button id="btn-find">find</button>
+		<button id="btn-copy">copy</button>
 		<button id="btn-undo">undo</button>
 		<button id="btn-redo">redo</button>
-		<button id="btn-copy">copy</button>
 		<button id="btn-paste">paste</button>
-		<button id="btn-del">delete</button>
-		<button id="btn-find">find</button>
+	</div></div>
+	<div class="belt"><div class="drawer">
+		<button id="btn-new">new</button>
+		<button id="btn-delete">delete</button>
+	</div></div>
+	<div class="belt"><div class="drawer">
+		<button>claude</button>
+		<button>codex</button>
+		<button>gemini</button>
+		<button>claude</button>
+	</div></div>
+	<div class="belt"><div class="drawer">
+		<button>ls</button>
+		<button>git</button>
+		<button>npm</button>
+		<button>kill</button>
 	</div></div>
 </tin></kit>
 <style>
@@ -246,6 +260,7 @@ APP.drawall=function(list){
 APP.go=function(){
 	var at=performance.now(), ast=mug(APP.code.value), ms=performance.now()-at;
 	APP.drawall(ast.run);APP.stat.textContent=ast.num+' bits in '+ms.toFixed(2)+'ms';
+	APP.ast = ast;
 	try{localStorage.mugbrick=APP.code.value}catch(e){}
 }
 APP.code.oninput=APP.go;
