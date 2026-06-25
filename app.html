@@ -4,94 +4,56 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
 <link rel="manifest" href="./manifest.json">
+<script>navigator?.serviceWorker.register?.('./sw.js')</script>
 <link rel="stylesheet" href="./gun/kit/web.css"><script src="./gun/kit/web.js"></script>
+
 <form id="sign" onsubmit="cop.sign()">
   <input id="host" name="host" placeholder="host:" class="fog sap lip">
   <input id="pass" name="pass" type="password" placeholder="pass:" class="fog sap lip">
   <button type="submit"></button>
 </form>
-<dialog id="vmDialog" class="fog sap lip" style="background: var(--mood, #000); color: var(--pop, lime); border: 1px solid var(--pop, lime); border-radius: 1em; padding: 2em; z-index: 1000;">
-  <p style="margin-top: 0; font-family: monospace;">Host failed to connect.</p>
-  <p style="font-family: monospace;">Do you want to boot a Linux VM in the browser?</p>
-  <div style="display: flex; justify-content: flex-end; gap: 1em; margin-top: 2em; font-family: monospace;">
-    <button onclick="vmDialog.close('no')" style="background: transparent; color: inherit; border: 1px solid var(--pop, lime); padding: 0.5em 1em; border-radius: 0.5em; cursor: pointer;">No</button>
-    <button onclick="vmDialog.close('yes')" style="background: var(--pop, lime); color: var(--mood, #000); border: none; padding: 0.5em 1em; border-radius: 0.5em; cursor: pointer; font-weight: bold;">Yes</button>
-  </div>
-</dialog>
-<div id="vmBoot" style="display:none; position:fixed; bottom:4em; left:1em; right:1em; z-index:999; font-family:monospace; color:var(--pop, lime); font-size:0.8em; opacity:0.7; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></div>
+
 <style>
 :root { --fill: var(--mood); }
 #sign { flex-shrink: 0; }
 iframe { width: 100%; flex: 1; min-height: 0; height: 0 !important; border: none; display: block; }
 input::placeholder { opacity: 1; }
 </style>
-<script>
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('./sw.js').catch(console.error);
-}
-</script>
-<script src="vm.js"></script>
-<script>location.hash = '';</script>
+
+<script src="util.js"></script>
 <script>;(function(cop){
+
+location.hash = '';
 host.focus();
 console.off=1;
 
 cop.sign = async ()=>{ if(cop.ws){ return }
-  var opened = false;
   cop.ws = new WebSocket((localStorage.host=host.value).replace(/^http/,'ws')||'ws://localhost:8022');
-  cop.ws.onopen = ()=>{
-    opened = true;
-    cop.ws.send(localStorage.pass=pass.value);
-    location.path = 'chat.html';
+  cop.ws.onopen = ()=>{ cop.ws.send(localStorage.pass=pass.value);
+    location.path = 'shell.html';
   };
   cop.ws.onmessage = (eve) => { kit.say(eve.data,'chat') };
   cop.ws.onerror = (err) => { console.error('ws err:', err) };
-  cop.ws.onclose = (eve) => { cop.ws=0;
-    if(!opened){
-      vmDialog.showModal();
-      vmDialog.onclose = function(){
-        if(vmDialog.returnValue === 'yes'){
-          VM.boot({
-            tip: vmBoot,
-            say: (out) => { kit.say(out, 'chat') },
-            onshim: (ws) => {
-              cop.ws = ws;
-              while(cop.pre.length) cop.ws.send(cop.pre.shift());
-            },
-            onready: () => { location.path = 'chat.html' }
-          });
-        }
-      };
-    } else {
-      cop.wait = cop.wait || 1000;
-      kit.say('Reconnecting...\n', 'chat');
-      setTimeout(() => { cop.wait = Math.min(cop.wait * 2, 30000); cop.sign() }, cop.wait);
-    }
+  cop.ws.onclose = (eve) => { cop.ws=0; kit.say('Reconnecting...\n', 'chat');
+    setTimeout(() => { cop.wait = Math.min(cop.wait * 2, 30000); cop.sign() }, cop.wait = cop.wait || 1000);
   };
   cop.ws.onopen = ((fn) => () => { cop.wait = 1000; fn() })(cop.ws.onopen);
 };
 
 (pass.value = localStorage.pass||'') && cop.sign();
 
-cop.pre = [];
-
-// bridge: open.html requests → VM serial proxy
-kit.ear('fetch',(eve)=>{
-  var d = eve.detail||eve.data;
-  if(!d || !d.port) return;
-  VM.srv.fetch(d.port, d.path).then((html) => {
-    kit.say(html, 'open');
-  });
-});
-
-kit.ear('host',(eve)=>{
-  var cmd = eve.detail||eve.data;
-  if(cmd === undefined) return;
+kit.ear('host',(eve,cmd,no)=>{
+  if(no === (cmd = eve.detail||eve.data)){ return }
   var msg = (typeof cmd === 'string') ? cmd : JSON.stringify(cmd);
-  if(!cop.ws){ cop.pre.push(msg); return }
+  if(!cop.ws){ (cop.limbo = cop.limbo||[]).push(msg); return }
   cop.ws.send(msg);
 });
 
 }(window.cop = {}));
 </script>
-<script src="util.js"></script>
+<script src="vm/boot.js"></script>
+<script src="vm/git.js"></script>
+<script src="vm/npm.js"></script>
+<script src="vm/pip.js"></script>
+<script src="vm/apk.js"></script>
+<script src="vm/srv.js"></script>
