@@ -122,22 +122,18 @@ body::after {
 
 </style>
 <script src="util.js"></script>
-<script>;(function(shell){ shell();
-face = document.body;
-var root = face.all('shell')[0];
+<script>;(function(shell){
+var root = shell.all('shell')[0];
 var task = root.all('task')[0];
 var model = task.cloneNode(1);
 (shell.$ = task.all('prompt')[0]).focus();
 
-kit.ear('chat',(eve)=>{ var d = eve.detail || eve.data || '';
-  if('{'==d[0]){ try{
-
-  }catch(e){}}
-  //stream(d);
-  CMD.stream(d);
+kit.ear('chat',(eve, raw)=>{ raw = eve.detail || eve.data || eve;
+  if('{'==raw[0]){ try{ }catch(e){}}
+  shell.stream(raw);
 });
 
-face.ear('keydown',function(eve){
+shell.ear('keydown',function(eve){
   if(!eve.target.matches('prompt')){ return }
   shell.$ = eve.target;
   if('enter' == eve.key.toLowerCase() && !eve.shiftKey){
@@ -145,34 +141,32 @@ face.ear('keydown',function(eve){
     kit.say('', 'prompt');
     return;
   }
-  CMD.help(eve);
 });
 kit.ear('prompt',(eve)=>{
   var cmd = eve.detail||eve.data;
   cmd = (cmd || shell.$.textContent || '').trim();
   shell.$.textContent = cmd;
   //shell.$.removeAttribute('contenteditable');
-  CMD.live = shell.$.up('task')[0];
+  shell.live = shell.$.up('task')[0];
   kit.say(cmd+'\r','host');
   screen.buzz();
 });
 
-var CMD = {};
-CMD.raw = '';
-CMD.stream = function(raw){
+shell.raw = '';
+shell.stream = function(raw){
   var clean, part, done, i;
-  (window.shellReply || {}).maybeContinue && window.shellReply.maybeContinue(raw, {state: CMD, send: function(c){ kit.say(c, 'host') }});
-  CMD.raw += raw || '';
-  clean = (window.shellReply || {}).clean ? window.shellReply.clean(CMD.raw) : CMD.raw;
+  (window.shellReply || {}).maybeContinue && window.shellReply.maybeContinue(raw, {state: shell, send: function(c){ kit.say(c, 'host') }});
+  shell.raw += raw || '';
+  clean = (window.shellReply || {}).clean ? window.shellReply.clean(shell.raw) : shell.raw;
   part = (String.prototype.splitPrompts ? clean.splitPrompts() : String.prompts(clean));
   if(part.length > 1){
     done = part.slice(0, -1);
-    CMD.raw = part[part.length - 1];
-    for(i = 0; i < done.length; i += 1){ CMD.bash(done[i]) }
+    shell.raw = part[part.length - 1];
+    for(i = 0; i < done.length; i += 1){ shell.bash(done[i]) }
   }
-  if(CMD.live && CMD.live.all){ text(CMD.live.all('raw')[0], ((window.shellReply || {}).clean ? window.shellReply.clean(CMD.raw) : CMD.raw).flat()) }
+  if(shell.live && shell.live.all){ text(shell.live.all('raw')[0], ((window.shellReply || {}).clean ? window.shellReply.clean(shell.raw) : shell.raw).flat()) }
 }
-CMD.head = function(raw, flat, line, hit, cmd){
+shell.head = function(raw, flat, line, hit, cmd){
   flat = (raw || '').flat();
   line = flat.split(/\r\n|\n|\r/)[0] || '';
   hit = line.match(/^(.*?)(\$|#|>|%|~%|PS>)\s*([\s\S]*)$/);
@@ -185,11 +179,11 @@ CMD.head = function(raw, flat, line, hit, cmd){
     bin: (cmd.split(/\s+/)[0] || '').trim()
   };
 }
-CMD.bash = function(raw, t, h, r, i){
-  h = CMD.head(raw);
+shell.bash = function(raw, t, h, r, i){
+  h = shell.head(raw);
   if(!h.cmd){ return }
-  t = CMD.live || fresh();
-  CMD.live = null;
+  t = shell.live || fresh();
+  shell.live = null;
   text(t.all('symbol')[0], h.sign + ' ');
   text(t.all('prompt')[0], h.cmd);
   t.all('prompt')[0].removeAttribute('contenteditable');
@@ -207,22 +201,6 @@ CMD.bash = function(raw, t, h, r, i){
   }
   next();
 }
-CMD.help = function(eve){ var $ = shell.$;
-  if(CMD.help.wait){ clearTimeout(CMD.help.wait) }
-  CMD.help.wait = setTimeout(async function(){try{
-    var ask = $.textContent;
-    var answer = await AI.ask("1 sentence reply for terminal shell or code help:" + ask);
-    var a = AI.doc(answer), help = $.up().all('help')[0];
-    help.textContent = a.textContent + " Tap to execute suggestion.";
-    help.cmd = (a.all('code')[0]||a.all('b')[0]||'').textContent||'';
-  }catch(e){}},99+(Math.random()*250));
-}
-face.ear('click', function(eve, help){
-  if(!(help = eve.target.up('help')[0])){ return }
-  if(!help.cmd){ return }
-  shell.$ = help.up().all('prompt')[0];
-  kit.say(help.cmd, 'prompt');
-});
 
 function text(v, s){
   v.textContent = s || '';
@@ -252,7 +230,6 @@ function next(t){
 
 //kit.ear('clear',eve=>{ root.innerHTML = ""; next(); });
 
-}(window.shell = function(){
-
-}));
+}(window.shell = document.body));
 </script>
+<script src="cmd/aid.js"></script>
