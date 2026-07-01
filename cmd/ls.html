@@ -19,21 +19,31 @@
 <style>
 body { display: block; min-height: 0; overflow: hidden; }
 .ls {
-  width: 100%;
+  /*width: 100%;
   display: flex;
   flex-wrap: wrap;
   gap: 0.2em;
   padding: 10px;
-  align-content: flex-start;
+  align-content: flex-start;*/
+  display: block;
+  scroll-padding-left: 50%;
+  scroll-padding-right: 50%;
+  width: 100%;
+  max-height: max(90vh, 26em);
+  column-width: 8em;
+  column-gap: 0.5em;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 .ls a {
   display: block;
   flex: 0 0 auto;
-  min-width: 4em;
-  max-width: 10em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  min-width: 1em;
+  max-width: 8.5em;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-all;
+  line-height: 0.9em;
   padding: 0.7em 0.6em;
   text-align: center;
   background: color-mix(in srgb, var(--pop) 8%, transparent);
@@ -43,6 +53,7 @@ body { display: block; min-height: 0; overflow: hidden; }
   font-weight: 900;
   cursor: pointer;
   user-select: none;
+  margin-bottom: 0.2em;
 }
 .ls a:active {
   background: var(--pop);
@@ -124,7 +135,7 @@ CMD.ls = function(s,v,f,cmd){
   isBack.dataset.val = '..';
   v.append(isBack);
 
-  (s = s.split(f)).forEach((item,a)=>{
+  (s = s.split(f)).sort((a,b)=>a.toLowerCase().localeCompare(b.toLowerCase())).forEach((item,a)=>{
     if(!(item = item.flat().trim())){ return }
     if(item === '..') return;
     
@@ -141,6 +152,8 @@ CMD.ls = function(s,v,f,cmd){
     a.textContent = item + fold;
     v.append(a);
   });
+
+  v.scrollLeft = (v.scrollWidth - v.clientWidth) / 2;
 
   CMD.ls.on = CMD.ls.on || (function(){ 
     var longPressTimer;
