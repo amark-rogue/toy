@@ -374,7 +374,7 @@ body:has(.wane)::after,
   bottom: 0;
   left: -2em;
   width: 2em;
-  background: black;/*var(--fill, var(--mood));*/
+  background: var(--fill, var(--mood));
   -webkit-mask-image: linear-gradient(to right, #000 0%, transparent 100%);
   mask-image: linear-gradient(to right, #000 0%, transparent 100%);
   z-index: 99;
@@ -390,7 +390,7 @@ body:has(.wane)::after,
   right: -2em;
   bottom: 0;
   width: 2em;
-  background: black;/*var(--fill, var(--mood));*/
+  background: var(--fill, var(--mood));
   -webkit-mask-image: linear-gradient(to left, #000 0%, transparent 100%);
   mask-image: linear-gradient(to left, #000 0%, transparent 100%);
   z-index: 99;

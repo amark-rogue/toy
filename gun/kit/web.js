@@ -117,17 +117,124 @@ kit.watch.resize = function(){
     kit.up(kit.size(),'style');
   });
 };
-(kit.watch.observer = new MutationObserver(function(eve,b,low){eve.forEach(function(changes){changes.addedNodes.forEach(function(node){ //console.log("observed change on", node);
+kit.watch.join = function(node, all, i){
+  if(!node || !node.nodeName){ return }
   node.dispatchEvent(new CustomEvent('join '+node.nodeName.toLowerCase(), {bubbles:true}));
   node.dispatchEvent(new CustomEvent('join', {bubbles:true}));
+  all = node.querySelectorAll && node.querySelectorAll('*');
+  if(!all){ return }
+  for(i = 0; i < all.length; i += 1){ kit.watch.join(all[i]) }
+};
+(kit.watch.observer = new MutationObserver(function(eve,b,low){eve.forEach(function(changes){changes.addedNodes.forEach(function(node){ //console.log("observed change on", node);
+  kit.watch.join(node);
   //low = kit.watch.low(node, low); 
 })});
   //console.log(location.pathname.split('/').slice(-1)[0], "LOWEST", low, kit.watch.low(D.body), D.body.scrollHeight);
+  if(kit.vars && kit.vars.sync){ kit.vars.sync() }
   kit.watch.resize();
-})).observe(D.documentElement||D,{childList:true,subtree:true,characterData:true});
+})).observe(D.documentElement||D,{childList:true,subtree:true,characterData:true,attributes:true});
 
 kit.watch.low = function(v,l,f){ f='getBoundingClientRect'; return Math.max(((v[f]?v[f]():'').bottom||0) + (W.pageYOffset || D.documentElement.scrollTop),l||0) }
 kit.watch.wide = function(v,l,f){ f='getBoundingClientRect'; return Math.max(((v[f]?v[f]():'').right||0) + (W.pageXOffset || D.documentElement.scrollLeft),l||0) }
+kit.vars = {};
+kit.vars.fix = function(val, all, seen){
+  return String(val || '').replace(/var\(\s*(--[\w-]+)\s*(?:,\s*([^)]+))?\)/g, function(_, key, alt){
+    if((seen = seen || {})[key]){ return alt || '' }
+    seen[key] = 1;
+    return kit.vars.fix(all[key] || alt || '', all, seen);
+  }).trim();
+};
+kit.vars.take = function(css, out, i, key, val){
+  if(!css){ return out }
+  for(i = 0; i < css.length; i += 1){
+    key = css[i];
+    if(key.slice(0, 2) !== '--'){ continue }
+    val = css.getPropertyValue(key);
+    if(val){ out[key] = val }
+  }
+  return out;
+};
+kit.vars.rule = function(el, out, rules, i, rule, css){
+  if(!rules){ return out }
+  for(i = 0; i < rules.length; i += 1){
+    rule = rules[i];
+    if(rule.conditionText && W.matchMedia && !W.matchMedia(rule.conditionText).matches){ continue }
+    if(rule.cssRules){ kit.vars.rule(el, out, rule.cssRules); continue }
+    css = rule.style;
+    if(!css || !rule.selectorText){ continue }
+    try{ if(!el.matches(rule.selectorText)){ continue } }catch(e){ continue }
+    kit.vars.take(css, out);
+  }
+  return out;
+};
+kit.vars.get = function(el, out, css, i, key, val){
+  out = {};
+  for(i = 0; i < D.styleSheets.length; i += 1){
+    try{ kit.vars.rule(el, out, D.styleSheets[i].cssRules) }catch(e){}
+  }
+  kit.vars.take(el.style, out);
+  css = W.getComputedStyle(el);
+  kit.vars.take(css, out);
+  return out;
+};
+kit.vars.all = function(out, key){
+  out = kit.vars.get(D.documentElement);
+  if(D.body){
+    var bod = kit.vars.get(D.body);
+    for(key in bod){ out[key] = bod[key] }
+  }
+  for(key in out){ out[key] = kit.vars.fix(out[key], out) }
+  return out;
+};
+kit.vars.pull = function(src, dst, was, key, val, now){
+  src = src && src.style; if(!src){ return }
+  dst = dst || D.documentElement; if(!dst){ return }
+  was = dst._kitVar || (dst._kitVar = {});
+  for(var i = 0; i < src.length; i += 1){
+    key = src[i];
+    if(key.slice(0, 2) !== '--'){ continue }
+    val = src.getPropertyValue(key);
+    now = dst.style.getPropertyValue(key);
+    if(was[key] && now && now !== was[key]){ continue }
+    dst.style.setProperty(key, val);
+    was[key] = val;
+  }
+};
+kit.vars.put = function(i, d, el, css, all, was, key, val, now){
+  try{
+    if(!i){ return }
+    all = kit.vars.all();
+    for(key in all){ i.style.setProperty(key, all[key]) }
+    d = i.contentDocument; if(!d){ return }
+    el = d.documentElement; if(!el){ return }
+    if(i._kitDoc !== d){ i._kitDoc = d; i._kitVar = {} }
+    css = i.contentWindow && i.contentWindow.getComputedStyle(el);
+    was = i._kitVar || (i._kitVar = {});
+    for(key in all){
+      val = all[key];
+      now = css ? css.getPropertyValue(key) : el.style.getPropertyValue(key);
+      if(was[key] && now && now !== was[key]){ continue }
+      el.style.setProperty(key, val);
+      was[key] = val;
+    }
+  }catch(e){}
+};
+kit.vars.push = function(){
+  D.querySelectorAll('iframe').forEach(kit.vars.put);
+};
+kit.vars.sync = function(){
+  if(kit.vars.wait){ return }
+  kit.vars.wait = W.requestAnimationFrame(function(){
+    kit.vars.wait = 0;
+    kit.vars.push();
+  });
+};
+if(W.parent !== W){
+  try{
+    if(W.parent.kit && W.parent.kit.vars && W.frameElement){ W.parent.kit.vars.put(W.frameElement) }
+    kit.vars.pull(W.frameElement);
+  }catch(e){}
+}
 kit.frame = {};
 kit.frame.visible = function(i, r, s){
   if(!i || !i.isConnected){ return 0 }
@@ -219,17 +326,23 @@ kit.frame.lockScroll = function(i,d,b,w,y){
   i.addEventListener('load', apply);
 };
 kit.ear('join iframe',kit.add=function(eve){
-  //console.log(location.pathname.split('/').slice(-1)[0], "JOIN");
   kit.views.set(eve.target.contentWindow, eve.target);
+  kit.vars.put(eve.target);
+  eve.target.addEventListener('load', function(){ kit.vars.put(eve.target) });
   kit.frame.lockScroll(eve.target);
   kit.frame.refresh();
 });
 W[ON]('hashchange', kit.frame.refresh);
 W[ON]('load', kit.watch.resize);
+W[ON]('load', kit.vars.push);
 W[ON]('resize', kit.watch.resize);
+W[ON]('resize', kit.vars.sync);
 W[ON]('pageshow', kit.watch.resize);
+W[ON]('pageshow', kit.vars.push);
 W[ON]('transitionend', kit.watch.resize, true);
 W[ON]('animationend', kit.watch.resize, true);
+W[ON]('transitionend', kit.vars.push, true);
+W[ON]('animationend', kit.vars.push, true);
 if((D.fonts||'').ready){ D.fonts.ready.then(kit.watch.resize) }
 kit.ear('style',function(eve,i){
   if(!eve.target || !eve.target.style){ return }
