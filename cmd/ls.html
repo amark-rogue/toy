@@ -208,11 +208,9 @@ CMD.ls = function(s,v,f,cmd){
 	        kit.say('cat ' + quoteArg(val), 'prompt');
 	      } else {
 	        if(val === '..') {
-	          kit.say('cd ..', 'prompt');
-	          kit.say('ls .', 'prompt');
+	          kit.say({run: 'cd .. && ls .', cmd: 'ls .', bin: 'ls'}, 'prompt.same');
 	        } else {
-	          kit.say('cd ' + quoteArg(val), 'prompt');
-	          kit.say('ls .', 'prompt');
+	          kit.say({run: 'cd ' + quoteArg(val) + ' && ls .', cmd: 'ls .', bin: 'ls'}, 'prompt.same');
 	        }
 	      }
 	    })
