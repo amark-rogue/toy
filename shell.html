@@ -1,4 +1,4 @@
-<link rel="stylesheet" href="./gun/kit/web.css"><script src="./gun/kit/web.js"></script>
+<html class="wane"><body class="wane"><link rel="stylesheet" href="./gun/kit/web.css"><script src="./gun/kit/web.js"></script>
 
 <shell>
   <task>
@@ -38,11 +38,6 @@
 
 <style>
 :root { --fill: var(--mood); --font: 'Courier New', monospace; }
-html,
-body {
-  scroll-timeline-name: --top;
-  scroll-timeline-axis: block;
-}
 body { display: block; background: var(--fill); }
 shell {
   width: 100%;
@@ -80,48 +75,6 @@ iframe {
 }
 iframe.shut {
   height: 0 !important;
-}
-
-body::before {
-  content: "";
-  position: fixed;
-  top: -5em;
-  left: 0;
-  right: 0;
-  height: 7em;
-  background: var(--fill);
-  -webkit-mask-image: linear-gradient(to bottom, #000 0%, transparent 100%);
-  mask-image: linear-gradient(to bottom, #000 0%, transparent 100%);
-  z-index: 99;
-  pointer-events: none;
-  animation: veil linear both;
-  animation-timeline: --top;
-  animation-range: 0 7em;
-}
-
-body::after {
-  content: "";
-  position: fixed;
-  bottom: -7em;
-  left: 0;
-  right: 0;
-  height: 7em;
-  background: var(--fill);
-  -webkit-mask-image: linear-gradient(to top, #000 0%, transparent 100%);
-  mask-image: linear-gradient(to top, #000 0%, transparent 100%);
-  z-index: 99;
-  pointer-events: none;
-  animation: foot linear both reverse;
-  animation-timeline: --top;
-  animation-range: calc(100% - 7em) 100%;
-}
-
-@keyframes veil {
-  to { top: 0; }
-}
-
-@keyframes foot {
-  to { bottom: 0; }
 }
 
 </style>

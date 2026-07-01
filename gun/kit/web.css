@@ -321,6 +321,101 @@ p + p {
 .leak { overflow: visible; }
 .hold { overflow: hidden; }
 
+html:has(.wane),
+body:has(.wane),
+.wane {
+  scroll-timeline-name: --top;
+  scroll-timeline-axis: block;
+}
+body:has(.wane)::before,
+.wane:not(shell)::before {
+  content: "";
+  position: fixed;
+  top: -5em;
+  left: 0;
+  right: 0;
+  height: 5em;
+  background: var(--fill, var(--mood));
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 0%, transparent 100%);
+  z-index: 99;
+  pointer-events: none;
+  animation: wanet linear both;
+  animation-timeline: --top;
+  animation-range: 0 5em;
+}
+body:has(.wane)::after,
+.wane:not(shell)::after {
+  content: "";
+  position: fixed;
+  bottom: -5em;
+  left: 0;
+  right: 0;
+  height: 5em;
+  background: var(--fill, var(--mood));
+  -webkit-mask-image: linear-gradient(to top, #000 0%, transparent 100%);
+  mask-image: linear-gradient(to top, #000 0%, transparent 100%);
+  z-index: 99;
+  pointer-events: none;
+  animation: waneb linear both reverse;
+  animation-timeline: --top;
+  animation-range: calc(100% - 5em) 100%;
+}
+.wade {
+  display: block;
+  position: relative;
+  width: 100%;
+  timeline-scope: --side;
+}
+.wade::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -2em;
+  width: 2em;
+  background: black;/*var(--fill, var(--mood));*/
+  -webkit-mask-image: linear-gradient(to right, #000 0%, transparent 100%);
+  mask-image: linear-gradient(to right, #000 0%, transparent 100%);
+  z-index: 99;
+  pointer-events: none;
+  animation: wadel linear both;
+  animation-timeline: --side;
+  animation-range: 0 2em;
+}
+.wade::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: -2em;
+  bottom: 0;
+  width: 2em;
+  background: black;/*var(--fill, var(--mood));*/
+  -webkit-mask-image: linear-gradient(to left, #000 0%, transparent 100%);
+  mask-image: linear-gradient(to left, #000 0%, transparent 100%);
+  z-index: 99;
+  pointer-events: none;
+  animation: wader linear both reverse;
+  animation-timeline: --side;
+  animation-range: calc(100% - 2em) 100%;
+}
+.wade > * {
+  scroll-timeline-name: --side;
+  scroll-timeline-axis: inline;
+}
+@keyframes wanet {
+  to { top: 0; }
+}
+@keyframes waneb {
+  to { bottom: 0; }
+}
+@keyframes wadel {
+  to { left: 0; }
+}
+@keyframes wader {
+  to { right: 0; }
+}
+
 .sky {
   -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 2em, black calc(100% - 2em), transparent 100%);
   mask-image: linear-gradient(to bottom, transparent 0%, black 2em, black calc(100% - 2em), transparent 100%);
