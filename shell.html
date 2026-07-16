@@ -123,6 +123,7 @@ kit.ear('prompt.same',(eve)=>{
   if(!cmd || !t){ return }
   t.bin = msg.bin || '';
   t.cmd = msg.cmd || cmd;
+  t.same = 1;
   shell.live = t;
   kit.say(cmd+'\r','host');
   screen.buzz();
@@ -176,7 +177,7 @@ shell.bash = function(raw, t, h, r, i, old, src){
     old = t.all('iframe:not(.shut)')[0] || t.all('iframe')[0];
     i = old;
     src = './cmd/' + h.bin + '.html';
-    if(old && old.getAttribute('src')){
+    if(old && old.getAttribute('src') && !t.same){
       i = old.cloneNode(0);
       old.parentNode.insertBefore(i, old.nextSibling);
       old.classList.add('shut');
@@ -192,6 +193,7 @@ shell.bash = function(raw, t, h, r, i, old, src){
     };
     i.src = src;
   }
+  t.same = 0;
   next();
 }
 

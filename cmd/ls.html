@@ -2,13 +2,13 @@
 
 <div class="wade">
 <list id="list">
-  <a id="up" onclick="kit.say('cd ../\r\nls .', 'prompt.same')">../</a>
+  <a id="up" onclick="kit.say({run:'cd ../ && ls .', cmd:'ls .', bin:'ls'}, 'prompt.same')">../</a>
   <a id="add">+</a>
 </list>
 </div>
 
 <fit>
-  <a onclick="kit.say('cd '+this.where+'\r\nls .', 'prompt.same')"></a>
+  <a></a>
 </fit>
 
 <dialog id="actionDialog"></dialog>
@@ -105,8 +105,9 @@ CMD.ls = function(s,v,f,cmd){
 };
 
 B.ear('click',(eve, a)=>{ a = eve.target.closest('a');
-  if(!a.closest('.ls')){ return }
-  kit.say('cd '+a.where+' && ls .', 'prompt.same');
+  if(!a || !a.closest('list')){ return }
+  if(!a.where){ return }
+  kit.say({run:'cd '+a.where+' && ls .', cmd:'ls .', bin:'ls'}, 'prompt.same');
 });
 
 (async function(){ return;

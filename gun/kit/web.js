@@ -5,7 +5,7 @@ var W = window, D = document, SW = screen.width, SH = screen.height, ON = 'addEv
   console.log = console.warn = console.error = function(...args){ if(console.off){ return } add(); console.view.value += JSON.stringify(args).slice(1,-1); console.view.scrollTop = console.view.scrollHeight; }
   window.onerror = window.onunhandledrejection = console.log;
 }());
-var tmp = D[HI]('meta'); tmp.name = 'viewport'; tmp.content = 'width=device-width, initial-scale=1, interactive-widget=resizes-content'; D.head.appendChild(tmp);
+var tmp = D[HI]('meta'); tmp.name = 'viewport'; tmp.content = 'width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content'; D.head.appendChild(tmp);
 //(tmp=D[HI]('link')).rel="stylesheet"; tmp.href=((D.currentScript||'').src||'').replace('.js','.css'); D.head.appendChild(tmp); // auto-add CSS?
 tmp = D.head.parentNode.style; if(W.parent === W) { tmp['overscroll-behavior-y'] = 'contain'; tmp['background-color'] = 'var(--fill)'; } else { tmp['overflow-y'] = 'auto'; tmp['overscroll-behavior-y'] = 'auto'; } 
 function LOAD(src, h, s){ (s = D[HI]('script')).onload = h; s.src = src; D.head.appendChild(s) };
