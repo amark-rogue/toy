@@ -78,10 +78,10 @@ div, code, span { display: unset; }
 <script src="../util.js"></script>
 <script>
 kit.ear('cat', hear);
-function hear(eve){ hear.off();
+function hear(eve){ // hear.off();
   var s = eve.detail || eve.data || "";
-  var raw = s;
-  var lines = raw.split(/\r?\n/);
+  var raw = String(s).flat();
+  var lines = raw.split(/\r\n|\r|\n/);
   var cmd = (lines.shift() || "").trim();
 
   var text = lines.join('\n').replace(/[\r\n]+.*(?:\$|#|>|PS>)\s*$/, '').trim();
@@ -119,10 +119,14 @@ pan.out = function(el){
 setTimeout(pan, 1);
 //window.onkeyup = function(){ hear({detail:'cat "cat.html"\n'+editor.textContent}); }
 
+window.onkeyup = function(eve){ 
+  //window.scrollTo(eve.target);
+}
 
 (async function() { //return;
   var t = await (await fetch("https://cdn.jsdelivr.net/gh/amark/gun@master/kit/web.js")).text();
   
   kit.say('cat "cat.js"\n'+(t|| document.body.parentNode.innerHTML) , 'cat');
  } ()) ;
+
 </script>
