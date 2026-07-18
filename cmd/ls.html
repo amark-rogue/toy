@@ -22,6 +22,7 @@ body { display: block; min-height: 0; overflow: hidden; }
   scroll-padding-right: 50%;
   width: 100%;
   max-height: max(90vh, 26em);
+  max-height: 26em;
   column-width: 8em;
   column-gap: 0.01em;
   overflow-x: auto;
@@ -59,13 +60,15 @@ body { display: block; min-height: 0; overflow: hidden; }
 <script src="../util.js"></script>
 <script>
 kit.ear('ls',function hear(eve){ hear.off();
-  //kit.up('', 'scroll');
   CMD.ls(eve.detail || eve.data, list);
 });
   
-// ls.html is always the first cmd loaded (auto-fired by chat.html),
-// so it registers all belt shortcuts for cmd/*.html handlers.
-kit.say(['ls','ls .'], 'belt');
+// shell.html progressively enhances with ls.html
+// which then progressively enhances all the cmd/*.html
+kit.say([['ls','ls .'],['git','git status'],['npm','npm '],['kill','kill '],['clear','clear']], 'belt');
+kit.say([['claude','claude '],['codex','codex '],['gemini','gemini '],['grok','grok ']], 'belt');
+
+/*
 //kit.say(['cat','cat '], 'belt');
 //kit.say(['cd','cd '], 'belt');
 kit.say(['pwd','pwd'], 'belt');
@@ -79,11 +82,9 @@ kit.say(['touch','touch '], 'belt');
 //kit.say(['cp','cp '], 'belt');
 //kit.say(['mv','mv '], 'belt');
 //kit.say(['rm','rm '], 'belt');
-kit.say(['clear','clear'], 'belt');
 kit.say(['npm','npm '], 'belt');
 kit.say(['git','git status'], 'belt');
-kit.say(['claude','claude '], 'belt');
-kit.say(['codex','codex '], 'belt');
+*/
 
 CMD = {};
 CMD.ls = function(s,v,f,cmd){
@@ -107,6 +108,7 @@ CMD.ls = function(s,v,f,cmd){
 B.ear('click',(eve, a)=>{ a = eve.target.closest('a');
   if(!a || !a.closest('list')){ return }
   if(!a.where){ return }
+  if(a.file){ kit.say('cat '+a.where, 'prompt'); return }
   kit.say({run:'cd '+a.where+' && ls .', cmd:'ls .', bin:'ls'}, 'prompt.same');
 });
 

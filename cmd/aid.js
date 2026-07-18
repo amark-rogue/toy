@@ -1,10 +1,12 @@
+//shell.new('style').pin(shell).textContent = "help { filter: hue-rotate(220deg) brightness(2); touch-action: manipulation; }"; // TODO: BUG! AI please help: this line breaks kit setting 'main page' class.
+
 shell.ear('keydown',function(eve, $){ $ = shell.$;
   if(!eve.target.matches('prompt')){ return }
   if(shell.AI.wait){ clearTimeout(shell.AI.wait) }
   shell.AI.wait = setTimeout(async function(){try{
     var ask = $.textContent;
     var answer = await shell.AI.ask("1 sentence reply for terminal shell or code help:" + ask);
-    var a = shell.AI.doc(answer), help = $.up().all('help')[0];
+    var a = shell.AI.doc(answer), help = $.up().all('help')[0] || $.new('help').pin($,1);
     help.textContent = a.textContent + " Tap to execute suggestion.";
     help.cmd = (a.all('code')[0]||a.all('b')[0]||'').textContent||'';
   }catch(e){}},99+(Math.random()*250));

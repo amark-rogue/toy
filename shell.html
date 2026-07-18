@@ -4,7 +4,6 @@
   <task>
     <symbol>$ </symbol>
     <prompt contenteditable="true"><br/></prompt>
-    <help></help>
     <raw></raw>
     <iframe></iframe>
     <style>
@@ -13,27 +12,14 @@
   </task>
 </shell>
 
-<kit><tin>
-  <belt><tray>
-    <button onclick="kit.say('ls', 'prompt')">ls</button>
-    <button>git</button>
-    <button>npm</button>
-    <button>kill</button>
-  </tray></belt>
-  <belt><tray>
-    <button>claude</button>
-    <button>codex</button>
-    <button>gemini</button>
-    <button>grok</button>
-  </tray></belt>
-  <belt><tray>
-    <button>new</button>
-  </tray></belt>
-</tin></kit>
+<kit><tin></tin></kit>
 
 <button id="look">↓</button>
 
 <fit>
+  <belt></belt>
+  <tray></tray>
+  <button></button>
 </fit>
 
 <style>
@@ -59,10 +45,6 @@ prompt {
   min-height: 1em;
   caret-shape: block;
   white-space: pre-wrap;
-}
-help {
-  filter: hue-rotate(220deg) brightness(2);
-  touch-action: manipulation;
 }
 fit { display: none; }
 ::selection { background: var(--pop); color: var(--fill); }
@@ -107,7 +89,7 @@ kit.ear('prompt',(eve)=>{
   shell.$.textContent = cmd;
   //shell.$.removeAttribute('contenteditable');
   shell.live = shell.$.up('task')[0];
-  if(/^codex\b/i.test(cmd)){
+  if(/^codex\b/i.test(cmd)){ // TODO: BUG! BAD CODE! shell.html should have no knowledge of special commands
     shell.bash('$ ' + cmd + '\n');
     screen.buzz();
     return;
@@ -117,13 +99,15 @@ kit.ear('prompt',(eve)=>{
 });
 kit.ear('prompt.same',(eve)=>{
   var msg = eve.detail||eve.data||{};
-  console.log('prompt.same:', msg);
+  //console.log('prompt.same:', msg);
   var cmd = (msg.run || msg.cmd || msg).trim();
   var t = (eve.target && eve.target.up) ? eve.target.up('task')[0] : null;
   if(!cmd || !t){ return }
   t.bin = msg.bin || '';
   t.cmd = msg.cmd || cmd;
   t.same = 1;
+  t.stay = msg.stay || 0;
+  t.file = msg.file || '';
   shell.live = t;
   kit.say(cmd+'\r','host');
   screen.buzz();
@@ -173,7 +157,13 @@ shell.bash = function(raw, t, h, r, i, old, src){
   r = out(t);
   text(r, (raw || '').flat());
   if(!t.parentNode){ root.append(t) }
-  if(h.bin){
+  if(h.bin && t.stay){
+    old = t.all('iframe:not(.shut)')[0] || t.all('iframe')[0];
+    if(old){
+      kit.say({raw: raw, cmd: h.cmd, file: t.file}, h.bin, old);
+      r.remove();
+    }
+  } else if(h.bin){
     old = t.all('iframe:not(.shut)')[0] || t.all('iframe')[0];
     i = old;
     src = './cmd/' + h.bin + '.html';
@@ -188,12 +178,14 @@ shell.bash = function(raw, t, h, r, i, old, src){
     i.onload = function(){
       if(!i.readyState){ return i.remove() }
       i.classList.remove('shut');
-      kit.say(h.bin === 'codex' ? {$: h.cmd, raw: h.cmd, '#': t.job} : raw, h.bin, i);
+      kit.say(h.bin === 'codex' ? {$: h.cmd, raw: h.cmd, '#': t.job} : raw, h.bin, i); // TODO: BUG! BAD CODE! shell.html should have no knowledge of special commands
       r.remove();
     };
     i.src = src;
   }
   t.same = 0;
+  t.stay = 0;
+  t.file = '';
   next();
 }
 
@@ -203,7 +195,7 @@ shell.hook = function(obj, t, i){
   if(!t){ return 0 }
   i = t.all('iframe:not(.shut)')[0] || t.all('iframe')[0];
   if(!i){ return 0 }
-  kit.say(obj, 'codex', i);
+  kit.say(obj, 'codex', i); // TODO: BUG! BAD CODE! shell.html should have no knowledge of special commands
   return 1;
 }
 
@@ -230,8 +222,6 @@ function fresh(t){
   text(t.all('symbol')[0], '$ ');
   text(t.all('prompt')[0], '');
   t.all('prompt')[0].setAttribute('contenteditable', 'true');
-  text(t.all('help')[0], ' ');
-  t.all('help')[0].cmd = '';
   text(t.all('raw')[0], '');
   t.all('iframe')[0].removeAttribute('src');
   return t;
@@ -245,7 +235,26 @@ function next(t){
   //shell.$.focus();
 }
 
-//kit.ear('clear',eve=>{ root.innerHTML = ""; next(); });
+kit.ear('belt',(eve,t)=>{ eve = eve.detail;
+  if('string' == typeof eve[0]){ return } // TODO: bug: implement single button non-tray items.
+  document.body.all('tin')[0].pin(shell.new('fit belt').pin(t=shell.new('fit tray')));
+  eve.forEach((cmd,b)=>{
+    if((shell.belt||'')[cmd[0]]){ return }
+    b = t.new('button');
+    b.onclick = function(){ kit.say(cmd[1], 'prompt') };
+    b.textContent = cmd[0];
+    (shell.belt=shell.belt||{})[cmd[0]]=1;
+    t.pin(b);
+  });
+});
+
+kit.ear('clear',(eve,v,p)=>{ // clear is the 1 special command exception.
+  if(!eve.target){ return }
+  v = eve.target.closest('task');
+  while(p = v.previousSibling){ v.remove(); v=p; }
+  v.remove();
+});
+kit.say('ls .','prompt'); // this is an optional progressive enhancement, shell does not know about ls, it is just blindly calling for an enhancement.
 
 }(window.shell = document.body));
 </script>

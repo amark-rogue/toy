@@ -48,3 +48,5 @@ for(var i = 0; i < PDFs.length; i += 1){
 ```
 
 All design must be fat thumb friendly, responsive for phones (without needing to use CSS media query breakpoints) foremost, and be easy to operate by elderly, toddler, disabled, and/or one-handed while someone is driving a dodgem bumper car with minimal screen attention glancing.
+
+See README.md
