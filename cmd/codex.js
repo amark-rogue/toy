@@ -52,7 +52,7 @@ function Codex(c, obj){
   self.tid = obj.thread || null;
   self.ok = 0;
   self.wait = null;
-  self.dir = gooddir(obj.cwd) || process.cwd();
+  self.dir = gooddir(shdir(c)) || gooddir(obj.cwd) || process.cwd();
   self.proc = cp.spawn('codex', ['app-server', '--stdio'], {
     cwd: self.dir,
     stdio: ['pipe', 'pipe', 'pipe'],
@@ -89,6 +89,14 @@ function gooddir(dir){
   dir = path.resolve(dir);
   try{ if(fs.statSync(dir).isDirectory()){ return dir } }catch(e){}
   return '';
+}
+
+function shdir(c, p, out, hit){ // live cwd of the connection's shared shell PTY — `cd` in the terminal moves the AI too
+  p = ((c || {}).p || {})[1] || ((c || {}).p || {})['1'];
+  if(!p || !p.pid){ return '' }
+  try{ out = cp.execSync('lsof -a -p ' + p.pid + ' -d cwd -F n', {timeout: 2000}).toString() }catch(e){ return '' }
+  hit = out.split('\n').find(function(v){ return 'n' === v[0] });
+  return hit ? hit.slice(1) : '';
 }
 
 function fail(e){
