@@ -1,111 +1,152 @@
+// gemini — ACP bridge // @abenezermario
 var cp = require('child_process');
 
-function Gemini(c){
+function has(){
+  var r = cp.spawnSync('gemini', ['--version'], {encoding: 'utf8', timeout: 3000});
+  return !r.error && r.status === 0;
+}
+
+function send(c, obj, add){
+  var out = {}, k;
+  for(k in obj){ out[k] = obj[k] }
+  delete out.$;
+  for(k in add){ out[k] = add[k] }
+  out.type = 'gemini';
+  try{ c.send(JSON.stringify(out)) }catch(e){}
+}
+
+function shdir(c, p, out, hit){ // live cwd of the connection's shared shell PTY — `cd` in the terminal moves the AI too
+  p = ((c || {}).p || {})[1] || ((c || {}).p || {})['1'];
+  if(!p || !p.pid){ return '' }
+  try{ out = cp.execSync('lsof -a -p ' + p.pid + ' -d cwd -F n', {timeout: 2000}).toString() }catch(e){ return '' }
+  hit = out.split('\n').find(function(v){ return 'n' === v[0] });
+  return hit ? hit.slice(1) : '';
+}
+
+function Gemini(c, obj){
   var self = this;
-  self.c = c; self.id = 1; self.sid = null; self.buf = '';
-  self.proc = cp.spawn('gemini',['--acp'],{stdio:['pipe','pipe','pipe']});
-  self.proc.stdout.on('data',function(d){ self.onData(d) });
-  self.proc.on('close',function(){self.proc = null });
-  self.rpc('initialize',{protocolVersion:1,clientInfo:{name:'toy',version:'1.0'},capabilities:{}},function(r){
-    self.rpc('authenticate',{methodId:'oauth-personal'},function(){
+  self.c = c;
+  self.obj = obj;
+  self.id = 1;
+  self.cb = {};
+  self.sid = null; // must load via session/load — seeding from the request skips it and breaks --resume
+  self.buf = '';
+  self.ready = 0;
+  self.pending = null;
+  self.busy = 0;
+  self.proc = cp.spawn('gemini', ['--acp'], {stdio: ['pipe', 'pipe', 'pipe']});
+  self.proc.on('error', function(e){ send(self.c, self.obj, {$: 'Gemini failed to start: ' + e.message, done: 1}) });
+  self.proc.stdout.on('data', function(d){ self.data(d) });
+  self.proc.on('close', function(){ self.proc = null;
+    if(self.busy){ self.busy = 0; send(self.c, self.obj, {$: 'Gemini stopped.', done: 1}) }
+  });
+  self.rpc('initialize', {protocolVersion: 1, clientInfo: {name: 'toy', version: '1.0'}, capabilities: {}}, function(){
+    self.rpc('authenticate', {methodId: 'oauth-personal'}, function(){
       self.ready = 1;
-      if(self.pending) self.go(self.pending);
+      if(self.pending){ self.go(self.pending) }
     });
   });
 }
-Gemini.prototype.rpc = function(m,p,cb){
-  var id = this.id++; if(cb) this['_cb'+id] = cb;
-  var msg = JSON.stringify({jsonrpc:'2.0',id:id,method:m,params:p||{}});
-  this.proc && this.proc.stdin.write(msg+'\n');
+
+Gemini.prototype.rpc = function(m, p, cb){
+  var id = this.id++;
+  if(cb){ this.cb[id] = cb }
+  this.write({jsonrpc: '2.0', id: id, method: m, params: p || {}});
 };
-Gemini.prototype.respond = function(id,r){
-  this.proc && this.proc.stdin.write(JSON.stringify({jsonrpc:'2.0',id:id,result:r||{}})+'\n');
+
+Gemini.prototype.respond = function(id, r){
+  this.write({jsonrpc: '2.0', id: id, result: r || {}});
 };
-Gemini.prototype.onData = function(d){
-  this.buf += d.toString(); var lines = this.buf.split('\n'), self = this;
-  this.buf = lines.pop();
-  lines.forEach(function(l){ if(!l.trim()) return; try{ self.onMsg(JSON.parse(l)) }catch(e){ console.log('[gemini] parse err:', l.slice(0,100)) } });
+
+Gemini.prototype.write = function(msg){
+  if(this.proc && this.proc.stdin.writable){ this.proc.stdin.write(JSON.stringify(msg) + '\n') }
 };
-Gemini.prototype.onMsg = function(m){
-  // response to our rpc call
+
+Gemini.prototype.data = function(d){
+  var self = this, a;
+  self.buf += d.toString();
+  a = self.buf.split('\n');
+  self.buf = a.pop();
+  a.forEach(function(l){
+    if(!l.trim()){ return }
+    try{ self.msg(JSON.parse(l)) }catch(e){}
+  });
+};
+
+Gemini.prototype.msg = function(m){
   if(m.id && !m.method){
-    if(this['_cb'+m.id]){ this['_cb'+m.id](m.result,m.error); delete this['_cb'+m.id] }
+    if(this.cb[m.id]){ this.cb[m.id](m.result, m.error); delete this.cb[m.id] }
     return;
   }
-  // server requesting something from us (has id + method)
   if(m.id && m.method){
     if(m.method === 'session/request_permission'){
-      var opts = ((m.params||{}).permissions||[{}])[0].options || [];
+      var opts = ((m.params || {}).permissions || [{}])[0].options || [];
       var allow = opts.find(function(o){ return o.kind === 'allow_always' }) || opts.find(function(o){ return o.kind === 'allow_once' }) || opts[0];
-      this.respond(m.id, {outcome:{outcome:'selected',optionId:(allow||{}).optionId||''}});
+      this.respond(m.id, {outcome: {outcome: 'selected', optionId: (allow || {}).optionId || ''}});
     } else {
       this.respond(m.id, {});
     }
     return;
   }
-  // notification (no id)
   if(m.method === 'session/update'){
-    var u = (m.params||{}).update||{};
-    var t = u.sessionUpdate||'';
-    this.c.send(JSON.stringify({type:'gemini-event',data:u}));
-    return;
+    send(this.c, this.obj, {event: (m.params || {}).update || {}});
   }
 };
-Gemini.prototype.go = function(opt){
+
+Gemini.prototype.go = function(obj){
   var self = this;
-  var prompt = opt.prompt, cwd = opt.cwd, sid = opt.sid;
-  if(!self.ready){ self.pending = opt; return }
+  var txt = (obj.$ || obj.prompt || '').replace(/^gemini\s*/i, '').trim();
+  if(!txt){ send(self.c, obj, {$: 'Send a prompt for Gemini.', done: 1}); return }
+  if(self.busy){ send(self.c, obj, {$: 'Gemini is still working — stop it first.', done: 1}); return }
+  if(!self.ready){ self.pending = obj; return }
   self.pending = null;
-  // resume existing session by id
+  self.obj = obj;
+  self.busy = 1;
+  var sid = obj.session || null;
   if(sid && sid !== self.sid){
-    self.rpc('session/load',{sessionId:sid},function(r,e){
+    self.rpc('session/load', {sessionId: sid}, function(){
       self.sid = sid;
-      self.prompt(prompt);
+      self.prompt(txt);
     });
     return;
   }
-  // continue current session
-  if(self.sid){
-    self.prompt(prompt);
-    return;
-  }
-  // new session
-  self.rpc('session/new',{cwd:cwd||process.cwd(),mcpServers:[]},function(r){
-    self.sid = (r||{}).sessionId||null;
-    self.c.send(JSON.stringify({type:'gemini-event',data:{sessionUpdate:'session-init',sessionId:self.sid}}));
-    self.rpc('session/set_mode',{sessionId:self.sid,modeId:'yolo'},function(){
-      self.prompt(prompt);
+  if(self.sid){ self.prompt(txt); return }
+  self.rpc('session/new', {cwd: shdir(self.c) || obj.cwd || process.cwd(), mcpServers: []}, function(r){
+    self.sid = (r || {}).sessionId || null;
+    send(self.c, self.obj, {event: {sessionUpdate: 'session-init', sessionId: self.sid}});
+    self.rpc('session/set_mode', {sessionId: self.sid, modeId: 'yolo'}, function(){
+      self.prompt(txt);
     });
   });
 };
+
 Gemini.prototype.prompt = function(txt){
   var self = this;
-  self.rpc('session/prompt',{sessionId:self.sid,prompt:[{type:'text',text:txt}]},function(r,e){
-    self.c.send(JSON.stringify({type:'gemini-done',sessionId:self.sid}));
+  self.rpc('session/prompt', {sessionId: self.sid, prompt: [{type: 'text', text: txt}]}, function(){
+    self.busy = 0;
+    send(self.c, self.obj, {done: 1, session: self.sid});
   });
 };
+
 Gemini.prototype.cancel = function(){
-  if(this.sid){
-    // session/cancel is a notification, not a request
-    this.proc && this.proc.stdin.write(JSON.stringify({jsonrpc:'2.0',method:'session/cancel',params:{sessionId:this.sid}})+'\n');
-  }
-};
-Gemini.prototype.kill = function(){ if(this.proc){ console.log('[gemini] kill'); this.proc.kill(); this.proc = null } };
-
-module.exports = function(c, json, cwd){
-  if(!c.gemini) c.gemini = new Gemini(c);
-  c.gemini.go({prompt:json.prompt, sid:json.session||null, cwd:json.cwd||cwd});
+  if(this.sid){ this.write({jsonrpc: '2.0', method: 'session/cancel', params: {sessionId: this.sid}}) }
 };
 
-module.exports.check = function(c){
-  try{ cp.execSync('gemini --version',{timeout:3000,stdio:'pipe'}); console.log('[gemini] check: ok'); c.send(JSON.stringify({type:'gemini-auth',ok:true})); }
-  catch(e){ c.send(JSON.stringify({type:'gemini-auth',ok:false})); }
+Gemini.prototype.kill = function(){
+  if(this.proc){ this.proc.kill(); this.proc = null }
 };
 
-module.exports.stop = function(c){
-  if(c.gemini) c.gemini.cancel();
-};
+function bag(c){
+  if(c.toygemini){ return c.toygemini }
+  c.toygemini = {};
+  c.on('close', function(){ var k; for(k in c.toygemini){ c.toygemini[k].kill() } });
+  return c.toygemini;
+}
 
-module.exports.close = function(c){
-  if(c.gemini) c.gemini.kill();
+module.exports = function(obj, c){
+  var all = bag(c), id = obj['#'] || '1';
+  if(obj.act === 'stop'){ if(all[id]){ all[id].cancel() } return }
+  if(!has()){ send(c, obj, {$: 'Gemini CLI not found on this host.\n\nInstall with:\n\nnpm install -g @google/gemini-cli', done: 1}); return }
+  if(!all[id]){ all[id] = new Gemini(c, obj) }
+  all[id].go(obj);
 };

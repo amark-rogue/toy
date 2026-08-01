@@ -6,6 +6,7 @@
     <span class="tag">gemini</span>
     <span id="hd" class="val"></span>
     <span id="sid" class="id"></span>
+    <button id="stop" class="mini" type="button">stop</button>
   </div>
   <div id="bod" class="bod"></div>
 </div>
@@ -37,6 +38,8 @@ body { display: block; min-height: 0; overflow: hidden; }
 .run.open .rout { display: block; }
 .fail { color: var(--err); }
 .usr { opacity: 0.6; border-top: 1px solid color-mix(in srgb, var(--pop) 30%, transparent); padding: 0.4em 0; margin-top: 0.4em; display: block; }
+button { color: inherit; background: transparent; border: 1px solid var(--pop); border-radius: 0.45em; padding: 0.45em 0.7em; font: inherit; font-weight: 900; touch-action: manipulation; }
+.mini { min-width: 3.8em; font-size: 0.78em; opacity: 0.7; }
 </style>
 
 <script src="../util.js"></script>
@@ -45,33 +48,40 @@ body { display: block; min-height: 0; overflow: hidden; }
 var hd  = B.all('#hd')[0];
 var sid = B.all('#sid')[0];
 var bod = B.all('#bod')[0];
+var stop = B.all('#stop')[0];
 sid.onclick = function(){ if(GEM.sid) kit.up('gemini --resume '+GEM.sid+' ', 'prompt.try') };
 
 var GEM = {};
 GEM.sid = null;
+GEM.job = '';
 GEM.on  = 0;
 GEM.textEl = null;
 GEM.thinkEl = null;
 GEM.toolEls = {};
 
-GEM.send = function(txt){
-  if(GEM.on){ return }
-  GEM.on = 1;
-  GEM.textEl = null; GEM.thinkEl = null; GEM.toolEls = {};
-  var msg = {type: 'gemini', prompt: txt};
+GEM.send = function(say, act){
+  var msg = {'^': './cmd/gemini.js', '#': GEM.job || '1'};
+  if(say){ msg.$ = say; GEM.textEl = null; GEM.thinkEl = null; GEM.toolEls = {} }
+  if(act){ msg.act = act }
   if(GEM.sid){ msg.session = GEM.sid }
-  if(GEM.cwd){ msg.cwd = GEM.cwd }
+  if(GEM.cwd || localStorage.cwd){ msg.cwd = GEM.cwd || localStorage.cwd }
+  GEM.on = 1;
   kit.up(msg, 'host');
 };
 
+GEM.done = function(){
+  GEM.on = 0;
+  kit.say({}, 'style');
+};
+
 GEM.got = function(m){
-  if(m.type === 'gemini-event'){ GEM.evt(m.data); return }
-  if(m.type === 'gemini-done'){
-    GEM.on = 0;
-    if(m.sessionId) GEM.sid = m.sessionId;
+  if(m.$){ GEM.fail(m.$) }
+  if(m.event){ GEM.evt(m.event) }
+  if(m.done){
+    if(m.session){ GEM.sid = m.session }
     if(GEM.sid){ sid.textContent = GEM.sid.slice(0,8); sid.title = 'click to copy: '+GEM.sid }
     kit.up(GEM.sid, 'gemini-session');
-    kit.say({}, 'style');
+    GEM.done();
   }
 };
 
@@ -156,18 +166,27 @@ GEM.usr = function(txt){
 kit.ear('gemini', function(eve){
   var d = eve.detail || eve.data || {};
 
-  if(d.type && d.type.indexOf('gemini') === 0){ GEM.got(d); return }
+  if(d.type === 'gemini' || d['^']){ GEM.got(d); return }
 
-  var raw = typeof d === 'string' ? d : (d.prompt || '');
+  var raw = typeof d === 'string' ? d : (d.raw || d.$ || d.prompt || '');
+  GEM.job = (typeof d === 'object' && d['#']) ? d['#'] : (GEM.job || '1');
   var s = typeof d === 'object' ? (d.session || null) : null;
   var cwd = typeof d === 'object' ? (d.cwd || '') : '';
-  var txt = raw.replace(/^gemini\s*/i, '').trim();
-  if(!txt){ return }
+  var m = raw.match(/^gemini\s+--resume\s+(\S+)\s*([\s\S]*)$/i);
+  if(m){ GEM.sid = m[1]; sid.textContent = GEM.sid.slice(0,8); sid.title = 'click to copy: '+GEM.sid }
+  var say = (m ? m[2] : raw.replace(/^gemini\s*/i, '')).trim();
   if(cwd){ GEM.cwd = cwd }
-  if(s){ GEM.sid = s }
+  if(s && !m){ GEM.sid = s } // explicit --resume beats the shell's remembered session
+  if(!say){ hd.textContent = 'type: gemini <prompt>'; kit.say({}, 'style'); return }
 
-  GEM.usr(txt);
-  GEM.send(txt);
+  GEM.usr(say);
+  GEM.send(say);
 });
+
+stop.onclick = function(){
+  if(!GEM.on){ return }
+  GEM.send('', 'stop');
+  GEM.done();
+};
 
 }());</script>

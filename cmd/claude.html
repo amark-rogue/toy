@@ -6,6 +6,7 @@
     <span class="tag">claude</span>
     <span id="hd" class="val"></span>
     <span id="sid" class="id"></span>
+    <button id="stop" class="mini" type="button">stop</button>
   </div>
   <div id="bod" class="bod"></div>
 </div>
@@ -37,6 +38,8 @@ body { display: block; min-height: 0; overflow: hidden; }
 .run.open .rout { display: block; }
 .fail { color: var(--err); }
 .usr { opacity: 0.6; border-top: 1px solid color-mix(in srgb, var(--pop) 30%, transparent); padding: 0.4em 0; margin-top: 0.4em; display: block; }
+button { color: inherit; background: transparent; border: 1px solid var(--pop); border-radius: 0.45em; padding: 0.45em 0.7em; font: inherit; font-weight: 900; touch-action: manipulation; }
+.mini { min-width: 3.8em; font-size: 0.78em; opacity: 0.7; }
 </style>
 
 <script src="../util.js"></script>
@@ -45,30 +48,38 @@ body { display: block; min-height: 0; overflow: hidden; }
 var hd  = B.all('#hd')[0];
 var sid = B.all('#sid')[0];
 var bod = B.all('#bod')[0];
+var stop = B.all('#stop')[0];
 sid.onclick = function(){ if(CLD.sid) kit.up('claude --resume '+CLD.sid+' ', 'prompt.try') };
 
 var CLD = {};
 CLD.sid = null;
+CLD.job = '';
 CLD.on  = 0;
 CLD.blocks = {};
 
-CLD.send = function(txt){
-  if(CLD.on){ return }
-  CLD.on = 1;
-  var msg = {type: 'claude', prompt: txt};
+CLD.send = function(say, act){
+  var msg = {'^': './cmd/claude.js', '#': CLD.job || '1'};
+  if(say){ msg.$ = say }
+  if(act){ msg.act = act }
   if(CLD.sid){ msg.session = CLD.sid }
-  if(CLD.cwd){ msg.cwd = CLD.cwd }
+  if(CLD.cwd || localStorage.cwd){ msg.cwd = CLD.cwd || localStorage.cwd }
+  CLD.on = 1;
   kit.up(msg, 'host');
 };
 
+CLD.done = function(){
+  CLD.on = 0;
+  kit.say({}, 'style');
+};
+
 CLD.got = function(m){
-  if(m.type === 'claude-event'){ CLD.evt(m.data); return }
-  if(m.type === 'claude-done'){
-    CLD.on = 0;
-    if(m.sessionId) CLD.sid = m.sessionId;
+  if(m.$){ CLD.fail(m.$) }
+  if(m.event){ CLD.evt(m.event) }
+  if(m.done){
+    if(m.session){ CLD.sid = m.session }
     if(CLD.sid){ sid.textContent = CLD.sid.slice(0,8); sid.title = 'click to copy: '+CLD.sid }
     kit.up(CLD.sid, 'claude-session');
-    kit.say({}, 'style');
+    CLD.done();
   }
 };
 
@@ -175,18 +186,27 @@ CLD.usr = function(txt){
 kit.ear('claude', function(eve){
   var d = eve.detail || eve.data || {};
 
-  if(d.type && d.type.indexOf('claude') === 0){ CLD.got(d); return }
+  if(d.type === 'claude' || d['^']){ CLD.got(d); return }
 
-  var raw = typeof d === 'string' ? d : (d.prompt || '');
+  var raw = typeof d === 'string' ? d : (d.raw || d.$ || d.prompt || '');
+  CLD.job = (typeof d === 'object' && d['#']) ? d['#'] : (CLD.job || '1');
   var s = typeof d === 'object' ? (d.session || null) : null;
   var cwd = typeof d === 'object' ? (d.cwd || '') : '';
-  var txt = raw.replace(/^claude\s*/i, '').trim();
-  if(!txt){ return }
+  var m = raw.match(/^claude\s+--resume\s+(\S+)\s*([\s\S]*)$/i);
+  if(m){ CLD.sid = m[1]; sid.textContent = CLD.sid.slice(0,8); sid.title = 'click to copy: '+CLD.sid }
+  var say = (m ? m[2] : raw.replace(/^claude\s*/i, '')).trim();
   if(cwd){ CLD.cwd = cwd }
-  if(s){ CLD.sid = s }
+  if(s && !m){ CLD.sid = s } // explicit --resume beats the shell's remembered session
+  if(!say){ hd.textContent = 'type: claude <prompt>'; kit.say({}, 'style'); return }
 
-  CLD.usr(txt);
-  CLD.send(txt);
+  CLD.usr(say);
+  CLD.send(say);
 });
+
+stop.onclick = function(){
+  if(!CLD.on){ return }
+  CLD.send('', 'stop');
+  CLD.done();
+};
 
 }());</script>

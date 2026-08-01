@@ -63,8 +63,8 @@ kit.ear('ls',function hear(eve){ hear.off();
   CMD.ls(eve.detail || eve.data, list);
 });
   
-// ls.html is always the first cmd loaded (auto-fired by chat.html),
-// so it registers all belt shortcuts for cmd/*.html handlers.
+// ls.html registers the belt shortcuts for cmd/*.html handlers.
+// (App bins are registered by shell.html itself at boot — first command may be an AI tool.)
 kit.say(['ls','ls .'], 'belt');
 //kit.say(['cat','cat '], 'belt');
 //kit.say(['cd','cd '], 'belt');
@@ -82,8 +82,6 @@ kit.say(['touch','touch '], 'belt');
 kit.say(['clear','clear'], 'belt');
 kit.say(['npm','npm '], 'belt');
 kit.say(['git','git status'], 'belt');
-kit.say(['claude','claude '], 'belt');
-kit.say(['codex','codex '], 'belt');
 
 CMD = {};
 CMD.ls = function(s,v,f,cmd){

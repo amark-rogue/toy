@@ -7,7 +7,7 @@
 <script>navigator?.serviceWorker.register?.('./sw.js')</script>
 <link rel="stylesheet" href="./gun/kit/web.css"><script src="./gun/kit/web.js"></script>
 
-<form id="sign" onsubmit="cop.sign()">
+<form id="sign" onsubmit="cop.sign(1)">
   <input id="host" name="host" placeholder="host:" class="fog sap lip">
   <input id="pass" name="pass" type="password" placeholder="pass:" class="fog sap lip">
   <button type="submit"></button>
@@ -27,19 +27,28 @@ location.hash = '';
 host.focus();
 console.off=1;
 
-cop.sign = async ()=>{ if(cop.ws){ return }
-  cop.ws = new WebSocket((localStorage.host=host.value).replace(/^http/,'ws')||'ws://localhost:8022');
-  cop.ws.onopen = ()=>{ cop.ws.send(localStorage.pass=pass.value);
+cop.sign = async (go, url)=>{
+  if(cop.ws && (1 === cop.ws.readyState || (!go && 0 === cop.ws.readyState))){ return } // open, or already dialing (unless the user forces a retry)
+  if(cop.ws){ try{ cop.ws.onclose = 0; cop.ws.close() }catch(e){} cop.ws = 0 }
+  url = host.value || localStorage.host || (/^http/.test(location.origin)? location.origin : ''); // the app's own server relays the socket — no host to type, no autofill to depend on
+  if(url){ localStorage.host = host.value = url }
+  try{ cop.ws = new WebSocket(url.replace(/^http/,'ws') || 'ws://localhost:8022');
+  }catch(e){ cop.ws = 0; kit.say('Bad host — check the host field.', 'help'); return }
+  cop.ws.onopen = ()=>{ cop.wait = 1000; cop.ws.send(localStorage.pass = (pass.value || localStorage.pass || ''));
+    while((cop.limbo||[]).length){ cop.ws.send(cop.limbo.shift()) }
+    kit.say('', 'help');
     location.path = 'shell.html';
   };
   cop.ws.onmessage = (eve) => { kit.say(eve.data,'chat') };
   cop.ws.onerror = (err) => { console.error('ws err:', err) };
-  cop.ws.onclose = (eve) => { cop.ws=0; kit.say('Reconnecting...\n', 'chat');
+  cop.ws.onclose = (eve) => { cop.ws=0;
+    if('cannot pass' === eve.reason){ localStorage.removeItem('pass'); location.reload(); return } // stale pass rejected — back to a clean login, no retry spin
+    kit.say('Reconnecting...', 'help');
     setTimeout(() => { cop.wait = Math.min(cop.wait * 2, 30000); cop.sign() }, cop.wait = cop.wait || 1000);
   };
-  cop.ws.onopen = ((fn) => () => { cop.wait = 1000; fn() })(cop.ws.onopen);
 };
 
+host.value = localStorage.host || (/^http/.test(location.origin)? location.origin : '');
 (pass.value = localStorage.pass||'') && cop.sign();
 
 kit.ear('host',(eve,cmd,no)=>{
