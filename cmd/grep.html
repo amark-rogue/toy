@@ -8,7 +8,7 @@
 </div>
 <div id="hitTpl" class="hit model"></div>
 <style>
-body { display: block; min-height: 0; overflow: hidden; }
+body.page { display: block; min-height: 0; overflow: hidden; } /* body.page outranks web.css .page{inset:0} — the bare selector lost the specificity war */
 .hits { display: flex; flex-direction: column; gap: 0.2em; }
 .hit { display: block; padding: 0.4em 0.6em; border-left: 2px solid var(--pop); font-family: 'Courier New', monospace; font-size: 0.85em; word-break: break-word; white-space: pre-wrap; cursor: pointer; opacity: 0.85; text-align: left; }
 .hit:active { opacity: 0.5; }
@@ -19,8 +19,9 @@ mark { font-weight: bold; background: var(--pop); color: var(--mood, black); pad
 <script>
 kit.ear('grep', function hear(eve) { hear.off();
   var s = (eve.detail || eve.data || '').flat().trim().split('\n');
-  var m = s[0].match(/grep\s+(?:-[a-zA-Z]+\s+)?['"]?([^'"]+)['"]?/);
-  var term = m ? m[1] : '?';
+  var m = s[0].match(/grep\s+(?:-\S+\s+)*(?:'([^']*)'|"([^"]*)"|(\S+))/); // quoted term wins; bare term stops at whitespace
+  var term = m ? (m[1] || m[2] || m[3] || '?') : '?';
+  var esc = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // the term is text, not a pattern — regex chars must not blow up the panel
   var tpl = B.all('#hitTpl')[0];
   var out = B.all('#out')[0];
   B.all('#query')[0].textContent = term;
@@ -35,7 +36,7 @@ kit.ear('grep', function hear(eve) { hear.off();
       var item = tpl.cloneNode(true);
       item.id = ''; item.classList.remove('model');
       item.textContent = '';
-      l.split(new RegExp('('+term+')', 'gi')).forEach(function(p) {
+      l.split(new RegExp('('+esc+')', 'gi')).forEach(function(p) {
         if(p.toLowerCase() === term.toLowerCase()) {
           var mk = B.new('mark'); mk.textContent = p; item.append(mk);
         } else { item.append(document.createTextNode(p)); }

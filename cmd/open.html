@@ -121,7 +121,6 @@
             p.className = "err";
             p.textContent = msg;
             view.append(p);
-            kit.say({}, "style");
         };
 
         var render = function (html) {
@@ -154,10 +153,8 @@
                         load();
                     });
                 } catch (e) {}
-                kit.say({}, "style");
             };
             view.append(f);
-            kit.say({}, "style");
         };
 
         // receive response from VM.srv.fetch

@@ -13,7 +13,7 @@
   </div>
 </div>
 <style>
-body { display: block; min-height: 0; overflow: hidden; }
+body.page { display: block; min-height: 0; overflow: hidden; } /* body.page outranks web.css .page{inset:0} — the bare selector lost the specificity war */
 .acts { display: flex; flex-wrap: wrap; gap: 0.4em; padding: 0.5em 0.8em; border-top: 1px solid color-mix(in srgb, var(--pop) 30%, transparent); flex-shrink: 0; }
 .acts button { flex: 1 1 40%; min-width: 0; font-family: 'Courier New', monospace; font-weight: bold; font-size: 0.85em; border: 1px solid var(--pop); padding: 0.4em; border-radius: 0.5em; background: transparent; color: inherit; cursor: pointer; }
 .acts button:active { background: var(--pop); color: var(--mood); }
@@ -32,7 +32,7 @@ kit.ear('npm', function hear(eve) {
     }
     return '';
   });
-  B.all('#sub')[0].textContent = s[0].replace(/^npm\s+/,'').split(/\s+/)[0] || '?';
+  B.all('#sub')[0].textContent = s[0].replace(/^.*?[$#%>]\s*/,'').replace(/^npm\s+/,'').split(/\s+/)[0] || '?'; // line0 carries the prompt prefix
   B.all('#out')[0].textContent = s.slice(1).filter(function(l){ return l.trim(); }).join('\n');
   hear.off();
 });

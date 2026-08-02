@@ -5,7 +5,7 @@
 <pre id="code"><code id="editor" contenteditable="true"></code></pre>
 
 <style>
-body { display: block; }
+body.page { display: block; min-height: 0; } /* body.page outranks web.css .page{inset:0} — the bare selector lost the specificity war */
 html, body { background:black; }
 pre { 
   margin: 0; 
@@ -18,7 +18,7 @@ pre {
 
   display: block;
   max-width: 100vw;
-  max-height: 102dvh;
+  max-height: max(102dvh, 40em); /* dvh is 0 inside a not-yet-sized iframe — the 40em floor breaks the measure/size circle */
   overflow-y: auto;
   overflow-x: auto;
   trans-form: translateX(calc(var(--pan, 0) * -1px));
@@ -78,13 +78,13 @@ div, code, span { display: unset; }
 <script src="../util.js"></script>
 <script>
 kit.ear('cat', hear);
-function hear(eve){ // hear.off();
+function hear(eve){ hear.off(); // one payload per task — stray says must not clobber the render
   var s = eve.detail || eve.data || "";
   var raw = String(s).flat();
   var lines = raw.split(/\r\n|\r|\n/);
   var cmd = (lines.shift() || "").trim();
 
-  var text = lines.join('\n').replace(/[\r\n]+.*(?:\$|#|>|PS>)\s*$/, '').trim();
+  var text = lines.join('\n').replace(/[\r\n]+[\w~\/@.: -]*[$#%>]\s*$/, '').trim(); // only a bare trailing prompt line — file lines like </html> must survive
   var langs = {js:'javascript', json:'json', html:'xml', css:'css',md:'markdown', py:'python', sh:'bash', yaml:'yaml', yml:'yaml'};
   var lang = null;
   var m = cmd.match(/cat\s+(.+)/);
@@ -123,10 +123,5 @@ window.onkeyup = function(eve){
   //window.scrollTo(eve.target);
 }
 
-(async function() { //return;
-  var t = await (await fetch("https://cdn.jsdelivr.net/gh/amark/gun@master/kit/web.js")).text();
-  
-  kit.say('cat "cat.js"\n'+(t|| document.body.parentNode.innerHTML) , 'cat');
- } ()) ;
 
 </script>

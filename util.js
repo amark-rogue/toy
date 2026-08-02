@@ -115,13 +115,12 @@ Tool.mk = function(bod, name, inp){
   var top = D.createElement('p');
   top.className = 'rlb';
   top.textContent = '$ ' + label;
-  top.onclick = function(){ v.classList.toggle('open'); kit.say({},'style') };
+  top.onclick = function(){ v.classList.toggle('open'); };
   var out = D.createElement('pre');
   out.className = 'rout blk';
   v.append(top); v.append(out);
   v._out = out; v._buf = '';
   bod.append(v);
-  kit.say({},'style');
   return v;
 };
 
@@ -129,7 +128,6 @@ Tool.out = function(v, txt){
   if(!v) return;
   v._buf += (txt||'');
   v._out.textContent = v._buf;
-  kit.say({},'style');
 };
 
 Tool.done = function(v){
@@ -169,7 +167,20 @@ document.addEventListener('pointerdown', function(e) { return;
   }
 });
 
-String.prompts = function(t){
+String.prompts = function(t, s, p, out, head){
+  t = '' + t;
+  s = ']133;A'; // prompt sentinel — PS1 stamps every prompt start (see app.html sign-on), so cuts are exact
+  if(t.indexOf(s) < 0){ return String.prompts.on ? [t] : String.folds(t) } // once a sentinel shell is seen, heuristics retire — a sentinel-less buffer is one unfinished block
+  p = t.split(s);
+  head = p.shift();
+  out = head ? (String.prompts.on ? [head] : String.folds(head)) : []; // after the first sentinel, a head IS one complete block — only boot-era bytes need the heuristic
+  String.prompts.on = 1;
+  while(p.length > 1){ out.push(p.shift()) }
+  out.push(p[0]);
+  return out;
+}
+
+String.folds = function(t){
     const rawText = '' + t;
     const ansiRegex = /[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g;
     

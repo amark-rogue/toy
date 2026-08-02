@@ -18,7 +18,7 @@
 </div>
 
 <style>
-body { display: block; min-height: 0; overflow: hidden; }
+body.page { display: block; min-height: 0; overflow: hidden; } /* body.page outranks web.css .page{inset:0} — the bare selector lost the specificity war */
 .box { display: flex; flex-direction: column; min-height: 0; }
 .bar { display: flex; align-items: center; gap: 0.5em; padding: 0.4em 0.8em; border-bottom: 1px solid var(--pop); flex-shrink: 0; }
 .val { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 900; }
@@ -51,7 +51,6 @@ CDX.add = function(cls, text){
   v.classList.remove('tpl');
   v.textContent = text || '';
   bod.append(v);
-  kit.say({}, 'style');
   return v;
 };
 
@@ -62,7 +61,6 @@ CDX.user = function(text){
 CDX.say = function(text){
   if(!CDX.out){ CDX.out = CDX.add('msg', '') }
   CDX.out.textContent += text || '';
-  kit.say({}, 'style');
 };
 
 CDX.send = function(text, act){
@@ -77,17 +75,13 @@ CDX.send = function(text, act){
 
 CDX.done = function(){
   CDX.on = 0;
-  kit.say({}, 'style');
 };
 
 CDX.got = function(obj){
   if(obj.thread){ CDX.tid = obj.thread; lab.textContent = CDX.tid.slice(0, 8) }
   if(obj.need === 'codex'){ ins.classList.remove('hide') }
   if(obj.$){ CDX.say(obj.$) }
-  if(obj.done){
-    if(CDX.tid){ kit.up(CDX.tid, 'codex-session') }
-    CDX.done();
-  }
+  if(obj.done){ CDX.done() }
 };
 
 CDX.first = function(d){
@@ -99,7 +93,7 @@ CDX.first = function(d){
   if(m && m[1]){ CDX.tid = m[1]; lab.textContent = CDX.tid.slice(0, 8) }
   else if(s){ CDX.tid = s; lab.textContent = s.slice(0, 8) } // shell remembers the thread — bash prompts continue it
   text = text.trim();
-  if(!text){ lab.textContent = 'type: codex <prompt>'; kit.say({}, 'style'); return }
+  if(!text){ lab.textContent = 'type: codex <prompt>'; return }
   CDX.user(text);
   CDX.send(text);
 };
@@ -107,6 +101,14 @@ CDX.first = function(d){
 kit.ear('codex', function(eve){
   var d = eve.detail || eve.data || {};
   if(d.type === 'codex' || d['^']){ CDX.got(d); return }
+  if(d.more){ // REPL follow-up from the shell prompt
+    if(d.act){ CDX.send('', d.act); return }
+    CDX.job = d['#'] || CDX.job;
+    CDX.out = null;
+    CDX.user(d.$);
+    CDX.send(d.$);
+    return;
+  }
   CDX.first(d);
 });
 
@@ -117,8 +119,8 @@ ins.onclick = function(){
 };
 
 stop.onclick = function(){
-  CDX.send('', 'stop');
-  CDX.done();
+  if(CDX.on){ CDX.send('', 'stop'); CDX.done() }
+  kit.up(CDX.job, 'quit'); // leaving the panel's session also leaves the shell's REPL mode
 };
 
 }());</script>

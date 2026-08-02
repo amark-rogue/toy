@@ -14,7 +14,7 @@
 <dialog id="actionDialog"></dialog>
 
 <style>
-body { display: block; min-height: 0; overflow: hidden; }
+body.page { display: block; min-height: 0; overflow: hidden; } /* body.page outranks web.css .page{inset:0} — the bare selector lost the specificity war */
 .ls, list {
   text-align: center;
   display: block;
@@ -105,6 +105,7 @@ CMD.ls = function(s,v,f,cmd){
 B.ear('click',(eve, a)=>{ a = eve.target.closest('a');
   if(!a || !a.closest('list')){ return }
   if(!a.where){ return }
+  if(a.file){ kit.say({run:'cat '+a.where, cmd:'cat '+a.where, bin:'cat'}, 'prompt.same'); return } // files open, only dirs navigate
   kit.say({run:'cd '+a.where+' && ls .', cmd:'ls .', bin:'ls'}, 'prompt.same');
 });
 

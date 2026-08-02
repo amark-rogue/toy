@@ -19,7 +19,7 @@
 </div>
 
 <style>
-body { display: block; min-height: 0; overflow: hidden; }
+body.page { display: block; min-height: 0; overflow: hidden; } /* body.page outranks web.css .page{inset:0} — the bare selector lost the specificity war */
 .bar { display: flex; align-items: center; gap: 0.5em; padding: 0.4em 0.8em; border-bottom: 1px solid var(--pop); flex-shrink: 0; }
 .val { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 900; }
 .id { font-size: 0.6em; opacity: 0.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 10em; cursor: pointer; }
@@ -32,9 +32,9 @@ body { display: block; min-height: 0; overflow: hidden; }
 .tog { font-size: 0.8em; opacity: 0.7; cursor: pointer; margin: 0; user-select: none; display: block; }
 .run { display: block; border-left: 2px solid color-mix(in srgb, var(--pop) 40%, transparent); margin: 0.3em 0; overflow: hidden; }
 .run.ok { border-left-color: color-mix(in srgb, var(--pop) 70%, transparent); }
-.rlb { font-family: 'Courier New', monospace; font-size: 0.75em; padding: 0.2em 0.6em; margin: 0; opacity: 0.6; cursor: pointer; user-select: none; display: block; text-align: left; }
+.rlb { font-family: 'Courier New', monospace; font-size: 0.75em; padding: 0.2em 0.6em; margin: 0; opacity: 0.6; cursor: pointer; user-select: none; display: block; text-align: left; word-break: break-word; }
 .rlb:active { opacity: 1; }
-.rout { padding: 0.3em 0.6em; display: none; opacity: 0.7; font-size: 0.8em; max-height: 12em; overflow-y: auto; }
+.rout { padding: 0.3em 0.6em; display: none; opacity: 0.7; font-size: 0.8em; max-height: 12em; overflow-y: auto; overflow-x: auto; max-width: 100%; }
 .run.open .rout { display: block; }
 .fail { color: var(--err); }
 .usr { opacity: 0.6; border-top: 1px solid color-mix(in srgb, var(--pop) 30%, transparent); padding: 0.4em 0; margin-top: 0.4em; display: block; }
@@ -69,7 +69,6 @@ CLD.send = function(say, act){
 
 CLD.done = function(){
   CLD.on = 0;
-  kit.say({}, 'style');
 };
 
 CLD.got = function(m){
@@ -78,13 +77,12 @@ CLD.got = function(m){
   if(m.done){
     if(m.session){ CLD.sid = m.session }
     if(CLD.sid){ sid.textContent = CLD.sid.slice(0,8); sid.title = 'click to copy: '+CLD.sid }
-    kit.up(CLD.sid, 'claude-session');
     CLD.done();
   }
 };
 
 CLD.evt = function(ev){
-  if(ev.type === 'system' && ev.subtype === 'init'){ CLD.sid = ev.session_id; return }
+  if(ev.type === 'system' && ev.subtype === 'init'){ if(ev.session_id){ CLD.sid = ev.session_id } return }
   if(ev.type === 'assistant'){ CLD.msg(ev.message) }
   if(ev.type === 'user' && ev.message){ CLD.res(ev.message) }
   if(ev.type === 'result'){ return }
@@ -119,7 +117,6 @@ CLD.stream = function(ev){
       bod.append(v);
       CLD.blocks[idx] = {el: v, type: 'thinking', text: ''};
     }
-    kit.say({}, 'style');
   }
   if(t === 'content_block_delta'){
     var idx = se.index;
@@ -134,7 +131,6 @@ CLD.stream = function(ev){
       b.text += d.thinking;
       b.el.querySelector('.inn').textContent = b.text;
     }
-    kit.say({}, 'style');
   }
   if(t === 'content_block_stop'){
     delete CLD.blocks[se.index];
@@ -153,7 +149,7 @@ CLD.msg = function(msg){
 CLD.text = function(t){
   var v = B.all('.tpl.txt')[0].cloneNode(true);
   v.classList.remove('tpl'); v.textContent = t;
-  bod.append(v); kit.say({}, 'style');
+  bod.append(v);
 };
 
 CLD.think = function(t){
@@ -161,7 +157,7 @@ CLD.think = function(t){
   v.classList.remove('tpl');
   v.querySelector('.inn').textContent = t;
   v.querySelector('.tog').onclick = function(){ v.classList.toggle('open') };
-  bod.append(v); kit.say({}, 'style');
+  bod.append(v);
 };
 
 CLD.tool = function(name, inp){
@@ -172,7 +168,7 @@ CLD.tool = function(name, inp){
 CLD.fail = function(t){
   var v = B.all('.tpl.fail')[0].cloneNode(true);
   v.classList.remove('tpl'); v.textContent = t;
-  bod.append(v); kit.say({}, 'style');
+  bod.append(v);
 };
 
 CLD.usr = function(txt){
@@ -180,13 +176,19 @@ CLD.usr = function(txt){
   u.className = 'usr blk';
   u.textContent = '> ' + txt;
   bod.append(u);
-  kit.say({}, 'style');
 };
 
 kit.ear('claude', function(eve){
   var d = eve.detail || eve.data || {};
 
   if(d.type === 'claude' || d['^']){ CLD.got(d); return }
+  if(d.more){ // REPL follow-up from the shell prompt
+    if(d.act){ CLD.send('', d.act); return }
+    CLD.job = d['#'] || CLD.job;
+    CLD.usr(d.$);
+    CLD.send(d.$);
+    return;
+  }
 
   var raw = typeof d === 'string' ? d : (d.raw || d.$ || d.prompt || '');
   CLD.job = (typeof d === 'object' && d['#']) ? d['#'] : (CLD.job || '1');
@@ -197,16 +199,15 @@ kit.ear('claude', function(eve){
   var say = (m ? m[2] : raw.replace(/^claude\s*/i, '')).trim();
   if(cwd){ CLD.cwd = cwd }
   if(s && !m){ CLD.sid = s } // explicit --resume beats the shell's remembered session
-  if(!say){ hd.textContent = 'type: claude <prompt>'; kit.say({}, 'style'); return }
+  if(!say){ hd.textContent = 'type: claude <prompt>'; return }
 
   CLD.usr(say);
   CLD.send(say);
 });
 
 stop.onclick = function(){
-  if(!CLD.on){ return }
-  CLD.send('', 'stop');
-  CLD.done();
+  if(CLD.on){ CLD.send('', 'stop'); CLD.done() }
+  kit.up(CLD.job, 'quit'); // leaving the panel's session also leaves the shell's REPL mode
 };
 
 }());</script>

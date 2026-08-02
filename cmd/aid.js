@@ -1,9 +1,11 @@
 shell.ear('keydown',function(eve, $){ $ = shell.$;
   if(!eve.target.matches('prompt')){ return }
+  if(shell.mode){ return } // REPL text goes to the agent — no shell suggestions mid-session
   if(shell.AI.wait){ clearTimeout(shell.AI.wait) }
   shell.AI.wait = setTimeout(async function(){try{
     var ask = $.textContent;
     var answer = await shell.AI.ask("1 sentence reply for terminal shell or code help:" + ask);
+    if(shell.note){ return } // connection status owns the help line
     var a = shell.AI.doc(answer), help = $.up().all('help')[0];
     help.textContent = a.textContent + " Tap to execute suggestion.";
     help.cmd = (a.all('code')[0]||a.all('b')[0]||'').textContent||'';
@@ -13,13 +15,15 @@ shell.ear('keydown',function(eve, $){ $ = shell.$;
 shell.ear('click', function(eve, help){
   if(!(help = eve.target.up('help')[0])){ return }
   if(!help.cmd){ return }
-  shell.$ = help.up().all('prompt')[0];
-  kit.say(help.cmd, 'prompt');
+  kit.say(help.cmd, 'prompt.try'); // suggestions run in the live prompt — never rewrite a finished bubble
+  kit.say('', 'prompt');
 });
 
 shell.AI = {
   async txt(url, res){
-    res = await fetch(url);
+    if(shell.AI.halt){ shell.AI.halt.abort() } // latest-wins — a slow old reply must not overwrite a fresh one
+    res = await fetch(url, {signal: (shell.AI.halt = new AbortController()).signal});
+    if(!res.ok){ throw res.status } // error pages are not suggestions
     return await res.text();
   },
   async ask(q){
@@ -51,6 +55,6 @@ shell.AI = {
     return msg || JSON.stringify(data);
   },
   async key(){
-    return key || (key = localStorage.ork || (localStorage.ork = await UI.prompt(`openrouter key?`)));
+    return shell.AI.ork || (shell.AI.ork = localStorage.ork || (localStorage.ork = (window.UI && UI.prompt)? await UI.prompt(`openrouter key?`) : ''));
   }
 }
