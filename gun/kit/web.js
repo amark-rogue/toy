@@ -89,7 +89,7 @@ W[ON]('message',function(eve,data,i,tmp){
   if('ear'==data.type){ kit.ear(data.detail||data.data,function hear(eve){ if(!(i||'').contentWindow){hear.off(); return } if(kit._echo && kit._echo.i === i && kit._echo.t === eve.type){ return } if(((eve.target||'').tagName) === 'IFRAME'){ return } i.contentWindow.postMessage({data:eve.detail||eve.data,type:eve.type,wrap:-1}, DEV?'*':location.origin) }); return; }
   kit._echo = {i:i,t:data.type}; kit.say(data.data||data.detail,data.type,i,data.wrap||1); kit._echo = null;
 });
-kit.views = new Map;
+kit.views = new WeakMap; // keyed by contentWindow — a plain Map pins every dead task iframe forever
 (kit.size = function(b,d,h,w,last){
   b = D.body; d = D.documentElement;
   h = Math.max(
@@ -204,7 +204,7 @@ kit.vars.put = function(i, d, el, css, all, was, key, val, now){
   try{
     if(!i){ return }
     all = kit.vars.all();
-    for(key in all){ i.style.setProperty(key, all[key]) }
+    for(key in all){ if(i.style.getPropertyValue(key) !== all[key]){ i.style.setProperty(key, all[key]) } } // no-op writes re-enter the parent's observer
     d = i.contentDocument; if(!d){ return }
     el = d.documentElement; if(!el){ return }
     if(i._kitDoc !== d){ i._kitDoc = d; i._kitVar = {} }
@@ -214,6 +214,7 @@ kit.vars.put = function(i, d, el, css, all, was, key, val, now){
       val = all[key];
       now = css ? css.getPropertyValue(key) : el.style.getPropertyValue(key);
       if(was[key] && now && now !== was[key]){ continue }
+      if(el.style.getPropertyValue(key) === val){ was[key] = val; continue } // already there — a rewrite re-triggers the child's observer
       el.style.setProperty(key, val);
       was[key] = val;
     }
@@ -341,13 +342,14 @@ W[ON]('pageshow', kit.watch.resize);
 W[ON]('pageshow', kit.vars.push);
 W[ON]('transitionend', kit.watch.resize, true);
 W[ON]('animationend', kit.watch.resize, true);
-W[ON]('transitionend', kit.vars.push, true);
-W[ON]('animationend', kit.vars.push, true);
+W[ON]('transitionend', kit.vars.sync, true); // sync is rAF single-flight — raw push here ran a full CSS-rule scan per transitioned property
+W[ON]('animationend', kit.vars.sync, true);
 if((D.fonts||'').ready){ D.fonts.ready.then(kit.watch.resize) }
-kit.ear('style',function(eve,i){
+kit.ear('style',function(eve,i,v){
   if(!eve.target || !eve.target.style){ return }
   //console.log(location.pathname.split('/').slice(-1)[0], "resize:", eve.target, eve.detail);
-  var h = (eve.detail||'').height; if(h) eve.target.style.height = isNaN(h) ? h : h+'px';
+  var h = (eve.detail||'').height; if(h){ v = isNaN(h) ? h : h+'px';
+    if(eve.target.style.height !== v){ eve.target.style.height = v } } // same-value writes restart the height transition and storm transitionend
   // Allow width to remain responsive (e.g. 100%) rather than locking it to fixed pixels
   // var w = (eve.detail||'').width; if(w) eve.target.style.width = isNaN(w) ? w : w+'px';
 },document);
@@ -468,7 +470,7 @@ Object.defineProperty(HTMLIFrameElement.prototype, 'onload', {
       if(i.readyState) return fn.call(i, e);
       var r = function(){ if(r.d) return; r.d = 1; fn.call(i, e) };
       kit.ear('ready', function(){ i.readyState = 1; r() }, i);
-      setTimeout(r, 99);
+      setTimeout(r, 2000); // slow (cold-cache) pages must not be mistaken for dead ones
     };
     _ifL.set ? _ifL.set.call(i, w) : i.addEventListener('load', w);
   }

@@ -37,6 +37,7 @@ function Claude(c, obj){
   this.obj = obj;
   this.sid = obj.session || null;
   this.q = null;
+  this.cwd = gooddir(shdir(c)) || gooddir(obj.cwd) || process.cwd(); // pinned per session — cd mid-conversation must not yank the agent
 }
 
 Claude.prototype.go = function(obj){
@@ -48,7 +49,7 @@ Claude.prototype.go = function(obj){
   var sdk = require('@anthropic-ai/claude-agent-sdk');
   var opts = {includePartialMessages: true};
   if(obj.session || self.sid){ opts.resume = obj.session || self.sid }
-  opts.cwd = gooddir(shdir(self.c)) || gooddir(obj.cwd) || process.cwd();
+  opts.cwd = self.cwd;
   var q;
   (async function(){
     if(0 === key.n++){ key.was = process.env.ANTHROPIC_API_KEY; delete process.env.ANTHROPIC_API_KEY }

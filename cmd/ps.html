@@ -11,7 +11,7 @@
   <button class="kill">kill</button>
 </div>
 <style>
-body { display: block; min-height: 0; overflow: hidden; }
+body.page { display: block; min-height: 0; overflow: hidden; } /* body.page outranks web.css .page{inset:0} — the bare selector lost the specificity war */
 .procs { display: flex; flex-direction: column; gap: 0; }
 .proc { display: flex; align-items: center; gap: 0.5em; padding: 0.35em 0; border-bottom: 1px solid color-mix(in srgb, var(--pop) 15%, transparent); font-family: 'Courier New', monospace; }
 .pid { font-weight: bold; width: 3.5em; flex-shrink: 0; font-size: 0.85em; opacity: 0.7; }
@@ -26,12 +26,19 @@ kit.ear('ps', function hear(eve) { hear.off();
   var tpl = B.all('#rowTpl')[0];
   var out = B.all('#out')[0];
   var lines = s.slice(1);
-  if(lines.length && lines[0].includes('PID')) lines = lines.slice(1);
+  var head, pi = 0, ci = -1;
+  if(lines.length && lines[0].includes('PID')){
+    head = lines[0].trim().split(/\s+/); // the header knows the layout — plain ps and ps aux differ
+    pi = Math.max(head.indexOf('PID'), 0);
+    ci = head.indexOf('COMMAND');
+    if(ci < 0){ ci = head.indexOf('CMD') }
+    lines = lines.slice(1);
+  }
   lines.forEach(function(l) {
     l = l.trim(); if(!l) return;
     var p = l.split(/\s+/);
-    var pid = p[0]; if(isNaN(parseInt(pid))) pid = p[1];
-    var name = p.slice(3).join(' ') || p.join(' ');
+    var pid = p[pi]; if(isNaN(parseInt(pid))) pid = isNaN(parseInt(p[0]))? p[1] : p[0];
+    var name = (ci >= 0 ? p.slice(ci) : p.slice(3)).join(' ') || p.join(' ');
     var row = tpl.cloneNode(true);
     row.id = ''; row.classList.remove('model');
     row.all('.pid')[0].textContent = pid;

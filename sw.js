@@ -14,9 +14,7 @@ self.addEventListener('activate', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
-  var u = new URL(e.request.url);
-  if(u.origin !== location.origin || e.request.method !== 'GET'){ return }
-  // bust every cache layer (browser + CDN edge); the server ignores the query
-  u.searchParams.set('t', Date.now());
-  e.respondWith(fetch(new Request(u, {cache: 'no-store'})).catch(() => fetch(e.request)));
+  // pass-through: the server stamps assets with ?v=<mtime> and serves HTML no-cache,
+  // so a changed file always gets a fresh URL — browser caching of stamped URLs is safe and fast
+  e.respondWith(fetch(e.request));
 });

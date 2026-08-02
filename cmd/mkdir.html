@@ -6,7 +6,7 @@
   </div>
 </div>
 <style>
-body { display: block; min-height: 0; overflow: hidden; }
+body.page { display: block; min-height: 0; overflow: hidden; } /* body.page outranks web.css .page{inset:0} — the bare selector lost the specificity war */
 .err #lbl { color: var(--err); opacity: 1; }
 .err #fname { color: var(--err); }
 </style>
@@ -15,7 +15,7 @@ body { display: block; min-height: 0; overflow: hidden; }
 kit.ear('mkdir', function hear(eve) { hear.off();
   var s = (eve.detail || eve.data || '').flat().trim().split('\n');
   var out = s.slice(1).join('\n').trim();
-  var name = s[0].replace(/^mkdir\s+(?:-p\s+)?/,'').trim();
+  var name = s[0].replace(/^.*?[$#%>]\s*/,'').replace(/^mkdir\s+(?:-p\s+)?/,'').trim(); // line0 carries the prompt prefix
   if(out && (out.toLowerCase().includes('exist') || out.toLowerCase().includes('denied'))) {
     box.tag('err', 1);
     B.all('#lbl')[0].textContent = 'error';

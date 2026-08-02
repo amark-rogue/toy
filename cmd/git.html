@@ -115,15 +115,21 @@ code { counter-reset: line; padding-bottom: 1em; }
 <script src="git/config.js"></script>
 
 <script>
-kit.ear('git', function hear(eve) {
-  var s = eve.detail || eve.data || "", f = s.flat(), l = f.split('\n'), c = l[0]||'', cmd = (c.split(' ')[1]||'').trim(), i;
-
-    B.append(i = B.new('iframe'));
-    i.onload = function(e){
-        if(!i.readyState){ return i.remove() }
-        kit.say(f, cmd, i);
-    }; i.src = './git/'+cmd+'.html';
-
+kit.ear('git', function hear(eve, s, f, c, cmd, i) { hear.off();
+  s = eve.detail || eve.data || "";
+  f = s.flat();
+  c = f.split('\n')[0] || '';
+  cmd = ((c.match(/\bgit\s+(\S+)/) || [])[1] || '').trim(); // the subcommand lives after `git` in the echoed line, never at token[1] of the prompt
+  if(!{status: 1, branch: 1}[cmd]){
+    app.appendChild(make('pre', 'git-raw', f.trim())); // no rich page for this subcommand — plain output beats an empty panel
+    return;
+  }
+  B.append(i = B.new('iframe'));
+  i.onload = function(e){
+    if(!i.readyState){ return i.remove() }
+    kit.say(f, cmd, i);
+  };
+  i.src = './git/' + cmd + '.html';
 });
 
 var app = document.getElementById('app');
@@ -200,51 +206,6 @@ function renderNoRepo(raw) {
 
     app.appendChild(div);
 }
-
-kit.ear('git', function hear(eve) {
-  return;
-  var s = eve.detail || eve.data || "";
-  // Use util.js shellReply to clean pager text, then gitFlat() to strip ANSI and handle \r
-  var raw = window.shellReply && window.shellReply.clean ? window.shellReply.clean(s) : String(s);
-  var hasPrompt = /[\r\n]+.*(?:\$|#|>)\s*$/.test(raw);
-  raw = gitFlat(raw).replace(/[\r\n]+.*(?:\$|#|>)\s*$/, '');
-  
-  // The first line of the shell output contains the prompt and command executed
-  var lines = raw.trim().split('\n');
-  var cmdLine = lines[0] || '';
-  var cmdMatch = cmdLine.match(/(?:\$|#|>|PS>)\s*(.*)$/);
-  var fullCmd = cmdMatch ? cmdMatch[1] : cmdLine;
-  
-  var isNoRepo = raw.indexOf('fatal: not a git repository') >= 0;
-  if (isNoRepo) {
-      renderNoRepo(raw);
-      hear.off();
-      return;
-  }
-  
-  var isConfig = fullCmd.indexOf(' config') >= 0;
-  if (isConfig && window.renderConfig) {
-      renderConfig(raw, app);
-      if(hasPrompt) hear.off();
-      return;
-  }
-
-  var isDiff = fullCmd.indexOf(' diff') >= 0 || raw.indexOf('diff --git') >= 0;
-  var isStatus = /git\s+status/.test(fullCmd) || raw.indexOf('Changes ') >= 0 || raw.indexOf('nothing to commit') >= 0 || raw.indexOf('Untracked files') >= 0;
-
-  if (isDiff && raw.indexOf('@@@DIFF@@@') === -1) {
-      renderStandaloneDiff(raw);
-  } else if (raw.indexOf('@@@DIFF@@@') >= 0) {
-      var parts = raw.split('@@@DIFF@@@');
-      renderCombined(parts[0], parts[1]);
-  } else if (isStatus) {
-      renderStatus(raw);
-  } else {
-      // Non-status, non-diff git commands (git -v, git log, git branch, etc.)
-      renderRaw(raw);
-  }
-  if(hasPrompt) hear.off();
-});
 
 function parseStatus(raw) {
     var lines = raw.split(/\r?\n/);

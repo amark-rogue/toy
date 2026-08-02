@@ -24,7 +24,6 @@
     <button>claude</button>
     <button>codex</button>
     <button>gemini</button>
-    <button>grok</button>
   </tray></belt>
   <belt><tray>
     <button>new</button>
@@ -71,7 +70,8 @@ fit { display: none; }
 
 iframe {
   height: 0;
-  width: 100%;
+  width: 1px;
+  min-width: 100%; /* iOS sizes iframes to intrinsic content width — this pins layout to the container */
   max-hei-ght: calc(100dvh - 3em - 3em);
   transition: height 120ms ease;
 }
@@ -88,14 +88,13 @@ var model = task.cloneNode(1);
 shell.seq = 0;
 shell.apps = {};
 shell.belt = {};
-shell.sids = {};
+shell.fifo = [];
 kit.ear('app', function(eve, d){ d = eve.detail || eve.data;
   (Array.isArray(d)? d : [d]).forEach(function(a, name){ if(!a){ return }
     name = a.name || a;
     if(shell.apps[name]){ return }
     shell.apps[name] = 1;
     shell.belt[name] = shell.belt[name] || (name + ' '); // tap prefills the prompt — bash is the composer
-    kit.ear(name + '-session', function(eve){ shell.sids[name] = eve.detail || eve.data || '' });
   });
 });
 kit.say(['codex','claude','gemini'], 'app'); // shell's own belt apps — cmd modules may register more
@@ -112,6 +111,7 @@ kit.ear('belt', function(eve, d, name, cmd, b){ d = eve.detail || eve.data;
 });
 shell.ear('click', function(eve, b, cmd){
   if(!(b = eve.target.closest('kit button'))){ return }
+  if('new' === b.textContent.trim()){ next(); shell.$.focus(); screen.buzz(); return } // a fresh prompt, nothing typed for you
   cmd = shell.belt[b.textContent.trim()] || (b.textContent.trim() + ' '); // unregistered names prefill, never blind-run
   if(/\s$/.test(cmd)){ kit.say(cmd, 'prompt.try'); return }
   kit.say(cmd, 'prompt');
@@ -133,27 +133,47 @@ shell.ear('keydown',function(eve){
     return;
   }
 });
-kit.ear('prompt',(eve)=>{
+kit.ear('prompt',(eve, t, bin)=>{
   var cmd = eve.detail||eve.data;
   cmd = (cmd || shell.$.textContent || '').trim();
   shell.$.textContent = cmd;
-  //shell.$.removeAttribute('contenteditable');
-  shell.live = shell.$.up('task')[0];
+  if(!cmd){ kit.say('\r','host'); screen.buzz(); return } // bare Enter just nudges the PTY, prompt stays live
+  if(shell.mode){
+    if('exit' === cmd || 'quit' === cmd){ shell.quit(); return }
+    if('stop' === cmd){ shell.more('', 'stop'); shell.quit(); return }
+    if(/^\$\s/.test(cmd)){ cmd = shell.$.textContent = cmd.replace(/^\$\s+/, '') } // escape hatch — one shell command, mode stays
+    else { shell.more(cmd); return }
+  }
+  bin = (cmd.split(/\s+/)[0] || '').toLowerCase();
+  if(shell.apps[bin] && !/\s/.test(cmd)){
+    kit.say(cmd.toLowerCase() + ' ', 'prompt.try'); // bare tool name — stay in the prompt, wait for the ask
+    return;
+  }
+  t = shell.$.up('task')[0];
+  shell.$.removeAttribute('contenteditable');
   shell.used = 1;
-  if(shell.apps[(cmd.split(/\s+/)[0] || '').toLowerCase()]){
-    if(!/\s/.test(cmd)){ kit.say(cmd.toLowerCase() + ' ', 'prompt.try'); return } // bare tool name — stay in the prompt, wait for the ask
+  shell.fifo.push(t);
+  if(shell.apps[bin]){
+    t.job || (t.job = '' + (++shell.seq));
+    shell.mode = {bin: bin, job: t.job}; // REPL — the prompt feeds this session until exit/stop
     shell.bash('$ ' + cmd + '\n');
     screen.buzz();
+    next();
     return;
   }
   kit.say(cmd+'\r','host');
   screen.buzz();
+  next();
+});
+kit.ear('quit',(eve, d)=>{ d = eve.detail || eve.data;
+  if(shell.mode && shell.mode.job == d){ shell.quit() }
 });
 kit.ear('help',(eve, all, h)=>{
   all = root.all('help');
   if(!(h = all[all.length - 1])){ return }
   h.textContent = eve.detail || eve.data || '';
   h.cmd = ''; // status text is not tappable — clear any stale AI suggestion
+  shell.note = h.textContent.trim()? 1 : 0; // while status shows, suggestions stay out of the help line
 });
 kit.ear('prompt.try',(eve, all, $, r, s)=>{
   var cmd = eve.detail || eve.data || '';
@@ -176,20 +196,20 @@ kit.ear('prompt.same',(eve)=>{
   var cmd = (msg.run || msg.cmd || msg).trim();
   var t = (eve.target && eve.target.up) ? eve.target.up('task')[0] : null;
   if(!cmd || !t){ return }
-  t.bin = msg.bin || '';
+  t.bin = (msg.bin || '').toLowerCase();
   t.cmd = msg.cmd || cmd;
   t.same = 1;
-  shell.live = t;
+  shell.fifo.push(t);
   shell.used = 1;
   kit.say(cmd+'\r','host');
   screen.buzz();
 });
 
 shell.raw = '';
-shell.stream = function(raw){
-  var clean, part, done, i;
+shell.stream = function(raw, clean, part, done, i, r, tail){
   (window.shellReply || {}).maybeContinue && window.shellReply.maybeContinue(raw, {state: shell, send: function(c){ kit.say(c, 'host') }});
   shell.raw += raw || '';
+  if(shell.raw.length > 262144){ shell.raw = shell.raw.slice(-131072) } // a promptless firehose must not grow the buffer forever
   clean = (window.shellReply || {}).clean ? window.shellReply.clean(shell.raw) : shell.raw;
   part = (String.prototype.splitPrompts ? clean.splitPrompts() : String.prompts(clean));
   if(part.length > 1){
@@ -197,7 +217,15 @@ shell.stream = function(raw){
     shell.raw = part[part.length - 1];
     for(i = 0; i < done.length; i += 1){ shell.bash(done[i]) }
   }
-  if(shell.live && shell.live.all){ text(out(shell.live), ((window.shellReply || {}).clean ? window.shellReply.clean(shell.raw) : shell.raw).flat()) }
+  if(!shell.fifo[0] || !shell.fifo[0].all){ return }
+  r = out(shell.fifo[0]);
+  tail = ((window.shellReply || {}).clean ? window.shellReply.clean(shell.raw) : shell.raw).flat();
+  if(r.tail && tail.length > r.tail.length && tail.slice(0, r.tail.length) === r.tail){
+    r.append(document.createTextNode(tail.slice(r.tail.length))); // append-only growth — a selection mid-stream survives
+  } else {
+    text(r, tail);
+  }
+  r.tail = tail;
 }
 shell.head = function(raw, flat, line, hit, cmd){
   flat = (raw || '').flat();
@@ -212,19 +240,18 @@ shell.head = function(raw, flat, line, hit, cmd){
     bin: (cmd.split(/\s+/)[0] || '').trim().toLowerCase()
   };
 }
-shell.bash = function(raw, t, h, r, i, old, src){
+shell.bash = function(raw, t, h, r, i, old, src, e){
   h = shell.head(raw);
   if(!h.cmd){ return }
-  if((/^stty\b|^clear$/.test(h.cmd) || /\$$/.test(h.cmd))
-    && !(shell.live && ((shell.live.all('prompt')[0]||'').textContent||'').trim() === h.cmd)){ return } // PTY init/echo noise (boot & reconnect) — never a task, never consumes shell.live
-  t = shell.live;
+  if((/^stty\b|^clear$|^export PS1=/.test(h.cmd) || /\$$/.test(h.cmd))
+    && !(shell.fifo[0] && ((shell.fifo[0].all('prompt')[0]||'').textContent||'').trim() === h.cmd)){ return } // PTY init/echo noise (boot & reconnect) — never a task, never consumes the queue
+  t = shell.fifo.shift();
   if(!t){
     if(!shell.used){ return } // PTY boot noise (stty/clear echoes) — no task bubbles before first user input
     t = fresh();
   }
   t.job || (t.job = '' + (++shell.seq));
   t.setAttribute('job', t.job);
-  shell.live = null;
   h.bin = t.bin || h.bin;
   h.cmd = t.cmd || h.cmd;
   t.bin = '';
@@ -235,13 +262,17 @@ shell.bash = function(raw, t, h, r, i, old, src){
   t.all('prompt')[0].removeAttribute('contenteditable');
   r = out(t);
   text(r, (raw || '').flat());
-  if(!t.parentNode){ root.append(t) }
+  if(!t.parentNode){
+    e = root.lastElementChild;
+    (e && e.all && e.all('prompt[contenteditable=true]')[0]) ? root.insertBefore(t, e) : root.append(t); // unsolicited output slots in above the live prompt, never after it
+  }
   if(h.bin){
     old = t.all('iframe:not(.shut)')[0] || t.all('iframe')[0];
     i = old;
     src = './cmd/' + h.bin + '.html';
     if(old && old.getAttribute('src') && !t.same){
       i = old.cloneNode(0);
+      i.removeAttribute('src'); // a cloned src starts loading the OLD page before the new one is assigned
       old.parentNode.insertBefore(i, old.nextSibling);
       old.classList.add('shut');
       setTimeout(function(){
@@ -251,12 +282,37 @@ shell.bash = function(raw, t, h, r, i, old, src){
     i.onload = function(){
       if(!i.readyState){ return i.remove() }
       i.classList.remove('shut');
-      kit.say(shell.apps[h.bin] ? {$: h.cmd, raw: h.cmd, '#': t.job, session: shell.sids[h.bin] || ''} : raw, h.bin, i);
+      kit.say(shell.apps[h.bin] ? {$: h.cmd, raw: h.cmd, '#': t.job} : raw, h.bin, i); // entry is always a fresh session — panels hold their own sid, --resume overrides
       r.remove();
     };
     i.src = src;
   }
   t.same = 0;
+  next();
+}
+
+shell.more = function(cmd, act, t, i){
+  t = root.querySelector('task[job="' + shell.mode.job + '"]');
+  i = t && (t.all('iframe:not(.shut)')[0] || t.all('iframe')[0]);
+  if(!i){ shell.quit(); if(cmd){ kit.say(cmd, 'prompt') } return } // session panel gone — drop out and run it normally
+  kit.say(act? {'#': shell.mode.job, act: act, more: 1} : {$: cmd, '#': shell.mode.job, more: 1}, shell.mode.bin, i);
+  if(act){ return }
+  shell.$.removeAttribute('contenteditable');
+  shell.used = 1;
+  next();
+  screen.buzz();
+}
+
+shell.quit = function(t){
+  if(!shell.mode){ return }
+  shell.mode = 0; // next `claude` is a new task, a new job, a fresh session
+
+  if(!(shell.$.textContent || '').trim()){
+    t = shell.$.up('task')[0];
+    text(t.all('symbol')[0], '$ '); // empty prompt just changes hands, no ghost bubble
+    return;
+  }
+  shell.$.removeAttribute('contenteditable');
   next();
 }
 
@@ -303,12 +359,22 @@ function fresh(t){
 function next(t){
   if((root.lastElementChild || {}).all && root.lastElementChild.all('prompt[contenteditable=true]')[0]){ return }
   t = fresh();
+  if(shell.mode){ text(t.all('symbol')[0], shell.mode.bin + '> ') }
   root.append(t);
   shell.$ = t.all('prompt')[0];
-  //shell.$.focus();
+  shell.$.focus();
 }
 
-//kit.ear('clear',eve=>{ root.innerHTML = ""; next(); });
+kit.ear('clear',(eve)=>{
+  while(root.firstChild){ root.firstChild.remove() }
+  shell.fifo = [];
+  next();
+});
+
+look.onclick = function(){
+  B.scrollTop = B.scrollHeight; // quirks mode — the body is the scroller
+  scrollTo(0, B.scrollHeight);
+};
 
 }(window.shell = document.body));
 </script>

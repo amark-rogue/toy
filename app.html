@@ -35,6 +35,7 @@ cop.sign = async (go, url)=>{
   try{ cop.ws = new WebSocket(url.replace(/^http/,'ws') || 'ws://localhost:8022');
   }catch(e){ cop.ws = 0; kit.say('Bad host — check the host field.', 'help'); return }
   cop.ws.onopen = ()=>{ cop.wait = 1000; cop.ws.send(localStorage.pass = (pass.value || localStorage.pass || ''));
+    cop.ws.send(" export PS1=\"\\[\\e]133;A\\a\\]$PS1\"\r"); // invisible prompt sentinel — blocks split exactly at prompts, glued or not
     while((cop.limbo||[]).length){ cop.ws.send(cop.limbo.shift()) }
     kit.say('', 'help');
     location.path = 'shell.html';
@@ -54,7 +55,7 @@ host.value = localStorage.host || (/^http/.test(location.origin)? location.origi
 kit.ear('host',(eve,cmd,no)=>{
   if(no === (cmd = eve.detail||eve.data)){ return }
   var msg = (typeof cmd === 'string') ? cmd : JSON.stringify(cmd);
-  if(!cop.ws){ (cop.limbo = cop.limbo||[]).push(msg); return }
+  if(!cop.ws || 1 !== cop.ws.readyState){ (cop.limbo = cop.limbo||[]).push(msg); return } // dialing sockets throw on send — queue, onopen flushes
   cop.ws.send(msg);
 });
 

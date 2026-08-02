@@ -30,6 +30,8 @@ html, body /*, main, .page*/ {
   font-size: max(16pt, 2vw);
   font-size: 16pt;
   font-size: var(--cs);
+  -webkit-text-size-adjust: 100%; /* iOS inflates text inside overflowing blocks — sizes are already deliberate */
+  text-size-adjust: 100%;
   transition: all 0.3s;
   transition: all var(--time);
   background-color: transparent;
@@ -318,6 +320,7 @@ body:has(.wane),
   scroll-timeline-name: --top;
   scroll-timeline-axis: block;
 }
+@supports (animation-timeline: scroll()) { /* without scroll timelines the both-filled animation snaps to its end — a 5em opaque bar pinned over the terminal */
 body:has(.wane)::before,
 .wane:not(shell)::before {
   content: "";
@@ -352,12 +355,14 @@ body:has(.wane)::after,
   animation-timeline: --top;
   animation-range: calc(100% - 5em) 100%;
 }
+}
 .wade {
   display: block;
   position: relative;
   width: 100%;
   timeline-scope: --side;
 }
+@supports (animation-timeline: scroll()) {
 .wade::before {
   content: "";
   position: absolute;
@@ -389,6 +394,7 @@ body:has(.wane)::after,
   animation: wader linear both reverse;
   animation-timeline: --side;
   animation-range: calc(100% - 2em) 100%;
+}
 }
 .wade > * {
   scroll-timeline-name: --side;
