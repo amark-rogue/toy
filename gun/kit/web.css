@@ -2,7 +2,7 @@
   --cs: 16pt;
   --mood: white;
   --m00d: 100%,100%,100%;
-  --fill: white;
+  --fill: var(--mood);
   --blur: 5px;
   --drip: center;
   --font: system-ui, sans-serif;
