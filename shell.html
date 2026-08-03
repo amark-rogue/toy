@@ -102,6 +102,15 @@ kit.ear('prompt',(eve)=>{
   kit.say(cmd+'\r','host');
   screen.buzz();
 });
+kit.ear('prompt.set', function(eve, cmd, t, p){
+  cmd = eve.detail || eve.data || '';
+  t = (eve.target && eve.target.up) ? eve.target.up('task')[0] : null;
+  p = t && t.all('prompt')[0];
+  if(p){
+    t.show = cmd;
+    p.textContent = cmd;
+  }
+});
 kit.ear('prompt.try',(eve, all, $, r, s)=>{
   var cmd = eve.detail || eve.data || '';
   if(!cmd){ return }
@@ -180,7 +189,8 @@ shell.bash = function(raw, t, h, r, i, old, src){
   t.cmd = '';
   if(h.bin){ t.setAttribute('bin', h.bin) }
   text(t.all('symbol')[0], h.sign + ' ');
-  text(t.all('prompt')[0], h.cmd);
+  text(t.all('prompt')[0], t.show || h.cmd);
+  t.show = '';
   t.all('prompt')[0].removeAttribute('contenteditable');
   r = out(t);
   text(r, (raw || '').flat());

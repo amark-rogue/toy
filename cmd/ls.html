@@ -2,7 +2,7 @@
 
 <div class="wade">
 <list id="list">
-  <a id="up" onclick="kit.say({run:'cd ../ && ls .', cmd:'ls .', bin:'ls'}, 'prompt.same')">../</a>
+  <a id="up">../</a>
   <a id="add">+</a>
 </list>
 </div>
@@ -72,6 +72,7 @@ kit.say([['claude','claude '],['codex','codex '],['gemini','gemini '],['grok','g
 CMD = {};
 CMD.ls = function(s,v,f,cmd){
   cmd = (s=s.flat()).cut('\n',ESC); s = cmd[2]; cmd = cmd[0];
+  CMD.base(cmd);
   
   s = s.replaceAll('\r\n','\t').replaceAll('\r','\t').replaceAll('\n','\t').replaceAll(/\s{2,}/g,'\t');
   f = (s.indexOf('\t')+1)? '\t' : /\s+/;
@@ -88,17 +89,42 @@ CMD.ls = function(s,v,f,cmd){
   v.scrollLeft = (v.scrollWidth - v.clientWidth) / 2;
 };
 
+CMD.path = '~';
+CMD.base = function(cmd, hit){
+  hit = cmd.match(/\bcd\s+(.+?)\s+&&\s+ls\b/);
+  if(hit){ CMD.path = hit[1].replace(/\\(.)/g, '$1') }
+};
+CMD.go = function(item, part, out){
+  part = (CMD.path + '/' + item).split('/');
+  out = [];
+  part.forEach(function(v){
+    if(!v || '.' === v){ return }
+    if('..' === v){ if(out.length > 1){ out.pop() } return }
+    out.push(v);
+  });
+  return out.join('/') || '~';
+};
+CMD.arg = function(path){ return path.replace(/[^\w@%+=:,./~-]/g, '\\$&') };
+up.where = '..';
+
 B.ear('contextmenu', function(eve, a){ a = eve.target.closest('list a');
   if(!a || !a.where){ return }
   eve.preventDefault();
   kit.say(a.where, 'ls.pop', pop);
 });
 
-B.ear('click',(eve, a)=>{ a = eve.target.closest('a');
+B.ear('click',(eve, a, path, cmd)=>{ a = eve.target.closest('a');
   if(!a || !a.closest('list')){ return }
   if(!a.where){ return }
-  if(a.file){ kit.say('cat '+a.where, 'prompt'); return }
-  kit.say({run:'cd '+a.where+' && ls .', cmd:'ls .', bin:'ls'}, 'prompt.same');
+  if(a.file){
+    kit.say('cat '+a.where, 'prompt.set');
+    kit.say('cat '+a.where, 'prompt');
+    return;
+  }
+  path = CMD.go(a.where);
+  cmd = 'cd '+CMD.arg(path)+' && ls .';
+  kit.say(cmd, 'prompt.set');
+  kit.say({run:cmd, cmd:'ls .', bin:'ls'}, 'prompt.same');
 });
 
 (async function(){ return;
