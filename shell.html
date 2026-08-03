@@ -157,17 +157,22 @@ shell.stream = function(raw){
   }
   if(shell.live && shell.live.all){ text(out(shell.live), ((window.shellReply || {}).clean ? window.shellReply.clean(shell.raw) : shell.raw).flat()) }
 }
-shell.head = function(raw, flat, line, hit, cmd){
+shell.last = function(cmd, cut){
+  while((cut = cmd.cut('&&', ESC))[1]){ cmd = cut[2] }
+  return cmd.trim();
+}
+shell.head = function(raw, flat, line, hit, cmd, last){
   flat = (raw || '').flat();
   line = flat.split(/\r\n|\n|\r/)[0] || '';
   hit = line.match(/^(.*?)(\$|#|>|%|~%|PS>)\s*([\s\S]*)$/);
   cmd = hit ? hit[3].trim() : line.trim();
+  last = shell.last(cmd);
   return {
     path: hit ? hit[1].trim() : '',
     sign: hit ? hit[2].trim() : '$',
     line: line,
     cmd: cmd,
-    bin: (cmd.split(/\s+/)[0] || '').trim().toLowerCase()
+    bin: (last.split(/\s+/)[0] || '').trim().toLowerCase()
   };
 }
 shell.bash = function(raw, t, h, r, i, old, src){
@@ -293,7 +298,7 @@ kit.ear('clear',(eve,v,p)=>{ // clear is the 1 special command exception.
   while(p = v.previousSibling){ v.remove(); v=p; }
   v.remove();
 });
-kit.say('ls .','prompt'); // this is an optional progressive enhancement, shell does not know about ls, it is just blindly calling for an enhancement.
+kit.say(localStorage.pwd||'ls .','prompt'); // this is an optional progressive enhancement, shell does not know about ls, it is just blindly calling for an enhancement.
 
 
 

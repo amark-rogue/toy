@@ -123,7 +123,7 @@ B.ear('click',(eve, a, path, cmd)=>{ a = eve.target.closest('a');
   }
   path = CMD.go(a.where);
   cmd = 'cd '+CMD.arg(path)+' && ls .';
-  kit.say(cmd, 'prompt.set');
+  kit.say(localStorage.pwd = cmd, 'prompt.set');
   kit.say({run:cmd, cmd:'ls .', bin:'ls'}, 'prompt.same');
 });
 
