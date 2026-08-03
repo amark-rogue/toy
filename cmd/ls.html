@@ -11,10 +11,11 @@
   <a></a>
 </fit>
 
-<dialog id="actionDialog"></dialog>
+<iframe id="pick" src="./ls-pop.html"></iframe>
 
 <style>
 body { display: block; min-height: 0; overflow: hidden; }
+iframe { display: block; width: 100%; height: 0; }
 .ls, list {
   text-align: center;
   display: block;
@@ -68,27 +69,6 @@ kit.ear('ls',function hear(eve){ hear.off();
 kit.say([['ls','ls .'],['git','git status'],['npm','npm '],['kill','kill '],['clear','clear']], 'belt');
 kit.say([['claude','claude '],['codex','codex '],['gemini','gemini '],['grok','grok ']], 'belt');
 
-/*
-// ls.html registers the belt shortcuts for cmd/*.html handlers.
-// (App bins are registered by shell.html itself at boot — first command may be an AI tool.)
-kit.say(['ls','ls .'], 'belt');
-//kit.say(['cat','cat '], 'belt');
-//kit.say(['cd','cd '], 'belt');
-kit.say(['pwd','pwd'], 'belt');
-kit.say(['whoami','whoami'], 'belt');
-kit.say(['ps','ps aux'], 'belt');
-kit.say(['ping','ping '], 'belt');
-kit.say(['grep','grep '], 'belt');
-kit.say(['echo','echo '], 'belt');
-kit.say(['mkdir','mkdir '], 'belt');
-kit.say(['touch','touch '], 'belt');
-//kit.say(['cp','cp '], 'belt');
-//kit.say(['mv','mv '], 'belt');
-//kit.say(['rm','rm '], 'belt');
-kit.say(['npm','npm '], 'belt');
-kit.say(['git','git status'], 'belt');
-*/
-
 CMD = {};
 CMD.ls = function(s,v,f,cmd){
   cmd = (s=s.flat()).cut('\n',ESC); s = cmd[2]; cmd = cmd[0];
@@ -107,6 +87,12 @@ CMD.ls = function(s,v,f,cmd){
 
   v.scrollLeft = (v.scrollWidth - v.clientWidth) / 2;
 };
+
+B.ear('contextmenu', function(eve, a){ a = eve.target.closest('list a');
+  if(!a || !a.where){ return }
+  eve.preventDefault();
+  kit.say(a.where, 'ls.pop', pick);
+});
 
 B.ear('click',(eve, a)=>{ a = eve.target.closest('a');
   if(!a || !a.closest('list')){ return }
