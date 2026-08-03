@@ -33,17 +33,15 @@ cop.sign = async (go, url)=>{
   url = host.value || localStorage.host || (/^http/.test(location.origin)? location.origin : ''); // the app's own server relays the socket — no host to type, no autofill to depend on
   if(url){ localStorage.host = host.value = url }
   try{ cop.ws = new WebSocket(url.replace(/^http/,'ws') || 'ws://localhost:8022');
-  }catch(e){ cop.ws = 0; kit.say('Bad host — check the host field.', 'help'); return }
+  }catch(e){ cop.ws = 0; return }
   cop.ws.onopen = ()=>{ cop.wait = 1000; cop.ws.send(localStorage.pass = (pass.value || localStorage.pass || ''));
     while((cop.limbo||[]).length){ cop.ws.send(cop.limbo.shift()) }
-    kit.say('', 'help');
     location.path = 'shell.html';
   };
   cop.ws.onmessage = (eve) => { kit.say(eve.data,'chat') };
   cop.ws.onerror = (err) => { console.error('ws err:', err) };
   cop.ws.onclose = (eve) => { cop.ws=0;
     if('cannot pass' === eve.reason){ localStorage.removeItem('pass'); location.reload(); return } // stale pass rejected — back to a clean login, no retry spin
-    kit.say('Reconnecting...', 'help');
     setTimeout(() => { cop.wait = Math.min(cop.wait * 2, 30000); cop.sign() }, cop.wait = cop.wait || 1000);
   };
 };
