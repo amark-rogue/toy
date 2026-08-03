@@ -149,12 +149,19 @@ function link(src){
 		cloneNode(){ return el() },
 		removeAttribute(){},
 		appendChild(){},
+		addEventListener(){},
+		querySelector(){ return null },
+		closest(){ return null },
+		focus(){},
 		className: '',
+		style: {},
 		textContent: '',
 		dataset: {},
 		classList: {add(){}, remove(){}}
 	});
-	const win = {document: {getElementById: id => el(), createElement: () => el(), createTextNode: s => ({textContent: s})}, console, performance: {now: () => Date.now()}, localStorage: {}, setTimeout};
+	const win = {document: {getElementById: id => el(), createElement: () => el(), createTextNode: s => ({textContent: s}), querySelector: () => null, addEventListener(){}, body: el()}, console, performance: {now: () => Date.now()}, localStorage: {}, navigator: {clipboard: {}}, setTimeout};
+	win.window = win;
+	win.addEventListener = function(){};
 	vm.createContext(win);
 	vm.runInContext(fs.readFileSync(dir + '/gun/mug-codex.js', 'utf8'), win);
 	vm.runInContext(src, win);

@@ -34,6 +34,7 @@ const tests = [
   { name: 'nano', cmd: 'nano', args: [] },
   { name: 'top', cmd: 'top', args: [] },
   { name: 'screen', cmd: 'screen', args: [] },
+  { name: 'codex', cmd: 'codex', args: [] },
   { name: 'node_repl', cmd: 'node', args: ['-i'] },
   { name: 'python_repl', cmd: 'python', args: ['-i'] }
 ];
@@ -89,7 +90,8 @@ async function runCommand(test) {
 }
 
 async function runAll() {
-  for (const test of tests) {
+  const pick = process.argv.slice(2);
+  for (const test of tests.filter((one) => !pick.length || pick.includes(one.name))) {
     await runCommand(test);
   }
   console.log(`All samples generated in: ${outDir}`);

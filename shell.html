@@ -59,6 +59,10 @@ iframe {
 iframe.shut {
   height: 0 !important;
 }
+iframe.term {
+  height: calc(100dvh - 4em);
+  max-height: calc(100dvh - 4em);
+}
 
 </style>
 <script src="util.js"></script>
@@ -67,9 +71,7 @@ var root = shell.all('shell')[0];
 var task = root.all('task')[0];
 var model = task.cloneNode(1);
 shell.seq = 0;
-shell.apps = {};
 shell.belt = {};
-shell.sids = {};
 (shell.$ = task.all('prompt')[0]).focus();
 
 kit.ear('chat',(eve, raw)=>{ raw = eve.detail || eve.data || eve;
@@ -93,12 +95,6 @@ kit.ear('prompt',(eve)=>{
   //shell.$.removeAttribute('contenteditable');
   shell.live = shell.$.up('task')[0];
   shell.used = 1;
-  if(shell.apps[(cmd.split(/\s+/)[0] || '').toLowerCase()]){
-    if(!/\s/.test(cmd)){ kit.say(cmd.toLowerCase() + ' ', 'prompt.try'); return } // bare tool name — stay in the prompt, wait for the ask
-    shell.bash('$ ' + cmd + '\n');
-    screen.buzz();
-    return;
-  }
   kit.say(cmd+'\r','host');
   screen.buzz();
 });
@@ -147,7 +143,23 @@ shell.raw = '';
 shell.stream = function(raw){
   var clean, part, done, i;
   (window.shellReply || {}).maybeContinue && window.shellReply.maybeContinue(raw, {state: shell, send: function(c){ kit.say(c, 'host') }});
+  if(shell.tty){
+    kit.say(raw, 'term', shell.tty);
+    shell.code = ((shell.code || '') + (raw || '')).slice(-4096);
+    if(/\x1b\[\?(?:47|1047|1049)l/.test(shell.code) ||
+      ('alt' !== shell.tty.mode && /(?:^|\n)\S*[$#>%]\s*$/.test(shell.code.flat()))){
+      shell.tty = null;
+      shell.code = '';
+      shell.raw = '';
+      next();
+    }
+    return;
+  }
   shell.raw += raw || '';
+  if(i = shell.raw.tty()){
+    shell.term(shell.raw, i);
+    return;
+  }
   clean = (window.shellReply || {}).clean ? window.shellReply.clean(shell.raw) : shell.raw;
   part = (String.prototype.splitPrompts ? clean.splitPrompts() : String.prompts(clean));
   if(part.length > 1){
@@ -157,6 +169,16 @@ shell.stream = function(raw){
   }
   if(shell.live && shell.live.all){ text(out(shell.live), ((window.shellReply || {}).clean ? window.shellReply.clean(shell.raw) : shell.raw).flat()) }
 }
+shell.term = function(raw, mode, t, all){
+  t = shell.live;
+  if(!t){ return }
+  t.bin = 'term';
+  shell.raw = '';
+  shell.bash(raw);
+  all = t.all('iframe:not(.shut)');
+  shell.tty = all[all.length - 1] || null;
+  if(shell.tty){ shell.tty.mode = mode; shell.tty.classList.add('term') }
+};
 shell.last = function(cmd, cut){
   while((cut = cmd.cut('&&', ESC))[1]){ cmd = cut[2] }
   return cmd.trim();
@@ -165,7 +187,7 @@ shell.head = function(raw, flat, line, hit, cmd, last){
   flat = (raw || '').flat();
   line = flat.split(/\r\n|\n|\r/)[0] || '';
   hit = line.match(/^(.*?)(\$|#|>|%|~%|PS>)\s*([\s\S]*)$/);
-  cmd = hit ? hit[3].trim() : line.trim();
+  cmd = line.cmd();
   last = shell.last(cmd);
   return {
     path: hit ? hit[1].trim() : '',
@@ -221,7 +243,7 @@ shell.bash = function(raw, t, h, r, i, old, src){
     i.onload = function(){
       if(!i.readyState){ return i.remove() }
       i.classList.remove('shut');
-      kit.say(shell.apps[h.bin] ? {$: h.cmd, raw: h.cmd, '#': t.job, session: shell.sids[h.bin] || ''} : raw, h.bin, i);
+      kit.say(raw, h.bin, i);
       r.remove();
     };
     i.src = src;
@@ -229,11 +251,12 @@ shell.bash = function(raw, t, h, r, i, old, src){
   t.same = 0;
   t.stay = 0;
   t.file = '';
-  next();
+  if('term' !== h.bin){ next() }
 }
 
 shell.hook = function(obj, t, i){
-  if(!obj || !obj['#']){ return 0 }
+  if(!obj){ return 0 }
+  if(!obj['#']){ return 0 }
   t = root.querySelector('task[job="' + String(obj['#']).replace(/"/g, '') + '"]');
   if(!t){ return obj.type? 1 : 0 } // typed reply for a dead task: drop, don't leak JSON into the stream
   i = t.all('iframe:not(.shut)')[0] || t.all('iframe')[0];
@@ -305,40 +328,6 @@ kit.say(localStorage.pwd||'ls .','prompt'); // this is an optional progressive e
 
 
 
-kit.ear('app', function(eve, d){ d = eve.detail || eve.data;
-  (Array.isArray(d)? d : [d]).forEach(function(a, name){ if(!a){ return }
-    name = a.name || a;
-    if(shell.apps[name]){ return }
-    shell.apps[name] = 1;
-    shell.belt[name] = shell.belt[name] || (name + ' '); // tap prefills the prompt — bash is the composer
-    kit.ear(name + '-session', function(eve){ shell.sids[name] = eve.detail || eve.data || '' });
-  });
-});
-/*
-kit.say(['codex','claude','gemini'], 'app'); // shell's own belt apps — cmd modules may register more
-kit.ear('belt', function(eve, d, name, cmd, b){ d = eve.detail || eve.data;
-  if(!d){ return }
-  name = (Array.isArray(d)? d[0] : d.name || '' + d).trim();
-  cmd = Array.isArray(d)? (d[1] || name) : (d.prompt || name);
-  if(!name){ return }
-  shell.belt[name] = cmd;
-  if([...B.all('kit button')].some(function(v){ return v.textContent.trim() === name })){ return }
-  b = B.new('kit button');
-  b.textContent = name;
-  B.all('kit tray')[0].append(b);
-});
-shell.ear('click', function(eve, b, cmd){
-  if(!(b = eve.target.closest('kit button'))){ return }
-  cmd = shell.belt[b.textContent.trim()] || (b.textContent.trim() + ' '); // unregistered names prefill, never blind-run
-  if(/\s$/.test(cmd)){ kit.say(cmd, 'prompt.try'); return }
-  console.log("CATCH IT HERE:", cmd);
-  kit.say(cmd, 'prompt');
-  screen.buzz();
-});
-*/
-
-
-
 }(window.shell = document.body));
 </script>
-<script src="cmd/aid.js"></script>
+<script src="aid.js"></script>

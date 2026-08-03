@@ -53,7 +53,7 @@ sid.onclick = function(){ if(CLD.sid) kit.up('claude --resume '+CLD.sid+' ', 'pr
 
 var CLD = {};
 CLD.sid = null;
-CLD.job = '';
+CLD.job = job();
 CLD.on  = 0;
 CLD.blocks = {};
 
@@ -189,6 +189,7 @@ kit.ear('claude', function(eve){
   if(d.type === 'claude' || d['^']){ CLD.got(d); return }
 
   var raw = typeof d === 'string' ? d : (d.raw || d.$ || d.prompt || '');
+  raw = raw.cmd();
   CLD.job = (typeof d === 'object' && d['#']) ? d['#'] : (CLD.job || '1');
   var s = typeof d === 'object' ? (d.session || null) : null;
   var cwd = typeof d === 'object' ? (d.cwd || '') : '';

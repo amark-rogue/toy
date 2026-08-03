@@ -28,6 +28,20 @@ String.prototype.flat = function(){
   return this.replace(/\x1B(?:\[[0-?]*[ -/]*[@-~]|\][^\x07]+\x07)/g, '');
 }
 
+String.prototype.cmd = function(s, line, hit){
+  s = this.flat();
+  line = s.split(/\r\n|\n|\r/)[0] || '';
+  hit = line.match(/^(.*?)(\$|#|>|%|~%|PS>)\s*([\s\S]*)$/);
+  return (hit ? hit[3] : line).trim();
+};
+
+String.prototype.tty = function(){
+  if(/\x1b\[\?(?:47|1047|1049)h/.test(this)){ return 'alt' }
+  if(/\x1b\[\?2026h/.test(this)){ return 'sync' }
+  if(/\x1b\[\?25l/.test(this) && /\x1b\[(?:H\x1b\[J|2J)/.test(this)){ return 'full' }
+  return '';
+};
+
 String.prototype.ansi = function() {
   var colors = {
     30: 'black', 31: 'red', 32: 'green', 33: 'yellow', 34: 'blue', 35: 'magenta', 36: 'cyan', 37: 'white',
@@ -71,6 +85,11 @@ String.prototype.unansi = function() {
 
 ESC = {"'":'','"':'','#':'\n'};
 var D = document, B = D.body;
+window.job = function(i, t){
+  i = frameElement;
+  t = i && i.closest('task');
+  return (t && t.getAttribute('job')) || '';
+};
 
 // tool-call renderer for AI agent cards (claude, codex, gemini)
 ;(function(){

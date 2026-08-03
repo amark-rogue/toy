@@ -53,7 +53,7 @@ sid.onclick = function(){ if(GEM.sid) kit.up('gemini --resume '+GEM.sid+' ', 'pr
 
 var GEM = {};
 GEM.sid = null;
-GEM.job = '';
+GEM.job = job();
 GEM.on  = 0;
 GEM.textEl = null;
 GEM.thinkEl = null;
@@ -169,6 +169,7 @@ kit.ear('gemini', function(eve){
   if(d.type === 'gemini' || d['^']){ GEM.got(d); return }
 
   var raw = typeof d === 'string' ? d : (d.raw || d.$ || d.prompt || '');
+  raw = raw.cmd();
   GEM.job = (typeof d === 'object' && d['#']) ? d['#'] : (GEM.job || '1');
   var s = typeof d === 'object' ? (d.session || null) : null;
   var cwd = typeof d === 'object' ? (d.cwd || '') : '';

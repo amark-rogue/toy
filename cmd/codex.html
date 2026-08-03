@@ -9,6 +9,10 @@
     <button id="stop" class="mini" type="button">stop</button>
   </div>
   <div id="bod" class="bod"></div>
+  <form id="ask">
+    <textarea id="say" aria-label="Codex prompt" placeholder="Ask Codex" rows="2"></textarea>
+    <button type="submit">send</button>
+  </form>
 </div>
 
 <div class="model">
@@ -24,6 +28,8 @@ body { display: block; min-height: 0; overflow: hidden; }
 .val { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 900; }
 .bod { padding: 0.6em; display: block; }
 .bod > * { display: block; margin-bottom: 0.6em; }
+#ask { display: flex; align-items: stretch; gap: 0.4em; padding: 0.6em; border-top: 1px solid var(--pop); }
+#say { flex: 1; min-width: 0; min-height: 3em; resize: vertical; color: inherit; border: 1px solid var(--pop); border-radius: 0.45em; padding: 0.55em; }
 .blk { white-space: pre-wrap; word-break: break-word; margin: 0; font-family: 'Courier New', monospace; font-size: 0.88em; text-align: left; }
 .usr { opacity: 0.6; border-top: 1px solid color-mix(in srgb, var(--pop) 30%, transparent); padding-top: 0.45em; }
 .fail { color: var(--err); }
@@ -39,9 +45,11 @@ var bod = B.all('#bod')[0];
 var lab = B.all('#lab')[0];
 var ins = B.all('#ins')[0];
 var stop = B.all('#stop')[0];
+var ask = B.all('#ask')[0];
+var say = B.all('#say')[0];
 var CDX = {};
 
-CDX.job = '';
+CDX.job = job();
 CDX.tid = '';
 CDX.on = 0;
 CDX.out = null;
@@ -77,6 +85,7 @@ CDX.send = function(text, act){
 
 CDX.done = function(){
   CDX.on = 0;
+  say.focus();
   kit.say({}, 'style');
 };
 
@@ -92,6 +101,7 @@ CDX.got = function(obj){
 
 CDX.first = function(d){
   var raw = typeof d === 'string' ? d : (d.raw || d.$ || d.prompt || '');
+  raw = raw.cmd();
   var m = raw.match(/^codex(?:\s+--resume\s+(\S+))?\s*([\s\S]*)$/i);
   var text = m ? (m[2] || '') : raw;
   var s = (typeof d === 'object' && d.session) || null;
@@ -99,7 +109,7 @@ CDX.first = function(d){
   if(m && m[1]){ CDX.tid = m[1]; lab.textContent = CDX.tid.slice(0, 8) }
   else if(s){ CDX.tid = s; lab.textContent = s.slice(0, 8) } // shell remembers the thread — bash prompts continue it
   text = text.trim();
-  if(!text){ lab.textContent = 'type: codex <prompt>'; kit.say({}, 'style'); return }
+  if(!text){ lab.textContent = 'ready'; say.focus(); kit.say({}, 'style'); return }
   CDX.user(text);
   CDX.send(text);
 };
@@ -119,6 +129,22 @@ ins.onclick = function(){
 stop.onclick = function(){
   CDX.send('', 'stop');
   CDX.done();
+};
+
+ask.onsubmit = function(eve, text){
+  eve.preventDefault();
+  text = say.value.trim();
+  if(!text || CDX.on){ return }
+  say.value = '';
+  CDX.out = null;
+  CDX.user(text);
+  CDX.send(text);
+};
+
+say.onkeydown = function(eve){
+  if('Enter' !== eve.key || eve.shiftKey){ return }
+  eve.preventDefault();
+  ask.requestSubmit();
 };
 
 }());</script>
