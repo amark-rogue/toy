@@ -5,14 +5,10 @@
   <div class="bar">
     <span class="tag">codex</span>
     <span id="lab" class="val"></span>
+    <button id="ins" type="button" class="mini hide">install</button>
     <button id="stop" class="mini" type="button">stop</button>
   </div>
   <div id="bod" class="bod"></div>
-  <form id="ask" class="ask">
-    <textarea id="txt" rows="2" autocomplete="off" autocapitalize="sentences" spellcheck="true"></textarea>
-    <button id="go" type="submit">send</button>
-    <button id="ins" type="button" class="hide">install</button>
-  </form>
 </div>
 
 <div class="model">
@@ -31,9 +27,7 @@ body { display: block; min-height: 0; overflow: hidden; }
 .blk { white-space: pre-wrap; word-break: break-word; margin: 0; font-family: 'Courier New', monospace; font-size: 0.88em; text-align: left; }
 .usr { opacity: 0.6; border-top: 1px solid color-mix(in srgb, var(--pop) 30%, transparent); padding-top: 0.45em; }
 .fail { color: var(--err); }
-.ask { display: flex; gap: 0.45em; padding: 0.55em; border-top: 1px solid color-mix(in srgb, var(--pop) 30%, transparent); align-items: stretch; }
-textarea { flex: 1; min-width: 0; resize: none; color: inherit; background: transparent; border: 1px solid color-mix(in srgb, var(--pop) 45%, transparent); border-radius: 0.45em; padding: 0.55em; font: inherit; min-height: 3.1em; }
-button { color: inherit; background: transparent; border: 1px solid var(--pop); border-radius: 0.45em; padding: 0.45em 0.7em; font: inherit; font-weight: 900; min-width: 4.7em; touch-action: manipulation; }
+button { color: inherit; background: transparent; border: 1px solid var(--pop); border-radius: 0.45em; padding: 0.45em 0.7em; font: inherit; font-weight: 900; touch-action: manipulation; }
 .mini { min-width: 3.8em; font-size: 0.78em; opacity: 0.7; }
 .hide { display: none; }
 </style>
@@ -43,9 +37,6 @@ button { color: inherit; background: transparent; border: 1px solid var(--pop); 
 
 var bod = B.all('#bod')[0];
 var lab = B.all('#lab')[0];
-var ask = B.all('#ask')[0];
-var txt = B.all('#txt')[0];
-var go  = B.all('#go')[0];
 var ins = B.all('#ins')[0];
 var stop = B.all('#stop')[0];
 var CDX = {};
@@ -81,15 +72,11 @@ CDX.send = function(text, act){
   if(CDX.tid){ msg.thread = CDX.tid }
   if(localStorage.cwd){ msg.cwd = localStorage.cwd }
   CDX.on = 1;
-  go.disabled = true;
   kit.up(msg, 'host');
 };
 
 CDX.done = function(){
   CDX.on = 0;
-  go.disabled = false;
-  txt.value = '';
-  CDX.fit();
   kit.say({}, 'style');
 };
 
@@ -97,22 +84,22 @@ CDX.got = function(obj){
   if(obj.thread){ CDX.tid = obj.thread; lab.textContent = CDX.tid.slice(0, 8) }
   if(obj.need === 'codex'){ ins.classList.remove('hide') }
   if(obj.$){ CDX.say(obj.$) }
-  if(obj.done){ CDX.done() }
-};
-
-CDX.fit = function(){
-  txt.style.height = 'auto';
-  txt.style.height = txt.scrollHeight + 'px';
+  if(obj.done){
+    if(CDX.tid){ kit.up(CDX.tid, 'codex-session') }
+    CDX.done();
+  }
 };
 
 CDX.first = function(d){
   var raw = typeof d === 'string' ? d : (d.raw || d.$ || d.prompt || '');
   var m = raw.match(/^codex(?:\s+--resume\s+(\S+))?\s*([\s\S]*)$/i);
   var text = m ? (m[2] || '') : raw;
+  var s = (typeof d === 'object' && d.session) || null;
   CDX.job = (typeof d === 'object' && d['#']) ? d['#'] : (CDX.job || '1');
   if(m && m[1]){ CDX.tid = m[1]; lab.textContent = CDX.tid.slice(0, 8) }
+  else if(s){ CDX.tid = s; lab.textContent = s.slice(0, 8) } // shell remembers the thread — bash prompts continue it
   text = text.trim();
-  if(!text){ text = 'Help me with this codebase.' }
+  if(!text){ lab.textContent = 'type: codex <prompt>'; kit.say({}, 'style'); return }
   CDX.user(text);
   CDX.send(text);
 };
@@ -122,23 +109,6 @@ kit.ear('codex', function(eve){
   if(d.type === 'codex' || d['^']){ CDX.got(d); return }
   CDX.first(d);
 });
-
-ask.onsubmit = function(eve){
-  var val = txt.value.trim();
-  eve.preventDefault();
-  if(!val || CDX.on){ return }
-  CDX.out = null;
-  CDX.user(val);
-  CDX.send(val);
-};
-
-txt.oninput = CDX.fit;
-txt.onkeydown = function(eve){
-  if(eve.key === 'Enter' && !eve.shiftKey){
-    eve.preventDefault();
-    ask.requestSubmit();
-  }
-};
 
 ins.onclick = function(){
   ins.classList.add('hide');
