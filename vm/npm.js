@@ -10,6 +10,21 @@ VM.cmd.routes.push({
 VM.pkg.npm = {};
 VM.pkg.npm.got = {};
 
+// skip paths jsdelivr blocks or that are useless in a browser shell
+VM.pkg.npm.skip = function (f) {
+  if (!f || /[\x00-\x1f\x7f]/.test(f)) return 1;
+  if (
+    /\.(jar|war|exe|dll|so|dylib|node|o|a|lib|class|bat|cmd|ps1|apk|aab|zip|gz|tgz|7z|rar|woff2?|ttf|eot|ico|png|jpe?g|gif|webp|mp[34]|wav|ogg|wasm|map)$/i.test(
+      f,
+    )
+  )
+    return 1;
+  if (/\/(android|ios|gradle|\.gradle|Pods|react-native\/android|react-native\/ios)\//i.test(f))
+    return 1;
+  if (/gradlew(\.bat)?$/i.test(f)) return 1;
+  return 0;
+};
+
 VM.pkg.npm.run = function (cmd, emu) {
   var m = cmd.match(/^npm\s+install\s+(.+)/);
   if (!m) return false;
@@ -21,13 +36,27 @@ VM.pkg.npm.exec = async function (names, emu) {
   VM.pkg.npm.got = {};
   var base = "/root",
     t = Date.now();
+  // complete leftover prompt: "~ $ " + this line (VM.shim does not re-echo the typed cmd)
   VM.say("npm install " + names.join(" ") + "\n");
   for (var i = 0; i < names.length; i++) {
     var raw = names[i].replace(/^--.*/, "");
     if (!raw) continue;
     var at = raw.lastIndexOf("@");
-    var name = at > 0 ? raw.slice(0, at) : raw;
-    var ver = at > 0 ? raw.slice(at + 1) : "latest";
+    // scoped @org/pkg: only split version when @ is after the name
+    var name, ver;
+    if (raw.charAt(0) === "@") {
+      var cut = raw.indexOf("@", 1);
+      if (cut > 0) {
+        name = raw.slice(0, cut);
+        ver = raw.slice(cut + 1) || "latest";
+      } else {
+        name = raw;
+        ver = "latest";
+      }
+    } else {
+      name = at > 0 ? raw.slice(0, at) : raw;
+      ver = at > 0 ? raw.slice(at + 1) : "latest";
+    }
     try {
       await VM.pkg.npm.one(name, ver, emu, 0, base);
     } catch (e) {
@@ -42,19 +71,21 @@ VM.pkg.npm.exec = async function (names, emu) {
       ((Date.now() - t) / 1000).toFixed(1) +
       "s\n",
   );
-  emu.serial0_send("echo done\n");
+  // re-prompt only (same as git) — not "echo done" which muddies the npm unit
+  emu.serial0_send("\n");
 };
 
 VM.pkg.npm.one = async function (name, ver, emu, depth, base) {
   if (VM.pkg.npm.got[name]) return;
   VM.pkg.npm.got[name] = 1;
   var pad = "  ".repeat(depth || 0);
+  var meta;
 
   try {
     var res = await fetch("https://registry.npmjs.org/" + name + "/latest");
     if (!res.ok) res = await fetch("https://registry.npmjs.org/" + name);
     if (!res.ok) return;
-    var meta = await res.json();
+    meta = await res.json();
     ver = meta.version || (meta["dist-tags"] || {}).latest;
     if (!ver) return;
   } catch (e) {
@@ -72,7 +103,7 @@ VM.pkg.npm.one = async function (name, ver, emu, depth, base) {
     (arr || []).forEach((f) => {
       var p = pre + "/" + f.name;
       if (f.type === "directory") flat(f.files, p);
-      else files.push(p);
+      else if (!VM.pkg.npm.skip(p)) files.push(p);
     });
   };
   flat((await tree.json()).files, "");

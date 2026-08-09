@@ -31,9 +31,11 @@ kit.ear('npm', function hear(eve) {
       if(clean) return clean;
     }
     return '';
-  });
-  B.all('#sub')[0].textContent = s[0].replace(/^npm\s+/,'').split(/\s+/)[0] || '?';
-  B.all('#out')[0].textContent = s.slice(1).filter(function(l){ return l.trim(); }).join('\n');
+  }).filter(function(l){ return l; });
+  // first line is "~ $ npm install gun" — strip prompt then "npm "
+  var head = (s[0] || '').replace(/^.*?[$#>%]\s*/, '').replace(/^npm\s+/, '');
+  B.all('#sub')[0].textContent = head.split(/\s+/)[0] || '?';
+  B.all('#out')[0].textContent = s.slice(1).join('\n');
   hear.off();
 });
 </script>

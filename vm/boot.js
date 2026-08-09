@@ -2,31 +2,18 @@
 // boot, snapshot, filesystem, command intercepts, serial I/O, server proxy
 // AUTHOR CREDIT: @abenezermario
 
-/*
-<dialog id="vmDialog" class="fog sap lip" style="background: var(--mood, #000); color: var(--pop, lime); border: 1px solid var(--pop, lime); border-radius: 1em; padding: 2em; z-index: 1000;">
-  <p style="margin-top: 0; font-family: monospace;">Host failed to connect.</p>
-  <p style="font-family: monospace;">Do you want to boot a Linux VM in the browser?</p>
-  <div style="display: flex; justify-content: flex-end; gap: 1em; margin-top: 2em; font-family: monospace;">
-    <button onclick="vmDialog.close('no')" style="background: transparent; color: inherit; border: 1px solid var(--pop, lime); padding: 0.5em 1em; border-radius: 0.5em; cursor: pointer;">No</button>
-    <button onclick="vmDialog.close('yes')" style="background: var(--pop, lime); color: var(--mood, #000); border: none; padding: 0.5em 1em; border-radius: 0.5em; cursor: pointer; font-weight: bold;">Yes</button>
-  </div>
-</dialog>
-<div id="vmBoot" style="display:none; position:fixed; bottom:4em; left:1em; right:1em; z-index:999; font-family:monospace; color:var(--pop, lime); font-size:0.8em; opacity:0.7; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></div>
-*/
-
 window.VM = {};
 
 ;(function(){
-  var was = cop.sign;
-  cop.sign = async ()=>{
-    if('vm' !== host.value){ was(); return }
-    VM.boot({
-      tip: sign,
+  sign.onsubmit = async ()=>{
+    if('vm' !== host.value){ return cop.sign() }
+    cop.ws = 0;
+    VM.boot({ tip: sign,
       say: (out) => { kit.say(out, 'chat') },
+      onready: () => { location.path = 'shell.html' },
       onshim: (ws) => { cop.ws = ws;
         while((cop.limbo||[]).length){ cop.ws.send(cop.limbo.shift()) }
-      },
-      onready: () => { location.path = 'shell.html' }
+      }
     });
   }
 }());
@@ -51,10 +38,14 @@ VM.snap.load = function () {
 };
 
 // --- filesystem ---
+// Generic hook: set VM.fs.hook = { dir(emu, path), put(emu, path, data) }
+// to swap the 9p backend (or any other store). Callers use VM.fs only.
 
 VM.fs = {};
+VM.fs.hook = null;
 
 VM.fs.dir = function (emu, path) {
+  if (VM.fs.hook && VM.fs.hook.dir) return VM.fs.hook.dir(emu, path);
   var parts = path.split("/").filter(Boolean);
   var cur = "";
   for (var i = 0; i < parts.length; i++) {
@@ -69,6 +60,7 @@ VM.fs.dir = function (emu, path) {
 };
 
 VM.fs.put = async function (emu, path, data) {
+  if (VM.fs.hook && VM.fs.hook.put) return VM.fs.hook.put(emu, path, data);
   var dir = path.slice(0, path.lastIndexOf("/"));
   if (dir) VM.fs.dir(emu, dir);
   await emu.create_file(path, data);
@@ -268,10 +260,11 @@ VM.boot = function (opt) {
 
       // create shim for app.html
       var ws = VM.shim(emu);
-      if (opt.onshim) opt.onshim(ws);
-
-      // load chat immediately — commands queue until VM is ready
-      if (VM.onready) VM.onready();
+      // wait for vm/*.js plugs (git/npm/…) then open shell
+      Promise.resolve(VM.mods).then(function(){
+        if (opt.onshim) opt.onshim(ws);
+        if (VM.onready) VM.onready();
+      });
     });
   };
   document.head.appendChild(s);
@@ -294,3 +287,53 @@ VM.cmd.route = function (cmd, emu) {
   }
   return false;
 };
+
+// --- plugs: load other vm/*.js (not boot, not demo) ---
+// app.html only needs boot.js (+ demo.js for the demo host).
+// Browsers cannot glob; we try a dir listing, else fall back to known names.
+
+VM.base = (document.currentScript && document.currentScript.src || '').replace(/[^/]*$/, '') || 'vm/';
+// skip these entry files when scanning
+VM.skip = { boot: 1, demo: 1 };
+// fallback if dir listing is unavailable (file://, no autoindex, etc.)
+VM.plug = ['git', 'npm', 'pip', 'apk', 'srv'];
+VM.got = {};
+
+// inject one plug script once; missing file is ok
+VM.load = function(name){
+  name = (name || '').replace(/\.js$/i, '');
+  if(!name || VM.skip[name] || VM.got[name]) return VM.got[name] || Promise.resolve(0);
+  if(!/^[a-z][a-z0-9]*$/i.test(name)) return Promise.resolve(0);
+  return (VM.got[name] = new Promise(function(yes){
+    var s = document.createElement('script');
+    s.src = VM.base + name + '.js';
+    s.setAttribute('data-vm', name);
+    s.onload = function(){ yes(1) };
+    s.onerror = function(){ yes(0) };
+    document.head.appendChild(s);
+  }));
+};
+
+// discover *.js next to boot via HTML dir listing, else VM.plug
+VM.scan = async function(){
+  try{
+    var r = await fetch(VM.base);
+    if(!r.ok) throw Error('no dir');
+    var t = await r.text();
+    var seen = {}, out = [], m, re = /(?:href|src)=["']([^"']+\.js)["']/gi;
+    while((m = re.exec(t))){
+      var n = m[1].split('/').pop().replace(/\.js$/i, '');
+      if(!n || VM.skip[n] || seen[n]) continue;
+      if(!/^[a-z][a-z0-9]*$/i.test(n)) continue;
+      seen[n] = 1;
+      out.push(n);
+    }
+    if(out.length) return out;
+  }catch(e){}
+  return VM.plug.slice();
+};
+
+// start loading plugs as soon as boot core is defined
+VM.mods = VM.scan().then(function(all){
+  return Promise.all(all.map(function(n){ return VM.load(n) }));
+});

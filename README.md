@@ -11,7 +11,7 @@ Code on Phone needs to pioneer the most intuitive & efficient pedestrian program
 
 ## Structure
 
-TOY is the Open Source future, COP is the enterprise legacy integrations. `index.html` advertises sellable features of TOY with a login link to `app.html` which lets users connect to their IT department's `ssh` spec COP host (or a limited VM), TOY then inits `#shell.html` using the [`gun/kit`](https://github.com/amark/gun) framework. `shell.html` parses an interactive bash CLI, streaming output into matching modular `cmd/*.html` iframe components, some which may spawn upgrades to the ssh host communication.
+TOY is the Open Source future, COP is the enterprise legacy integrations. `index.html` advertises sellable features of TOY with a login link to `app.html` which lets users connect to their IT department's `ssh` spec COP host (or a limited VM or demo), TOY then inits `#shell.html` using the [`gun/kit`](https://github.com/amark/gun) framework. `shell.html` parses an interactive bash CLI, streaming output into matching modular `cmd/*.html` iframe components sometimes with a `#` dedicated `pty` session, or may spawn upgrades to the ssh host communication via `^` messages that bypass `pty` entirely - for example to serve or write files directly.
 
 ## Contributing
 
