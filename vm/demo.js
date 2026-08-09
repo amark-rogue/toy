@@ -225,8 +225,8 @@ demo.opfs.seed = async function(){
   await demo.opfs.write('/root/readme.md',
     'Welcome to the demo OPFS shell.\n\n' +
     'Try: ls, cd, cat, mkdir, touch, echo, cp, rm, pwd\n' +
-    'Also: git clone https://github.com/user/repo\n' +
-    '      npm install left-pad\n'
+    'Also: git clone https://github.com/amark/gun\n' +
+    '      npm install gun\n'
   );
   await demo.opfs.write('/root/hello.js', 'console.log("hi from demo");\n');
   await demo.opfs.write('/root/notes/todo.txt',
