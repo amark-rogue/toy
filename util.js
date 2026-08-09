@@ -3,7 +3,7 @@ dom.all = function(q){ return this.querySelectorAll(q) };
 dom.new = function(t){ return (this.all(t)[0]||document.createElement(t)).cloneNode(1); };
 dom.ear =doms.ear= function(e,h){ return all(this,v=>{v.addEventListener(e,h)}) };
 dom.tag =doms.tag= function(c,s){ return all(this,v=>{v.classList[s?(s>0?'add':'remove'):'toggle'](c)}) };
-dom.pin =doms.pin= function(t,p,m){ p = p||0.1;
+dom.pin =doms.pin= function(t,p,m,s){ p = p||0.1; if(p.pin){ p.pin(this,t); return this }
   m = {'-1':'beforebegin','-0.1':'afterbegin','0.1':'beforeend','1':'afterend'};
   return all(this,(v,i,a)=>{all(t,e=>{ v.insertAdjacentElement(m[p]||m[0.1],e) })});
 }
