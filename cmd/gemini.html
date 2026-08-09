@@ -30,12 +30,7 @@ body { display: block; min-height: 0; overflow: hidden; }
 .thk .inn { display: none; }
 .thk.open .inn { display: block; }
 .tog { font-size: 0.8em; opacity: 0.7; cursor: pointer; margin: 0; user-select: none; display: block; }
-.run { display: block; border-left: 2px solid color-mix(in srgb, var(--pop) 40%, transparent); margin: 0.3em 0; overflow: hidden; }
-.run.ok { border-left-color: color-mix(in srgb, var(--pop) 70%, transparent); }
-.rlb { font-family: 'Courier New', monospace; font-size: 0.75em; padding: 0.2em 0.6em; margin: 0; opacity: 0.6; cursor: pointer; user-select: none; display: block; text-align: left; }
-.rlb:active { opacity: 1; }
-.rout { padding: 0.3em 0.6em; display: none; opacity: 0.7; font-size: 0.8em; max-height: 12em; overflow-y: auto; }
-.run.open .rout { display: block; }
+.run { opacity: 0.65; border-left: 2px solid color-mix(in srgb, var(--pop) 40%, transparent); padding-left: 0.5em; }
 .fail { color: var(--err); }
 .usr { opacity: 0.6; border-top: 1px solid color-mix(in srgb, var(--pop) 30%, transparent); padding: 0.4em 0; margin-top: 0.4em; display: block; }
 button { color: inherit; background: transparent; border: 1px solid var(--pop); border-radius: 0.45em; padding: 0.45em 0.7em; font: inherit; font-weight: 900; touch-action: manipulation; }
@@ -122,11 +117,18 @@ GEM.evt = function(u){
   }
 
   if(t === 'tool_call'){
+    // host runs the tool; log a short $ line only
     var id = u.toolCallId || '';
-    var v = Tool.mk(bod, id, {title: u.title, kind: u.kind});
-    if(v) GEM.toolEls[id] = v;
+    var tip = u.title || (id || 'tool').replace(/-\d+-\d+$/, '').replace(/_/g, ' ');
+    var v = B.all('.tpl.txt')[0].cloneNode(true);
+    v.classList.remove('tpl');
+    v.classList.add('run');
+    v.textContent = '$ ' + tip;
+    bod.append(v);
+    if(id) GEM.toolEls[id] = v;
     GEM.textEl = null;
     GEM.thinkEl = null;
+    kit.say({}, 'style');
     return;
   }
 
@@ -134,15 +136,14 @@ GEM.evt = function(u){
     var id = u.toolCallId || '';
     var v = GEM.toolEls[id];
     if(!v){ return }
-    // content is array: [{type:"content", content:{type:"text", text:"..."}}]
     var out = '';
-    (u.content||[]).forEach(function(c){ out += ((c.content||{}).text || '') });
+    (u.content || []).forEach(function(c){ out += ((c.content || {}).text || '') });
     if(!out) out = u.output || u.result || '';
     if(typeof out !== 'string') out = JSON.stringify(out, null, 2);
-    Tool.out(v, out);
-    Tool.done(v);
+    if(out) v.textContent += '\n' + out;
     GEM.textEl = null;
     GEM.thinkEl = null;
+    kit.say({}, 'style');
     return;
   }
 

@@ -44,7 +44,7 @@ sign.onsubmit = cop.sign = async (eve)=>{ eve?.preventDefault?.(); if(cop.ws){ r
   };
 };
 
-pass.value && cop.sign();
+localStorage.pass && cop.sign();
 
 kit.ear('host',(eve,cmd,no)=>{
   if(no === (cmd = eve.detail||eve.data)){ return }

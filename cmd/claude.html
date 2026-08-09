@@ -30,12 +30,7 @@ body { display: block; min-height: 0; overflow: hidden; }
 .thk .inn { display: none; }
 .thk.open .inn { display: block; }
 .tog { font-size: 0.8em; opacity: 0.7; cursor: pointer; margin: 0; user-select: none; display: block; }
-.run { display: block; border-left: 2px solid color-mix(in srgb, var(--pop) 40%, transparent); margin: 0.3em 0; overflow: hidden; }
-.run.ok { border-left-color: color-mix(in srgb, var(--pop) 70%, transparent); }
-.rlb { font-family: 'Courier New', monospace; font-size: 0.75em; padding: 0.2em 0.6em; margin: 0; opacity: 0.6; cursor: pointer; user-select: none; display: block; text-align: left; }
-.rlb:active { opacity: 1; }
-.rout { padding: 0.3em 0.6em; display: none; opacity: 0.7; font-size: 0.8em; max-height: 12em; overflow-y: auto; }
-.run.open .rout { display: block; }
+.run { opacity: 0.65; border-left: 2px solid color-mix(in srgb, var(--pop) 40%, transparent); padding-left: 0.5em; }
 .fail { color: var(--err); }
 .usr { opacity: 0.6; border-top: 1px solid color-mix(in srgb, var(--pop) 30%, transparent); padding: 0.4em 0; margin-top: 0.4em; display: block; }
 button { color: inherit; background: transparent; border: 1px solid var(--pop); border-radius: 0.45em; padding: 0.45em 0.7em; font: inherit; font-weight: 900; touch-action: manipulation; }
@@ -94,10 +89,11 @@ CLD.evt = function(ev){
 
 CLD.res = function(msg){
   (msg.content || []).forEach(function(blk){
-    if(blk.type === 'tool_result' && CLD.lastTool){
-      Tool.out(CLD.lastTool, blk.content || '');
-      Tool.done(CLD.lastTool);
-    }
+    if(blk.type !== 'tool_result' || !CLD.lastTool){ return }
+    var t = blk.content || '';
+    if(typeof t !== 'string') t = JSON.stringify(t);
+    if(t) CLD.lastTool.textContent += '\n' + t;
+    kit.say({}, 'style');
   });
 };
 
@@ -164,9 +160,21 @@ CLD.think = function(t){
   bod.append(v); kit.say({}, 'style');
 };
 
+// host runs the real tool; we only log a short $ line (+ result later)
 CLD.tool = function(name, inp){
-  var v = Tool.mk(bod, name, inp);
+  inp = inp || {};
+  var tip = inp.command || inp.title || '';
+  if(!tip){
+    var a = inp.file_path || inp.path || inp.pattern || '';
+    tip = (name || 'tool') + (a ? ' ' + a : '');
+  }
+  var v = B.all('.tpl.txt')[0].cloneNode(true);
+  v.classList.remove('tpl');
+  v.classList.add('run');
+  v.textContent = '$ ' + tip;
+  bod.append(v);
   CLD.lastTool = v;
+  kit.say({}, 'style');
 };
 
 CLD.fail = function(t){
