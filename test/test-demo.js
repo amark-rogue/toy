@@ -59,6 +59,7 @@ ctx.demo.say = function(s){ out.push(s) };
 ctx.demo.wire();
 
 var ws = ctx.demo.shim();
+ws.send('ls .\r');
 ws.send('git clone https://github.com/acme/toy\r');
 ws.send('help\r');
 

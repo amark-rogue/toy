@@ -436,14 +436,21 @@ demo.shim = function(){
       }
       demo.wait(async function(){
         if(!demo.ok) return;
-        // login tip first (ssh/vm serial leave a prompt in the buffer)
         demo.prime();
-        // VM.shim: route intercepts (npm/git/…) else serial0_send
         demo.route = 1;
         demo.end = 0;
         try{
-          var job = core.send(msg);
-          if(job && job.then) await job;
+          var cmd = (msg || '').replace(/[\r\n]+$/, '').trim();
+          var job;
+          if(VM.ready && (job = VM.cmd.route(cmd, demo.emu))){
+            if(job && job.then) await job;
+            return;
+          }
+          demo.route = 0;
+          cmd = (msg || '').replace(/[\r\n]+$/, '');
+          if(!cmd){ demo.tip(); return; }
+          var body = await demo.cmd.run(cmd);
+          demo.echo(cmd, body);
         }finally{
           demo.route = 0;
           if(demo.end) demo.tip();
