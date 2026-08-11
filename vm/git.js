@@ -100,8 +100,19 @@ VM.git.clone = async function (emu, host, owner, repo, branch, dest) {
       await Promise.all(
         batch.map(async (f) => {
           var url = host.raw(owner, repo, used, f.path);
-          var r = await fetch(url, { headers: host.auth() });
-          if (!r.ok) {
+          var r;
+          try{
+            r = await fetch(url, { headers: host.auth() });
+          }catch(e){}
+          if (!r || !r.ok) {
+            if (host === VM.git.hosts["github.com"]) {
+              try{
+                var cdn = "https://cdn.jsdelivr.net/gh/" + owner + "/" + repo + "@" + used + "/" + f.path;
+                r = await fetch(cdn);
+              }catch(e){}
+            }
+          }
+          if (!r || !r.ok) {
             VM.say("skip " + f.path + "\n");
             return;
           }

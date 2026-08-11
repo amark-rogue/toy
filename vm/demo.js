@@ -78,12 +78,131 @@ demo.opfs = {};
 demo.opfs.root = null;
 demo.opfs.chain = Promise.resolve();
 
-demo.opfs.init = async function(){
-  if(!(navigator.storage && navigator.storage.getDirectory)){
-    throw Error('OPFS not available in this browser');
+// Virtual FileSystemDirectoryHandle for private/incognito fallback
+demo.opfs.fake = function(name, kind){
+  return {
+    name: name || '',
+    kind: kind || 'directory',
+    files: {},
+    data: null,
+    getDirectoryHandle: async function(n, opt){
+      var hit = this.files[n];
+      if(hit && 'file' === hit.kind) throw Error(n + ': Is a directory');
+      if(!hit){
+        if(!opt || !opt.create) throw Error(n + ': No such file or directory');
+        hit = this.files[n] = demo.opfs.fake(n, 'directory');
+      }
+      return hit;
+    },
+    getFileHandle: async function(n, opt){
+      var hit = this.files[n];
+      if(hit && 'directory' === hit.kind) throw Error(n + ': Is a directory');
+      if(!hit){
+        if(!opt || !opt.create) throw Error(n + ': No such file or directory');
+        hit = this.files[n] = demo.opfs.fake(n, 'file');
+      }
+      return hit;
+    },
+    removeEntry: async function(n, opt){
+      var hit = this.files[n];
+      if(!hit) throw Error(n + ': No such file or directory');
+      if('directory' === hit.kind && !(opt && opt.recursive) && Object.keys(hit.files).length){
+        throw Error(n + ': is a directory');
+      }
+      delete this.files[n];
+      demo.opfs.save();
+    },
+    entries: async function*(){
+      for(var k in this.files){
+        if(Object.prototype.hasOwnProperty.call(this.files, k)){
+          yield [k, this.files[k]];
+        }
+      }
+    },
+    getFile: async function(){
+      var self = this;
+      return { arrayBuffer: async () => self.data || new ArrayBuffer(0) };
+    },
+    createWritable: async function(){
+      var self = this;
+      return {
+        write: async function(b){
+          if(typeof b === 'string') self.data = new TextEncoder().encode(b).buffer;
+          else if(b && b.buffer) self.data = b.buffer;
+          else if(b instanceof ArrayBuffer) self.data = b;
+          else self.data = new ArrayBuffer(0);
+        },
+        close: async function(){ demo.opfs.save(); }
+      };
+    }
+  };
+};
+
+demo.opfs.pack = function(node){
+  if(!node) return null;
+  if('file' === node.kind){
+    var str = '';
+    if(node.data) try{ str = new TextDecoder('utf-8').decode(node.data) }catch(e){}
+    return { kind: 'file', text: str };
   }
-  demo.opfs.root = await navigator.storage.getDirectory();
+  var files = {}, k;
+  for(k in node.files){
+    if(Object.prototype.hasOwnProperty.call(node.files, k)){
+      files[k] = demo.opfs.pack(node.files[k]);
+    }
+  }
+  return { kind: 'directory', files: files };
+};
+
+demo.opfs.unpack = function(obj, node){
+  if(!obj || !node) return;
+  var k, child;
+  for(k in obj.files){
+    if(Object.prototype.hasOwnProperty.call(obj.files, k)){
+      if('file' === obj.files[k].kind){
+        child = demo.opfs.fake(k, 'file');
+        child.data = new TextEncoder().encode(obj.files[k].text || '').buffer;
+        node.files[k] = child;
+      } else {
+        child = demo.opfs.fake(k, 'directory');
+        demo.opfs.unpack(obj.files[k], child);
+        node.files[k] = child;
+      }
+    }
+  }
+};
+
+demo.opfs.save = function(){
+  if(!demo.opfs.virtual) return;
+  try{
+    var obj = demo.opfs.pack(demo.opfs.virtual);
+    localStorage.setItem('demo.opfs.virtual', JSON.stringify(obj));
+  }catch(e){}
+};
+
+demo.opfs.load = function(){
+  if(!demo.opfs.virtual) return;
+  try{
+    var raw = localStorage.getItem('demo.opfs.virtual');
+    if(raw){
+      var obj = JSON.parse(raw);
+      if(obj && 'directory' === obj.kind) demo.opfs.unpack(obj, demo.opfs.virtual);
+    }
+  }catch(e){}
+};
+
+demo.opfs.init = async function(){
   demo.opfs.chain = Promise.resolve();
+  try{
+    if(navigator.storage && navigator.storage.getDirectory){
+      demo.opfs.root = await navigator.storage.getDirectory();
+    }
+  }catch(e){}
+  if(!demo.opfs.root){
+    demo.opfs.virtual = demo.opfs.virtual || demo.opfs.fake('', 'directory');
+    demo.opfs.root = demo.opfs.virtual;
+    demo.opfs.load();
+  }
 };
 
 // directory handle for path; make=1 creates parents
