@@ -6,7 +6,7 @@ window.VM = {};
 
 ;(function(){
   sign.onsubmit = async ()=>{
-    if('vm' !== host.value){ return cop.sign() }
+    if('vm' !== host.value.toLowerCase()){ return cop.sign() }
     cop.ws = 0;
     VM.boot({ tip: sign,
       say: (out) => { kit.say(out, 'chat') },
@@ -188,7 +188,8 @@ VM.shim = function (emu) {
     send: function (cmd) {
       if (cmd && !cmd.endsWith("\n") && !cmd.endsWith("\r")) cmd += "\n";
       var trimmed = (cmd || "").replace(/[\r\n]+$/, "").trim();
-      if (VM.ready && VM.cmd.route(trimmed, emu)) return;
+      var job;
+      if (VM.ready && (job = VM.cmd.route(trimmed, emu))) return job;
       if (!VM.ready) {
         VM.queue.push(cmd);
       } else {
@@ -281,8 +282,8 @@ VM.cmd.routes = [];
 VM.cmd.route = function (cmd, emu) {
   for (var i = 0; i < VM.cmd.routes.length; i++) {
     if (VM.cmd.routes[i].match.test(cmd)) {
-      VM.cmd.routes[i].run(cmd, emu);
-      return true;
+      VM.say(cmd + "\r\n");
+      return VM.cmd.routes[i].run(cmd, emu) || true;
     }
   }
   return false;

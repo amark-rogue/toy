@@ -60,8 +60,7 @@ VM.git.run = function (cmd, emu) {
     emu.serial0_send("\n");
     return true;
   }
-  VM.git.clone(emu, h, owner, repo, branch, dest);
-  return true;
+  return VM.git.clone(emu, h, owner, repo, branch, dest);
 };
 
 VM.git.clone = async function (emu, host, owner, repo, branch, dest) {
@@ -126,7 +125,7 @@ VM.git.clone = async function (emu, host, owner, repo, branch, dest) {
       );
     }
     VM.say("\ndone.\n");
-    emu.serial0_send("ls " + dest + "\n");
+    emu.serial0_send("\n");
   } catch (e) {
     VM.say("fatal: " + e.message + "\n");
     emu.serial0_send("\n");

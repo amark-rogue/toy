@@ -28,16 +28,13 @@ VM.pkg.npm.skip = function (f) {
 VM.pkg.npm.run = function (cmd, emu) {
   var m = cmd.match(/^npm\s+install\s+(.+)/);
   if (!m) return false;
-  VM.pkg.npm.exec(m[1].trim().split(/\s+/), emu);
-  return true;
+  return VM.pkg.npm.exec(m[1].trim().split(/\s+/), emu);
 };
 
 VM.pkg.npm.exec = async function (names, emu) {
   VM.pkg.npm.got = {};
   var base = "/root",
     t = Date.now();
-  // complete leftover prompt: "~ $ " + this line (VM.shim does not re-echo the typed cmd)
-  VM.say("npm install " + names.join(" ") + "\n");
   for (var i = 0; i < names.length; i++) {
     var raw = names[i].replace(/^--.*/, "");
     if (!raw) continue;

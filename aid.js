@@ -11,8 +11,9 @@ shell.ear('join prompt', function(eve,r,s){
   s.addRange(r);
 });
 
-shell.ear('keyup',function(eve, $){ $ = shell.$;
+shell.ear('keydown',function(eve, $){ $ = shell.$;
   if(!eve.target.matches('prompt')){ return }
+  if($.text.length < 6){ return }
   if('help' !== $.textContent.slice(0,4).toLowerCase()){ return }
   if(shell.AI.wait){ clearTimeout(shell.AI.wait) }
   shell.AI.wait = setTimeout(async function(){try{

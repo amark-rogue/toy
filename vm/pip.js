@@ -12,12 +12,10 @@ VM.pkg.pip = {};
 VM.pkg.pip.run = function (cmd, emu) {
   var m = cmd.match(/^pip\s+install\s+(.+)/);
   if (!m) return false;
-  VM.pkg.pip.exec(m[1].trim().split(/\s+/), emu);
-  return true;
+  return VM.pkg.pip.exec(m[1].trim().split(/\s+/), emu);
 };
 
 VM.pkg.pip.exec = async function (names, emu) {
-  VM.say("pip install " + names.join(" ") + "\n");
   for (var i = 0; i < names.length; i++) {
     var name = names[i].replace(/^--.*/, "");
     if (!name) continue;

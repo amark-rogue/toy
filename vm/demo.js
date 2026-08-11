@@ -8,7 +8,7 @@ window.demo = {};
 
 ;(function(){
   sign.onsubmit = async ()=>{
-    if('demo' !== host.value){ return cop.sign() }
+    if('demo' !== host.value.toLowerCase()){ return cop.sign() }
     cop.ws = 0;
     demo.boot({
       say: (out) => { kit.say(out, 'chat') },
@@ -374,8 +374,9 @@ demo.wait = function(fn){
 demo.echo = function(msg, body){
   var out = (msg || '') + '\r\n';
   if(body){
+    body = body.replace(/\r?\n/g, '\r\n');
     out += body;
-    if(body.indexOf('\x1b[H') < 0 && !/\n$/.test(body)) out += '\n';
+    if(body.indexOf('\x1b[H') < 0 && !/\r\n$/.test(body)) out += '\r\n';
   }
   out += demo.path.tip();
   demo.say(out);
@@ -397,6 +398,10 @@ demo.prime = function(){
 // emu stand-in for VM.shim → same serial0_send surface as v86
 demo.emu = {
   serial0_send: function(cmd){
+    if(demo.route && !('' + (cmd || '')).replace(/[\r\n]+$/, '')){
+      demo.end = 1;
+      return;
+    }
     demo.wait(async function(){
       if(!demo.ok) return;
       demo.prime();
@@ -429,12 +434,20 @@ demo.shim = function(){
           else return;
         }catch(e){}
       }
-      demo.wait(function(){
+      demo.wait(async function(){
         if(!demo.ok) return;
         // login tip first (ssh/vm serial leave a prompt in the buffer)
         demo.prime();
         // VM.shim: route intercepts (npm/git/…) else serial0_send
-        core.send(msg);
+        demo.route = 1;
+        demo.end = 0;
+        try{
+          var job = core.send(msg);
+          if(job && job.then) await job;
+        }finally{
+          demo.route = 0;
+          if(demo.end) demo.tip();
+        }
       });
     },
     close: function(){
@@ -451,7 +464,9 @@ demo.shim = function(){
 demo.wire = function(){
   demo.on = 1;
   VM.ready = true;
-  VM.say = function(s){ if(s) demo.say(s) };
+  VM.say = function(s){
+    if(s) demo.say(('' + s).replace(/\r?\n/g, '\r\n'));
+  };
   VM.fs.hook = {
     dir: function(emu, path){
       // queue mkdir so put can await the chain (git/npm call dir sync)
@@ -475,6 +490,8 @@ demo.boot = function(opt){
   demo.ok = 0;
   demo.tipped = 0;
   demo.job = Promise.resolve();
+  demo.route = 0;
+  demo.end = 0;
 
   var start = async function(){
     try{
