@@ -13,7 +13,7 @@ shell.ear('join prompt', function(eve,r,s){
 
 shell.ear('keydown',function(eve, $){ $ = shell.$;
   if(!eve.target.matches('prompt')){ return }
-  if($.text.length < 6){ return }
+  if($.textContent.length < 6){ return }
   if('help' !== $.textContent.slice(0,4).toLowerCase()){ return }
   if(shell.AI.wait){ clearTimeout(shell.AI.wait) }
   shell.AI.wait = setTimeout(async function(){try{
