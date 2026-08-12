@@ -109,32 +109,9 @@ CMD.go = function(item, part, out){
 CMD.arg = function(path){ return path.replace(/[^\w@%+=:,./~-]/g, '\\$&') };
 up.where = '..';
 
-/*var timer, longp;
-B.ear('touchstart', (eve, a)=>{
-  a = eve.target.closest('list a');
-  if(!a || !a.where){ return }
-  longp = 0;
-  clearTimeout(timer);
-  timer = setTimeout(()=>{
-    longp = 1;
-    kit.say(a.where, 'ls.pop', pop);
-  }, 400);
-}, {passive: true});
-
-B.ear('touchmove touchend touchcancel', (eve)=>{
-  clearTimeout(timer);
-});*/
-
-B.ear('contextmenu', function(eve, a){ a = eve.target.closest('list a');
-  if(!a || !a.where){ return }
-  eve.preventDefault();
-  kit.say(a.where, 'ls.pop', pop);
-});
-
 B.ear('click',(eve, a, path, cmd)=>{ a = eve.target.closest('a');
   if(!a || !a.closest('list')){ return }
   if(!a.where){ return }
-  //if(longp){ longp = 0; eve.preventDefault(); return }
   if(a.file){
     kit.say('cat '+a.where, 'prompt.set');
     kit.say('cat '+a.where, 'prompt');
@@ -145,6 +122,24 @@ B.ear('click',(eve, a, path, cmd)=>{ a = eve.target.closest('a');
   kit.say(localStorage.pwd = cmd, 'prompt.set');
   kit.say({run:cmd, cmd:'ls .', bin:'ls'}, 'prompt.same');
 });
+
+B.ear('contextmenu', function(eve, a){ a = eve.target.closest('list a');
+  if(!a || !a.where){ return }
+  eve.preventDefault();
+  kit.say(a.where, 'ls.pop', pop);
+  navigator?.vibrate?.(33);
+});
+B.ear('touchstart', (eve, a)=>{
+  a = eve.target.closest('list a');
+  if(!a || !a.where){ return }
+  clearTimeout(CMD.to);
+  CMD.to = setTimeout(()=>{
+    kit.say(a.where, 'ls.pop', pop);
+    navigator?.vibrate?.(33);
+  }, 999/2);
+});
+
+B.ear('touchmove touchend touchcancel', (eve)=>{ clearTimeout(CMD.to) });
 
 (async function(){ return;
   kit.say('ls .\nasdf\tqwertyuiop\thjkl\tzxcvbnmtyrueiwoqp1\tbnvm', 'ls');
