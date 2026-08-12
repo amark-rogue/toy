@@ -30,7 +30,7 @@ pop.show = function(eve, item){
   name.textContent = item;
   menu.classList.add('live');
   //requestAnimationFrame(function(){ kit.up(kit.size(), 'style') });
-  //try { navigator.vibrate && navigator.vibrate(18) } catch(e) {}
+  navigator?.vibrate?.(32);
 };
 
 pop.quote = function(s){ return "'" + ('' + s).replace(/'/g, "'\\''") + "'" };
