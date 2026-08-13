@@ -139,7 +139,7 @@ B.ear('touchstart', (eve, a)=>{
   }, 999/2);
 });
 
-B.ear('touchmove touchend touchcancel', (eve)=>{ clearTimeout(CMD.to) });
+B.ear('scroll touchmove touchend touchcancel', (eve)=>{ clearTimeout(CMD.to) });
 
 (async function(){ return;
   kit.say('ls .\nasdf\tqwertyuiop\thjkl\tzxcvbnmtyrueiwoqp1\tbnvm', 'ls');
