@@ -76,7 +76,7 @@ wait().then(function(){
   var got = out.join('');
   var real = fs.readFileSync('test/samples/darwin-arm64_user-log.txt', 'utf8');
   var git = got.indexOf('~ $ git clone https://github.com/acme/toy\r\n');
-  var done = got.indexOf('\r\ndone.\r\n~ $ ');
+  var done = got.search(/done\.\r\n(?:\x1b\[\?2004h)?~ \$ /);
   var help = got.indexOf('~ $ help\r\n');
   assert(git >= 0, 'clone command is echoed after a prompt');
   assert(done > git, 'clone output ends on its own prompt');
@@ -85,6 +85,24 @@ wait().then(function(){
   assert(/\$ [^\r\n]+\r\n/.test(real), 'real PTY echoes commands after prompts');
   assert(/\$ [^\r\n]+\r\n/.test(got), 'demo matches real PTY command boundaries');
   assert(/~ \$ $/.test(got), 'the transcript ends at a prompt');
+  assert(!/~ \$ ~ \$/.test(got), 'demo never stacks two tips on one line');
+  assert(got.indexOf('\x1b[?2004h') >= 0, 'demo frames prompts like a real PTY');
+  assert(got.indexOf('\x1b[?2004l') >= 0, 'demo turns paste mode off after a command');
+  global.HTMLElement = global.HTMLElement || function(){};
+  global.HTMLElement.prototype = global.HTMLElement.prototype || {};
+  global.NodeList = global.NodeList || function(){};
+  global.NodeList.prototype = global.NodeList.prototype || {};
+  global.document = global.document || {createElement: function(){ return {} }, querySelectorAll: function(){ return [] }, addEventListener: function(){}, body: {addEventListener: function(){}}};
+  global.window = global.window || {Tool: {}};
+  global.Tool = global.Tool || {};
+  global.screen = global.screen || {};
+  global.navigator = global.navigator || {};
+  eval(fs.readFileSync('util.js', 'utf8'));
+  var bits = String.prompts(got);
+  var cmds = bits.map(function(c){ return c.cmd() }).filter(Boolean);
+  assert(cmds.indexOf('git clone https://github.com/acme/toy') >= 0, 'splitter sees the clone command');
+  assert(cmds.indexOf('help') >= 0, 'splitter sees help after clone');
+  assert(cmds.every(function(c){ return 0 !== c.indexOf('~ $') }), 'no unit keeps a stacked tip as its command');
   console.log('PASS demo PTY stream');
 }).catch(function(err){
   console.error(err);

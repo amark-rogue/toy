@@ -124,7 +124,7 @@ VM.git.clone = async function (emu, host, owner, repo, branch, dest) {
           done++;
           if (done % 25 === 0 || done === total)
             VM.say(
-              "\r" +
+              "\rReceiving objects: " +
                 Math.round((done / total) * 100) +
                 "% (" +
                 done +
@@ -135,7 +135,8 @@ VM.git.clone = async function (emu, host, owner, repo, branch, dest) {
         }),
       );
     }
-    VM.say("\ndone.\n");
+    if(total) VM.say("\rReceiving objects: 100% (" + total + "/" + total + "), done.\n");
+    else VM.say("done.\n");
     emu.serial0_send("\n");
   } catch (e) {
     VM.say("fatal: " + e.message + "\n");

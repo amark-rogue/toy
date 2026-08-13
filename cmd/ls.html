@@ -123,7 +123,7 @@ B.ear('click',(eve, a, path, cmd)=>{ a = eve.target.closest('a');
   kit.say({run:cmd, cmd:'ls .', bin:'ls'}, 'prompt.same');
 });
 
-B.ear('contextmenu', function(eve, a){ a = eve.target.closest('list a');
+B.ear('contextmenu', (eve, a)=>{ a = eve.target.closest('list a');
   if(!a || !a.where){ return }
   eve.preventDefault();
   kit.say(a.where, 'ls.pop', pop);
@@ -139,7 +139,7 @@ B.ear('touchstart', (eve, a)=>{
   }, 999/2);
 });
 
-B.ear('scroll touchmove touchend touchcancel', (eve)=>{ clearTimeout(CMD.to) });
+B.ear('touchmove touchend touchcancel',(eve)=>{ clearTimeout(CMD.to) });
 
 (async function(){ return;
   kit.say('ls .\nasdf\tqwertyuiop\thjkl\tzxcvbnmtyrueiwoqp1\tbnvm', 'ls');

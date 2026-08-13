@@ -49,11 +49,13 @@ demo.path.abs = function(raw){
   return '/' + out.join('/');
 };
 
+demo.pty = {on: '\x1b[?2004h', off: '\x1b[?2004l'};
+
 demo.path.tip = function(){
   var p = demo.cwd;
   if(p === demo.home) p = '~';
   else if(0 === p.indexOf(demo.home + '/')) p = '~' + p.slice(demo.home.length);
-  return p + ' $ ';
+  return demo.pty.on + p + ' $ ';
 };
 
 demo.path.base = function(p){
@@ -488,30 +490,42 @@ demo.wait = function(fn){
 };
 
 // SSH/PTY shaped output: shell keeps the last prompt in shell.raw.
-// After login tip is primed, each unit is:  cmd\r\n + body + tip
-// so stream is  ~ $ ls .\r\nfiles\n~ $   — same as real serial/ssh.
+// After login tip is primed, each unit is:  cmd\r\n + 2004l + body + tip
+// so stream is  2004h~ $ ls .\r\n2004l\rfiles\n2004h~ $   — same as real serial/ssh.
 demo.echo = function(msg, body){
-  var out = (msg || '') + '\r\n';
+  var out = (msg || '') + '\r\n' + demo.pty.off + '\r';
   if(body){
     body = body.replace(/\r?\n/g, '\r\n');
     out += body;
     if(body.indexOf('\x1b[H') < 0 && !/\r\n$/.test(body)) out += '\r\n';
   }
+  demo.at = 0;
   out += demo.path.tip();
+  demo.at = 1;
+  demo.tipped = 1;
   demo.say(out);
 };
 
 // re-prompt only (routes call serial0_send("\n") when done — same as git/npm on VM)
+// skip if we already ended on a tip so leftover never becomes "~ $ ~ $ "
 demo.tip = function(){
+  if(demo.at) return;
   demo.tipped = 1;
+  demo.at = 1;
   demo.say(demo.path.tip());
 };
 
 // like a login banner: ensure one prompt sits in shell.raw before any cmd
 demo.prime = function(){
-  if(demo.tipped) return;
-  demo.tipped = 1;
-  demo.say(demo.path.tip());
+  if(demo.tipped || demo.at) return;
+  demo.tip();
+};
+
+// if a route forgot to close, push a fresh prompt so the splitter can resync
+demo.sync = function(){
+  if(demo.at) return;
+  demo.say('\r\n');
+  demo.tip();
 };
 
 // emu stand-in for VM.shim → same serial0_send surface as v86
@@ -562,6 +576,7 @@ demo.shim = function(){
           var cmd = (msg || '').replace(/[\r\n]+$/, '').trim();
           var job;
           if(VM.ready && (job = VM.cmd.route(cmd, demo.emu))){
+            demo.at = 0;
             if(job && job.then) await job;
             return;
           }
@@ -573,6 +588,7 @@ demo.shim = function(){
         }finally{
           demo.route = 0;
           if(demo.end) demo.tip();
+          else if(!demo.at) demo.sync();
         }
       });
     },
@@ -591,7 +607,9 @@ demo.wire = function(){
   demo.on = 1;
   VM.ready = true;
   VM.say = function(s){
-    if(s) demo.say(('' + s).replace(/\r?\n/g, '\r\n'));
+    if(!s) return;
+    demo.at = 0;
+    demo.say(('' + s).replace(/\r?\n/g, '\r\n'));
   };
   VM.fs.hook = {
     dir: function(emu, path){
@@ -615,6 +633,7 @@ demo.boot = function(opt){
   demo.fail = opt.fail || function(err){ demo.say('demo: ' + err + '\n') };
   demo.ok = 0;
   demo.tipped = 0;
+  demo.at = 0;
   demo.job = Promise.resolve();
   demo.route = 0;
   demo.end = 0;
@@ -643,7 +662,7 @@ demo.boot = function(opt){
     demo.ok = 1;
     // wait for vm/*.js plugs (git/npm/…) then same plug as VM → shell
     var ws = demo.shim();
-    Promise.resolve(VM.mods).then(function(){
+    VM.prep().then(function(){
       if(opt.onshim) opt.onshim(ws);
       if(opt.onready) opt.onready();
     });

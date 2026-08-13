@@ -2,13 +2,22 @@
 
 shell.new('style').pin(0.1, shell).textContent = 'help{display:block;font-size:.85em;opacity:.85;margin:.35em 0;padding:.4em .5em;border-left:2px solid var(--pop);cursor:pointer;white-space:pre-wrap;word-break:break-word;touch-action:manipulation;filter:hue-rotate(220deg) brightness(2)}' + 'help:empty{display:none}';
 
-shell.ear('join prompt', function(eve,r,s){
+shell.ear('join>prompt', function(eve,r,s){
   eve.target.textContent = 'help ';
   eve.target.focus();
   (r = document.createRange()).selectNodeContents(eve.target);
   r.collapse(false);
   (s = getSelection()).removeAllRanges();
   s.addRange(r);
+});
+
+shell.ear('keydown',function(eve, $, r){ $ = eve.target;
+  if(!$.matches('prompt')){ return }
+  if('help' != $.textContent.trim()){ return }
+  if(8 == eve.keyCode || 'Backspace' == eve.key){
+    $.textContent = '';
+    $.append(B.new('br'));
+  }
 });
 
 shell.ear('keydown',function(eve, $){ $ = shell.$;

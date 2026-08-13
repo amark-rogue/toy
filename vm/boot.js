@@ -99,7 +99,7 @@ VM.io.listen = function (emu, say) {
     }
     if (VM.io.boot === 1 && VM.io.buf.includes("~#")) {
       VM.io.boot = 2;
-      emu.serial0_send("export PS1='$ '\n");
+      emu.serial0_send("export PS1='\\w $ '\n");
       VM.io.buf = "";
       return;
     }
@@ -262,7 +262,7 @@ VM.boot = function (opt) {
       // create shim for app.html
       var ws = VM.shim(emu);
       // wait for vm/*.js plugs (git/npm/…) then open shell
-      Promise.resolve(VM.mods).then(function(){
+      VM.prep().then(function(){
         if (opt.onshim) opt.onshim(ws);
         if (VM.onready) VM.onready();
       });
@@ -282,7 +282,7 @@ VM.cmd.routes = [];
 VM.cmd.route = function (cmd, emu) {
   for (var i = 0; i < VM.cmd.routes.length; i++) {
     if (VM.cmd.routes[i].match.test(cmd)) {
-      VM.say(cmd + "\r\n");
+      VM.say(cmd + "\r\n\x1b[?2004l\r");
       return VM.cmd.routes[i].run(cmd, emu) || true;
     }
   }
@@ -334,7 +334,10 @@ VM.scan = async function(){
   return VM.plug.slice();
 };
 
-// start loading plugs as soon as boot core is defined
-VM.mods = VM.scan().then(function(all){
-  return Promise.all(all.map(function(n){ return VM.load(n) }));
-});
+// load plugs only when vm or demo actually boots — not on every app.html visit
+VM.prep = function(){
+  if(VM.mods) return VM.mods;
+  return (VM.mods = VM.scan().then(function(all){
+    return Promise.all(all.map(function(n){ return VM.load(n) }));
+  }));
+};

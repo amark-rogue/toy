@@ -119,7 +119,7 @@ kit.watch.resize = function(){
 };
 kit.watch.join = function(node, all, i){
   if(!node || !node.nodeName){ return }
-  node.dispatchEvent(new CustomEvent('join '+node.nodeName.toLowerCase(), {bubbles:true}));
+  node.dispatchEvent(new CustomEvent('join>'+node.nodeName.toLowerCase(), {bubbles:true}));
   node.dispatchEvent(new CustomEvent('join', {bubbles:true}));
   all = node.querySelectorAll && node.querySelectorAll('*');
   if(!all){ return }
@@ -325,7 +325,7 @@ kit.frame.lockScroll = function(i,d,b,w,y){
   apply();
   i.addEventListener('load', apply);
 };
-kit.ear('join iframe',kit.add=function(eve){
+kit.ear('join>iframe',kit.add=function(eve){
   kit.views.set(eve.target.contentWindow, eve.target);
   kit.vars.put(eve.target);
   eve.target.addEventListener('load', function(){ kit.vars.put(eve.target) });

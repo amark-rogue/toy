@@ -141,7 +141,7 @@ kit.ear('prompt.same',(eve)=>{
 
 shell.raw = '';
 shell.stream = function(raw){
-  var clean, part, done, i;
+  var clean, part, done, i, want, cut;
   (window.shellReply || {}).maybeContinue && window.shellReply.maybeContinue(raw, {state: shell, send: function(c){ kit.say(c, 'host') }});
   if(shell.tty){
     kit.say(raw, 'term', shell.tty);
@@ -160,11 +160,17 @@ shell.stream = function(raw){
     shell.term(shell.raw, i);
     return;
   }
+  if(window.shellReply){
+    want = (shell.live && shell.live.all && (shell.live.all('prompt')[0]||'').textContent || '').trim();
+    if(want && shellReply.seek && (cut = shellReply.seek(shell.raw, want))) shell.raw = cut;
+    if(shellReply.heal) shell.raw = shellReply.heal(shell.raw);
+  }
   clean = (window.shellReply || {}).clean ? window.shellReply.clean(shell.raw) : shell.raw;
   part = (String.prototype.splitPrompts ? clean.splitPrompts() : String.prompts(clean));
   if(part.length > 1){
     done = part.slice(0, -1);
     shell.raw = part[part.length - 1];
+    if(window.shellReply && shellReply.heal) shell.raw = shellReply.heal(shell.raw);
     for(i = 0; i < done.length; i += 1){ shell.bash(done[i]) }
   }
   if(shell.live && shell.live.all){ text(out(shell.live), ((window.shellReply || {}).clean ? window.shellReply.clean(shell.raw) : shell.raw).flat()) }
@@ -183,15 +189,21 @@ shell.last = function(cmd, cut){
   while((cut = cmd.cut('&&', ESC))[1]){ cmd = cut[2] }
   return cmd.trim();
 }
-shell.head = function(raw, flat, line, hit, cmd, last){
+shell.head = function(raw, flat, line, hit, cmd, last, n){
   flat = (raw || '').flat();
   line = flat.split(/\r\n|\n|\r/)[0] || '';
-  hit = line.match(/^(.*?)(\$|#|>|%|~%|PS>)\s*([\s\S]*)$/);
+  if(line.cr) line = line.cr();
+  hit = String.hit ? String.hit(line) : line.match(/^(.*?)(\$|#|>|%|~%|PS>)\s*([\s\S]*)$/);
   cmd = line.cmd();
   last = shell.last(cmd);
+  while(hit && hit.cmd && String.hit){
+    n = String.hit(hit.cmd);
+    if(!n) break;
+    hit = n;
+  }
   return {
-    path: hit ? hit[1].trim() : '',
-    sign: hit ? hit[2].trim() : '$',
+    path: hit ? (hit.path || (hit[1]||'').trim()) : '',
+    sign: hit ? (hit.sign || (hit[2]||'').trim()) : '$',
     line: line,
     cmd: cmd,
     bin: (last.split(/\s+/)[0] || '').trim().toLowerCase()
@@ -214,6 +226,7 @@ shell.bash = function(raw, t, h, r, i, old, src){
   h.cmd = t.cmd || h.cmd;
   t.bin = '';
   t.cmd = '';
+  if(h.bin && /[^a-z0-9.+_-]/i.test(h.bin)) h.bin = '';
   if(h.bin){ t.setAttribute('bin', h.bin) }
   text(t.all('symbol')[0], h.sign + ' ');
   text(t.all('prompt')[0], t.show || h.cmd);
@@ -322,11 +335,6 @@ kit.ear('clear',(eve,v,p)=>{ // clear is the 1 special command exception.
   v.remove();
 });
 kit.say(localStorage.pwd||'ls .','prompt'); // this is an optional progressive enhancement, shell does not know about ls, it is just blindly calling for an enhancement.
-
-
-
-
-
 
 }(window.shell = document.body));
 </script>

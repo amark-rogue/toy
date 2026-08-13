@@ -1,5 +1,4 @@
-<link rel="stylesheet" href="../gun/kit/web.css" />
-<script src="../gun/kit/web.js"></script>
+<link rel="stylesheet" href="../gun/kit/web.css" /><script src="../gun/kit/web.js"></script>
 
 <div class="box">
     <div class="bar">
@@ -8,7 +7,7 @@
             id="addr"
             class="val"
             value=""
-            placeholder="localhost:PORT/path"
+            placeholder="file.html or localhost:PORT/path"
             spellcheck="false"
         />
         <button id="go" class="act">go</button>
@@ -23,12 +22,18 @@
         min-height: 0;
         overflow: hidden;
     }
+    .box {
+        width: 100%;
+        height: 33em;
+        display: block;
+    }
     .bar {
         display: flex;
         align-items: center;
         gap: 0.4em;
         padding: 0.3em 0.6em;
         border-bottom: 1px solid var(--pop);
+        width: 100%;
     }
     .tag {
         font-weight: 900;
@@ -67,7 +72,7 @@
     }
     #view iframe {
         width: 100%;
-        min-height: 10em;
+        min-height: min(70dvh, 42em);
         border: none;
         display: block;
         background: white;
@@ -94,25 +99,44 @@
     (function () {
         var view = document.getElementById("view");
         var addr = document.getElementById("addr");
-        var port, path;
+        var port, path, file;
+        var id = Math.random().toString(36).slice(2, 8);
+
+        var arg = function (raw) {
+            if (typeof raw === "object" && raw) raw = raw.file || raw.cmd || raw.raw || "";
+            raw = String(raw || "").replace(/\x1B(?:\[[0-?]*[ -\/]*[@-~]|\][^\x07]+\x07)/g, "");
+            var lines = raw.split(/\r\n|\r|\n/);
+            for (var i = 0; i < lines.length; i += 1) {
+                var m = lines[i].match(/(?:^|[$#>%]\s*)open\s+(["']?)(.*?)\1\s*$/i);
+                if (m && m[2]) return m[2].trim();
+            }
+            return "";
+        };
 
         var load = function (url) {
             url = url || addr.value || "";
             var m = url.match(/^(?:(?:localhost|127\.0\.0\.1):)?(\d+)(\/.*)?$/);
             if (!m) {
-                show("error: use format PORT/path or localhost:PORT/path");
+                file = url;
+                addr.value = file;
+                wait("opening " + file + "...");
+                kit.up({ id: id, file: file }, "fetch");
                 return;
             }
             port = m[1];
             path = m[2] || "/";
             addr.value = "localhost:" + port + path;
+            wait("fetching localhost:" + port + path + "...");
+
+            kit.up({ id: id, port: port, path: path }, "fetch");
+        };
+
+        var wait = function (msg) {
             view.textContent = "";
             var tip = document.createElement("p");
             tip.className = "load";
-            tip.textContent = "fetching localhost:" + port + path + "...";
+            tip.textContent = msg;
             view.append(tip);
-
-            kit.up({ port: port, path: path }, "fetch");
         };
 
         var show = function (msg) {
@@ -127,12 +151,12 @@
         var render = function (html) {
             view.textContent = "";
             if (!html || !html.trim()) {
-                show("empty response from port " + port);
+                show("empty content");
                 return;
             }
             // render in sandboxed iframe
             var f = document.createElement("iframe");
-            f.sandbox = "allow-same-origin";
+            f.sandbox = "allow-scripts allow-forms allow-modals allow-popups allow-same-origin";
             f.srcdoc = html;
             f.onload = function () {
                 // resize to content
@@ -160,9 +184,56 @@
             kit.say({}, "style");
         };
 
+        var frame = async function (url, fallback) {
+            if (navigator.serviceWorker) {
+                try {
+                    var reg = await navigator.serviceWorker.register("../sw.js", { scope: "/", updateViaCache: "none" });
+                    await reg.update();
+                    await navigator.serviceWorker.ready;
+                    if (!navigator.serviceWorker.controller) {
+                        await new Promise(function (done) {
+                            var stop = setTimeout(done, 3000);
+                            navigator.serviceWorker.addEventListener("controllerchange", function () {
+                                clearTimeout(stop);
+                                done();
+                            }, { once: true });
+                        });
+                    }
+                    var get = await fetch(url, { cache: "no-store" });
+                    if (!get.ok) {
+                        if (fallback) {
+                            render(fallback);
+                            return;
+                        }
+                        var why = await get.text();
+                        show("open: could not read file from OPFS (" + get.status + "): " + why);
+                        return;
+                    }
+                } catch (err) {
+                    if (fallback) {
+                        render(fallback);
+                        return;
+                    }
+                    show("open: " + (err.message || err));
+                    return;
+                }
+            } else if (fallback) {
+                render(fallback);
+                return;
+            }
+            view.textContent = "";
+            var f = document.createElement("iframe");
+            f.sandbox = "allow-scripts allow-forms allow-modals allow-popups allow-same-origin";
+            f.src = url;
+            f.onload = function () { kit.say({}, "style"); };
+            view.append(f);
+            kit.say({}, "style");
+        };
+
         // receive response from VM.srv.fetch
         kit.ear("open", function (eve) {
             var d = eve.detail || eve.data || {};
+            if (d.id && d.id !== id) return;
             if (d.port && d.path) {
                 // initial command: set port and load
                 port = d.port;
@@ -171,8 +242,14 @@
                 load();
                 return;
             }
-            if (typeof d === "string") {
-                render(d);
+            if (typeof d === "string" || d.cmd || d.raw) {
+                var name = arg(d);
+                if (name) load(name);
+                return;
+            }
+            if (d.url) {
+                addr.value = d.file || file;
+                frame(d.url, d.html);
                 return;
             }
             if (d.html) {
