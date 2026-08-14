@@ -111,12 +111,17 @@ code { counter-reset: line; padding-bottom: 1em; }
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/a11y-dark.min.css" integrity="sha384-2QAAjX8pqaM5azX68KWI2wExF6Q13kY4kEiQFY4b/1zPe6rpgmTByNpDEllH3sb+" crossorigin="anonymous">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js" integrity="sha384-g4mRvs7AO0/Ol5LxcGyz4Doe21pVhGNnC3EQw5shw+z+aXDN86HqUdwXWO+Gz2zI" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/gh/amark/monotype/monotype.js" integrity="sha384-3c6Vpd2P7HeANlkSl3fzNZzvzICdxV7UypVSY4oqoH927hRmgK7+7mDFLoQtw4Dc" crossorigin="anonymous"></script>
+<script src="../gun/kit/dom.js"></script>
 <script src="../util.js"></script>
 <script src="git/config.js"></script>
 
 <script>
 kit.ear('git', function hear(eve) {
   var s = eve.detail || eve.data || "", f = s.flat(), l = f.split('\n'), c = l[0]||'', cmd = (c.split(' ')[1]||'').trim(), i;
+  if(0 <= f.indexOf('fatal: not a git repo')){
+    kit.say('git clone https://github.com/', 'prompt.try');
+    return;
+  }
 
     B.append(i = B.new('iframe'));
     i.onload = function(e){
