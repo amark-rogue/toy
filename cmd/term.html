@@ -31,6 +31,9 @@ var term = new Terminal({
 
 tty.fit = function(){
   fit.fit();
+  if(term.cols === tty.cols && term.rows === tty.rows){ return }
+  tty.cols = term.cols;
+  tty.rows = term.rows;
   kit.up({size:{cols:term.cols, rows:term.rows}}, 'host');
 };
 
