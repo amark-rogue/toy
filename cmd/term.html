@@ -31,13 +31,16 @@ var term = new Terminal({
 
 tty.fit = function(){
   fit.fit();
-  kit.up({'#':1, size:{cols:term.cols, rows:term.rows}}, 'host');
+  kit.up({size:{cols:term.cols, rows:term.rows}}, 'host');
 };
 
 term.loadAddon(fit);
 term.open(document.getElementById('term'));
 term.onData(function(data){ kit.up(data, 'host') });
-kit.ear('term', function(eve){ term.write(eve.detail || eve.data || '') });
+kit.ear('term', function(eve){
+  var msg = eve.detail || eve.data || '';
+  term.write(('object' == typeof msg) ? (msg.$ || msg.raw || '') : msg);
+});
 new ResizeObserver(tty.fit).observe(document.body);
 requestAnimationFrame(function(){ tty.fit(); term.focus() });
 }(window.tty = {}));

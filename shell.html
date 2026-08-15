@@ -73,11 +73,13 @@ var task = root.all('task')[0];
 var model = task.cloneNode(1);
 shell.seq = 0;
 shell.belt = {};
+shell.job = new WeakMap();
 (shell.$ = task.all('prompt')[0]).focus();
 
 kit.ear('chat',(eve, raw)=>{ raw = eve.detail || eve.data || eve;
+  if('string' == typeof raw) raw = raw.trimStart();
   if('{'==raw[0]){ try{ if(shell.hook(JSON.parse(raw))){ return } }catch(e){}}
-  shell.stream(raw);
+  shell.stream(raw, shell.active);
 });
 
 shell.ear('keydown',function(eve){
@@ -89,14 +91,20 @@ shell.ear('keydown',function(eve){
     return;
   }
 });
-kit.ear('prompt',(eve)=>{
+kit.ear('prompt',(eve, editable)=>{
   var cmd = eve.detail||eve.data;
+  var t = (eve.target && eve.target.up) ? eve.target.up('task')[0] : null;
+  if(t){ shell.$ = t.all('prompt')[0] }
+  if(!shell.$ || !shell.$.hasAttribute || !shell.$.hasAttribute('contenteditable')){
+    editable = root.all('prompt[contenteditable=true]')[0];
+    if(editable){ shell.$ = editable }
+  }
   cmd = (cmd || shell.$.textContent || '').trim();
   shell.$.textContent = cmd;
   //shell.$.removeAttribute('contenteditable');
   shell.live = shell.$.up('task')[0];
   shell.used = 1;
-  kit.say(cmd+'\r','host');
+  send(shell.live, cmd+'\r');
   screen.buzz();
 });
 kit.ear('prompt.set', function(eve, cmd, t, p){
@@ -136,55 +144,83 @@ kit.ear('prompt.same',(eve)=>{
   t.file = msg.file || '';
   shell.live = t;
   shell.used = 1;
-  kit.say(cmd+'\r','host');
+  send(t, cmd+'\r');
   screen.buzz();
 });
 
+kit.ear('host', function(eve, msg, t, id){
+  if(!eve.target || !eve.target.matches || !eve.target.matches('task iframe')){ return }
+  eve.preventDefault();
+  eve.stopPropagation();
+  eve.stopImmediatePropagation();
+  eve.cancelBubble = true;
+  id = shell.job.get(eve.target);
+  if(!id){ return }
+  msg = eve.detail || eve.data;
+  if(msg && 'object' == typeof msg && !Array.isArray(msg)){
+    t = {};
+    Object.keys(msg).forEach(function(k){ if('#' !== k){ t[k] = msg[k] } });
+    t['#'] = id;
+    msg = t;
+  } else {
+    msg = {'#': id, '$': msg};
+  }
+  kit.up(msg, 'host');
+});
+
 shell.raw = '';
-shell.stream = function(raw){
-  var clean, part, done, i, want, cut;
-  (window.shellReply || {}).maybeContinue && window.shellReply.maybeContinue(raw, {state: shell, send: function(c){ kit.say(c, 'host') }});
-  if(shell.tty){
-    kit.say(raw, 'term', shell.tty);
-    shell.code = ((shell.code || '') + (raw || '')).slice(-4096);
-    if(/\x1b\[\?(?:47|1047|1049)l/.test(shell.code) ||
-      ('alt' !== shell.tty.mode && /(?:^|\n)\S*[$#>%]\s*$/.test(shell.code.flat()))){
-      shell.tty = null;
-      shell.code = '';
-      shell.raw = '';
+shell.stream = function(raw, t){
+  var clean, part, done, i, want, cut, s;
+  t = t || shell.active || shell.live;
+  s = t || shell;
+  if(t && 'term' === t.getAttribute('bin')){
+    i = t.all('iframe:not(.shut)')[0] || t.all('iframe')[0];
+    if(i){ kit.say(raw, 'term', i); return }
+  }
+  (window.shellReply || {}).maybeContinue && window.shellReply.maybeContinue(raw, {state: s, send: function(c){ t ? send(t, c) : kit.say(c, 'host') }});
+  if(s.tty){
+    kit.say(raw, 'term', s.tty);
+    s.code = ((s.code || '') + (raw || '')).slice(-4096);
+    if(/\x1b\[\?(?:47|1047|1049)l/.test(s.code) ||
+      (!s.tty.mode && /(?:^|\n)\S*[$#>%]\s*$/.test(s.code.flat()))){
+      s.tty = null;
+      s.code = '';
+      s.raw = '';
       next();
     }
     return;
   }
-  shell.raw += raw || '';
-  if(i = shell.raw.tty()){
-    shell.term(shell.raw, i);
+  s.raw = (s.raw || '') + (raw || '');
+  if(i = s.raw.tty()){
+    shell.term(s.raw, i, t);
     return;
   }
   if(window.shellReply){
-    want = (shell.live && shell.live.all && (shell.live.all('prompt')[0]||'').textContent || '').trim();
-    if(want && shellReply.seek && (cut = shellReply.seek(shell.raw, want))) shell.raw = cut;
-    if(shellReply.heal) shell.raw = shellReply.heal(shell.raw);
+    want = (t && t.all && (t.all('prompt')[0]||'').textContent || '').trim();
+    if(want && shellReply.seek && (cut = shellReply.seek(s.raw, want))) s.raw = cut;
+    if(shellReply.heal) s.raw = shellReply.heal(s.raw);
   }
-  clean = (window.shellReply || {}).clean ? window.shellReply.clean(shell.raw) : shell.raw;
+  clean = (window.shellReply || {}).clean ? window.shellReply.clean(s.raw) : s.raw;
   part = (String.prototype.splitPrompts ? clean.splitPrompts() : String.prompts(clean));
   if(part.length > 1){
     done = part.slice(0, -1);
-    shell.raw = part[part.length - 1];
-    if(window.shellReply && shellReply.heal) shell.raw = shellReply.heal(shell.raw);
-    for(i = 0; i < done.length; i += 1){ shell.bash(done[i]) }
+    s.raw = part[part.length - 1];
+    if(window.shellReply && shellReply.heal) s.raw = shellReply.heal(s.raw);
+    for(i = 0; i < done.length; i += 1){ shell.bash(done[i], t) }
   }
-  if(shell.live && shell.live.all){ text(out(shell.live), ((window.shellReply || {}).clean ? window.shellReply.clean(shell.raw) : shell.raw).flat()) }
+  if(t && t.all){ text(out(t), ((window.shellReply || {}).clean ? window.shellReply.clean(s.raw) : s.raw).flat()) }
+  else if(shell.live && shell.live.all){ text(out(shell.live), ((window.shellReply || {}).clean ? window.shellReply.clean(s.raw) : s.raw).flat()) }
 }
 shell.term = function(raw, mode, t, all){
-  t = shell.live;
+  t = t || shell.live;
   if(!t){ return }
   t.bin = 'term';
-  shell.raw = '';
-  shell.bash(raw);
+  t.raw = '';
+  shell.bash(raw, t);
   all = t.all('iframe:not(.shut)');
-  shell.tty = all[all.length - 1] || null;
-  if(shell.tty){ shell.tty.mode = mode; shell.tty.classList.add('term') }
+  t.tty = all[all.length - 1] || null;
+  if(t.tty){ t.tty.mode = mode; t.tty.classList.add('term') }
+  next();
 };
 shell.last = function(cmd, cut){
   while((cut = cmd.cut('&&', ESC))[1]){ cmd = cut[2] }
@@ -212,17 +248,21 @@ shell.head = function(raw, flat, line, hit, cmd, last, n){
 }
 shell.bash = function(raw, t, h, r, i, old, src){
   h = shell.head(raw);
+  h.bin = (t && t.bin) || h.bin;
+  if('grok' === h.bin || 'gemini' === h.bin || 'codex' === h.bin || 'claude' === h.bin || 'nano' === h.bin || 'vim' === h.bin) h.bin = 'term';
+  h.cmd = h.cmd || (t && (t.cmd || (t.all && (t.all('prompt')[0]||'').textContent))) || '';
+  if('term' === h.bin && !h.cmd) h.cmd = 'term';
   if(!h.cmd){ return }
   if((/^stty\b|^clear$/.test(h.cmd) || /\$$/.test(h.cmd))
-    && !(shell.live && ((shell.live.all('prompt')[0]||'').textContent||'').trim() === h.cmd)){ return } // PTY init/echo noise (boot & reconnect) — never a task, never consumes shell.live
-  t = shell.live;
+    && !((t || shell.live) && ((((t || shell.live).all('prompt')[0]||'').textContent||'').trim() === h.cmd))){ return } // PTY init/echo noise (boot & reconnect) — never a task, never consumes shell.live
+  t = t || shell.live;
   if(!t){
     if(!shell.used){ return } // PTY boot noise (stty/clear echoes) — no task bubbles before first user input
     t = fresh();
   }
   t.job || (t.job = '' + (++shell.seq));
   t.setAttribute('job', t.job);
-  shell.live = null;
+  if(shell.live === t){ shell.live = null }
   h.bin = t.bin || h.bin;
   h.cmd = t.cmd || h.cmd;
   t.bin = '';
@@ -254,6 +294,7 @@ shell.bash = function(raw, t, h, r, i, old, src){
         if(old.parentNode){ old.remove() }
       }, 140);
     }
+    shell.job.set(i, t.job);
     i.onload = function(){
       if(!i.readyState){ return i.remove() }
       i.classList.remove('shut');
@@ -273,7 +314,12 @@ shell.hook = function(obj, t, i){
   if(!obj['#']){ return 0 }
   t = root.querySelector('task[job="' + String(obj['#']).replace(/"/g, '') + '"]');
   if(!t){ return obj.type? 1 : 0 } // typed reply for a dead task: drop, don't leak JSON into the stream
+  shell.active = t;
   i = t.all('iframe:not(.shut)')[0] || t.all('iframe')[0];
+  if('string' == typeof obj.$ && 'term' !== t.getAttribute('bin')){
+    shell.stream(obj.$, t);
+    return 1;
+  }
   if(!i){ return obj.type? 1 : 0 }
   kit.say(obj, obj.type || t.getAttribute('bin') || 'chat', i);
   return 1;
@@ -293,6 +339,14 @@ function out(t, r, i){
   if(i && i.parentNode){ i.parentNode.insertBefore(r, i) }
   else { t.append(r) }
   return r;
+}
+
+function send(t, raw){
+  if(!t){ return }
+  t.job || (t.job = '' + (++shell.seq));
+  t.setAttribute('job', t.job);
+  shell.active = t;
+  kit.say({'#': t.job, '$': raw}, 'host');
 }
 
 function fresh(t){
