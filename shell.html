@@ -146,6 +146,7 @@ kit.ear('host', function(eve, msg, id, t){
   if(!eve.target || !eve.target.matches || !eve.target.matches('task iframe')){ return }
   id = shell.job.get(eve.target);
   if(!id){ return }
+  eve.preventDefault();
   eve.stopImmediatePropagation();
   eve.cancelBubble = true;
   msg = eve.detail || eve.data;

@@ -43,7 +43,7 @@ kit.say = function(d,e,v,s){
   }
   var ev = new CustomEvent(e,{detail:d,bubbles:true,cancelable:true});
   v.dispatchEvent(ev); 
-  (!s && W===v || s === 1 && !ev.cancelBubble) && kit.up(d,e); 
+  (!s && W===v || s === 1 && !ev.defaultPrevented) && kit.up(d,e);
   if(v.tagName === 'IFRAME'){
     if(kit._echo && kit._echo.i === v && kit._echo.t === e){ return }
     var send = function() {
