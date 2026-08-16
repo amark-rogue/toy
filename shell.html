@@ -32,7 +32,7 @@ shell {
   color: var(--pop);
 }
 task {
-  margin: 1em 0;
+  display: flow-root;
 }
 symbol {
   display: inline;
@@ -44,6 +44,11 @@ prompt {
   width: 100%;
   min-height: 1em;
   caret-shape: block;
+  white-space: pre-wrap;
+}
+raw {
+  display: block;
+  clear: both;
   white-space: pre-wrap;
 }
 fit { display: none; }
@@ -184,12 +189,15 @@ shell.stream = function(raw, t){
     return;
   }
   s.raw = (s.raw || '') + (raw || '');
+  want = (t && t.all && (t.all('prompt')[0]||'').textContent || '').trim();
+  if(want && 0 === s.raw.indexOf(want) && /^\r?\n/.test(s.raw.slice(want.length))){
+    s.raw = '$ ' + s.raw;
+  }
   if(i = s.raw.tty()){
     shell.term(s.raw, i, t);
     return;
   }
   if(window.shellReply){
-    want = (t && t.all && (t.all('prompt')[0]||'').textContent || '').trim();
     if(want && shellReply.seek && (cut = shellReply.seek(s.raw, want))) s.raw = cut;
     if(shellReply.heal) s.raw = shellReply.heal(s.raw);
   }
@@ -201,8 +209,8 @@ shell.stream = function(raw, t){
     if(window.shellReply && shellReply.heal) s.raw = shellReply.heal(s.raw);
     for(i = 0; i < done.length; i += 1){ shell.bash(done[i], t) }
   }
-  if(t && t.all){ text(out(t), ((window.shellReply || {}).clean ? window.shellReply.clean(s.raw) : s.raw).flat()) }
-  else if(shell.live && shell.live.all){ text(out(shell.live), ((window.shellReply || {}).clean ? window.shellReply.clean(s.raw) : s.raw).flat()) }
+  if(part.length < 2 && t && t.all){ text(out(t), ((window.shellReply || {}).clean ? window.shellReply.clean(s.raw) : s.raw).flat()) }
+  else if(part.length < 2 && shell.live && shell.live.all){ text(out(shell.live), ((window.shellReply || {}).clean ? window.shellReply.clean(s.raw) : s.raw).flat()) }
 }
 shell.term = function(raw, mode, t, all){
   t = t || shell.live;
@@ -267,7 +275,7 @@ shell.bash = function(raw, t, h, r, i, old, src){
   t.all('prompt')[0].removeAttribute('contenteditable');
   r = out(t);
   if('term' === h.bin){ if(r.parentNode){ r.remove() } }
-  else { text(r, (raw || '').flat()) }
+  else { text(r, show(raw).flat().replace(/^\r/, '')) }
   if(!t.parentNode){ root.append(t) }
   if(h.bin && t.stay){
     old = t.all('iframe:not(.shut)')[0] || t.all('iframe')[0];
@@ -322,6 +330,14 @@ function text(v, s){
   v.textContent = s || '';
   if(!s){ v.append(document.createElement('br')) }
   return v;
+}
+
+function show(raw, at, n){
+  raw = raw || '';
+  at = raw.search(/\r\n|\n|\r/);
+  if(at < 0){ return '' }
+  n = '\r\n' === raw.slice(at, at + 2) ? 2 : 1;
+  return raw.slice(at + n);
 }
 
 function out(t, r, i){

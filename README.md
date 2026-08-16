@@ -11,8 +11,8 @@ Code on Phone needs to pioneer the most intuitive & efficient pedestrian program
 
 ## Structure
 
-TOY is the Open Source future, COP is the enterprise legacy integrations. `index.html` advertises sellable features of TOY with a login link to `app.html` which lets users connect to their IT department's `ssh` spec COP host (or a limited VM or demo), TOY then inits `#shell.html` using the [`gun/kit`](https://github.com/amark/gun) framework. `shell.html` parses an interactive bash CLI, streaming output into matching modular `cmd/*.html` iframe components sometimes with a `#` dedicated `pty` session, or may spawn upgrades to the ssh host communication via `^` messages that bypass `pty` entirely - for example to serve or write files directly.
+TOY is the Open Source future, COP is the enterprise legacy integrations. `index.html` advertises sellable features of TOY with a login link to `app.html` which lets users connect to their IT department's `ssh` spec COP host (or a limited VM or demo), TOY then inits `#shell.html` using the [`gun/kit`](https://github.com/amark/gun) framework. `shell.html` parses an interactive bash CLI, streaming output into matching modular `cmd/*.html` iframe components - these may have a `#` dedicated `pty` session, or may spawn upgrades to the ssh host via `^` messages that bypass `pty` entirely, like to serve or write files directly.
 
 ## Contributing
 
-See `contributing.md`. All features should be separate file modular kit UI components - for example, even the shell's `<help>` is its own isolated `aid.js` event listener that progressively enhances `#shell.html`. 
+See `contributing.md` & `test/README.md`. All features should be separate file modular `kit` iframe component, ideally only 20 ~ 50 lines long - for example, even the shell's `<help>` is its own isolated `aid.js` with event listener that progressively enhances `#shell.html`, use this as a guiding inspiration.

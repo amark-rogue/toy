@@ -10,7 +10,7 @@ var ctx = {
   navigator: {},
   screen: {},
   sign: {},
-  host: {value: ''},
+  host: {value: '', addEventListener: function(){}},
   cop: {sign: function(){}},
   kit: {say: function(){}, ear: function(){}},
   document: {
@@ -132,14 +132,16 @@ wait().then(async function(){
   assert(ctx.demo.pod.use('grep one file'), 'missing POSIX tools select the richer browser shell');
 
   var frame = [];
+  var fix = JSON.parse(fs.readFileSync('test/samples/shelltask.json', 'utf8'));
   ctx.demo.say = function(s){ frame.push(s) };
   ctx.demo.pod.mute = 0;
   ctx.demo.pod.cmd = 1;
   var tty = new ctx.demo.pod.Tty();
-  tty.write('node hello.js');
+  tty.write('node -v');
   tty.write('\r\n');
-  tty.write('ok\r\n');
-  assert.strictEqual(frame.join(''), 'node hello.js\r\n\x1b[?2004l\rok\r\n', 'Nodepod output keeps the PTY command boundary');
+  tty.write('v22.12.0\r\n');
+  tty.write(ctx.demo.path.tip());
+  assert.strictEqual(frame.join(''), fix.pod, 'Nodepod output matches the shell task fixture');
 
   var size;
   tty.onResize(function(s){ size = s });

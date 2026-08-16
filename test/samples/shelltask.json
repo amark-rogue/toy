@@ -1,0 +1,11 @@
+{
+  "node": "bash-3.2$ node -v\r\nv24.14.1\r\nbash-3.2$ ",
+  "list": "bash-3.2$ ls .\r\none.txt\ttwo.txt\r\nbash-3.2$ ",
+  "pod": "node -v\r\n\u001b[?2004l\rv22.12.0\r\n\u001b[?2004h~ $ ",
+  "log": [
+    {"#":"2","$":"bash-3.2$ node -v\r\n"},
+    {"#":"1","$":"bash-3.2$ ls .\r\n"},
+    {"#":"2","$":"v24.14.1\r\nbash-3.2$ "},
+    {"#":"1","$":"one.txt\ttwo.txt\r\nbash-3.2$ "}
+  ]
+}
