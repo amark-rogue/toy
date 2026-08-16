@@ -7,9 +7,12 @@
 window.demo = {};
 
 ;(function(){
-  sign.onsubmit = async ()=>{
-    if('demo' !== host.value.toLowerCase()){ return cop.sign() }
+  sign.onsubmit = async (eve)=>{ eve?.preventDefault?.();
+    if('demo' !== host.value.toLowerCase()){ return cop.sign(eve) }
     cop.ws = 0;
+    try{ await demo.pod.add();
+      demo.pod.cdn().catch(function(){});
+    }catch(e){ demo.pod.bad = e }
     demo.boot({
       say: (out) => { kit.say(out, 'chat') },
       onready: () => { location.path = 'shell.html' },
@@ -28,7 +31,7 @@ demo.cwd = demo.home;
 demo.say = function(){};
 demo.on = 0;
 demo.job = Promise.resolve();
-demo.base = (document.currentScript && document.currentScript.src || '').replace(/[^/]*$/, '') || 'vm/'; // base URL of this file → vm/  (for dynamic cmd loads)
+demo.rev = 0;
 
 // --- path ---
 
@@ -268,6 +271,7 @@ demo.opfs.exists = async function(path){
 
 demo.opfs.mkdirp = async function(path){
   await demo.opfs.dir(path, 1);
+  demo.rev += 1;
 };
 
 demo.opfs.write = async function(path, data){
@@ -277,6 +281,7 @@ demo.opfs.write = async function(path, data){
   var w = await fh.createWritable();
   await w.write(data);
   await w.close();
+  demo.rev += 1;
 };
 
 demo.opfs.read = async function(path){
@@ -312,6 +317,7 @@ demo.opfs.rm = async function(path, deep){
   if(!hit) throw Error('rm: ' + abs + ': No such file or directory');
   if(hit.kind === 'directory' && !deep) throw Error('rm: ' + abs + ': is a directory');
   await dir.removeEntry(name, { recursive: !!deep });
+  demo.rev += 1;
 };
 
 demo.opfs.cp = async function(src, dst, deep){
@@ -346,6 +352,7 @@ demo.opfs.seed = async function(){
   await demo.opfs.write('/root/readme.md',
     'Welcome to the demo OPFS shell.\n\n' +
     'Try: ls, cd, cat, mkdir, touch, echo, cp, rm, pwd\n' +
+    'Then: node hello.js, pipes, redirects, scripts, git, npm and npx\n' +
     'Also: git clone https://github.com/amark/gun\n' +
     '      npm install gun\n'
   );
@@ -355,17 +362,14 @@ demo.opfs.seed = async function(){
   );
 };
 
-// --- fs facade (async CLI + VM.fs.hook) ---
+// --- fs facade (the richer shell replaces these methods when loaded) ---
 
 demo.fs = {};
-
-demo.fs.mkdirp = function(path){
-  return demo.opfs.mkdirp(path);
-};
-
-demo.fs.write = function(path, data){
-  return demo.opfs.write(path, data);
-};
+demo.fs.mkdirp = function(path){ return demo.opfs.mkdirp(path) };
+demo.fs.write = function(path, data){ return demo.opfs.write(path, data) };
+demo.fs.read = function(path){ return demo.opfs.read(path) };
+demo.fs.exists = function(path){ return demo.opfs.exists(path) };
+demo.fs.list = function(path){ return demo.opfs.list(path) };
 
 // --- words / flags ---
 
@@ -563,6 +567,10 @@ demo.shim = function(){
       if('{' === msg.charAt(0)){
         try{
           var obj = JSON.parse(msg);
+          if(obj && obj.size){
+            if(demo.pod.ok) demo.pod.size(obj.size);
+            return;
+          }
           if(obj && null != obj.$) msg = '' + obj.$;
           else return;
         }catch(e){}
@@ -572,9 +580,19 @@ demo.shim = function(){
         demo.prime();
         demo.route = 1;
         demo.end = 0;
+        var own = 0;
         try{
           var cmd = (msg || '').replace(/[\r\n]+$/, '').trim();
           var job;
+          if(demo.pod.ok && demo.pod.on){
+            own = 1;
+            demo.pod.send(msg);
+            return;
+          }
+          if(demo.pod.ok && demo.pod.use(cmd)){
+            own = await demo.pod.start(msg);
+            if(own) return;
+          }
           if(VM.ready && (job = VM.cmd.route(cmd, demo.emu))){
             demo.at = 0;
             if(job && job.then) await job;
@@ -587,6 +605,7 @@ demo.shim = function(){
           demo.echo(cmd, body);
         }finally{
           demo.route = 0;
+          if(own) return;
           if(demo.end) demo.tip();
           else if(!demo.at) demo.sync();
         }
@@ -597,6 +616,7 @@ demo.shim = function(){
       demo.on = 0;
       VM.ready = false;
       VM.fs.hook = null;
+      if(demo.pod.stop) demo.pod.stop();
     }
   };
 };
@@ -615,12 +635,12 @@ demo.wire = function(){
     dir: function(emu, path){
       // queue mkdir so put can await the chain (git/npm call dir sync)
       demo.opfs.chain = demo.opfs.chain.then(function(){
-        return demo.opfs.mkdirp(path);
+        return demo.fs.mkdirp(path);
       });
     },
     put: async function(emu, path, data){
       await demo.opfs.chain;
-      await demo.opfs.write(path, data);
+      await demo.fs.write(path, data);
     }
   };
 };
@@ -665,6 +685,9 @@ demo.boot = function(opt){
     VM.prep().then(function(){
       if(opt.onshim) opt.onshim(ws);
       if(opt.onready) opt.onready();
+      if(window.Worker && demo.pod.ok){
+        demo.pod.wait(function(){ demo.pod.prep().catch(function(){}) }, 2500);
+      }
     });
   };
 
@@ -672,3 +695,54 @@ demo.boot = function(opt){
     demo.fail('boot failed: ' + (e.message || e));
   });
 };
+
+// --- POD ---
+
+demo.base = (document.currentScript && document.currentScript.src || '').replace(/[^/]*$/, '') || 'vm/';
+
+// Load the richer shell only for demo users. Local parts start on input;
+// the larger CDN runtime starts once submit proves the user wants demo mode.
+demo.pod = {mod: 0, got: {}, ok: 0, on: 0};
+
+demo.pod.one = function(name){
+  if(demo.pod.got[name]) return demo.pod.got[name];
+  if(!/^[a-z]+$/.test(name)) return Promise.reject(Error('bad demo part'));
+  demo.pod.got[name] = new Promise(function(yes, no){
+    var s = document.createElement('script');
+    s.src = demo.base + 'pod/' + name + '.js';
+    s.onload = function(){ yes(1) };
+    s.onerror = function(){
+      demo.pod.got[name] = 0;
+      no(Error('demo part could not load: ' + name));
+    };
+    document.head.appendChild(s);
+  });
+  return demo.pod.got[name];
+};
+
+demo.pod.add = function(){
+  if(demo.pod.mod) return demo.pod.mod;
+  demo.pod.mod = demo.pod.one('core').then(function(){
+    return Promise.all(['fs', 'term', 'boot', 'run'].map(demo.pod.one));
+  }).then(function(){
+    demo.pod.ok = 1;
+    return demo.pod;
+  }).catch(function(err){
+    demo.pod.mod = 0;
+    throw err;
+  });
+  return demo.pod.mod;
+};
+
+demo.pod.hint = function(eve){
+  if('demo' !== (host.value || '').trim().toLowerCase()) return;
+  var get = demo.pod.add();
+  get.catch(function(err){ demo.pod.bad = err });
+  if(eve && 'keydown' === eve.type && 'Enter' === eve.key){
+    get.then(function(){ return demo.pod.cdn() }).catch(function(){});
+  }
+  return get;
+};
+
+host.addEventListener('input', demo.pod.hint);
+host.addEventListener('keydown', demo.pod.hint);

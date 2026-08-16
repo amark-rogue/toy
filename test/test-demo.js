@@ -45,8 +45,30 @@ var run = function(file){
 
 run('vm/boot.js');
 run('vm/demo.js');
+run('vm/pod/core.js');
+run('vm/pod/fs.js');
+run('vm/pod/term.js');
+run('vm/pod/boot.js');
+run('vm/pod/run.js');
+ctx.demo.pod.ok = 1;
 run('vm/git.js');
 run('vm/js/help.js');
+
+var page = fs.readFileSync('app.html', 'utf8');
+var raw = page.match(/<script type="importmap">\s*([\s\S]*?)\s*<\/script>/);
+assert(raw, 'app declares module integrity metadata');
+var map = JSON.parse(raw[1]).integrity;
+var urls = Object.keys(map);
+assert.strictEqual(urls.length, 5, 'every Nodepod runtime module is integrity-pinned');
+urls.forEach(function(url){
+  assert(url.indexOf('https://cdn.jsdelivr.net/npm/@scelar/nodepod@1.9.20/dist/') === 0,
+    'Nodepod CDN URL pins the exact package version');
+  assert(/^sha384-[A-Za-z0-9+/]{64}$/.test(map[url]), 'Nodepod module has a SHA-384 hash');
+});
+var main = fs.readFileSync('vm/pod/main.js', 'utf8');
+assert(main.indexOf(urls[0]) >= 0, 'the local bridge imports the pinned CDN entry');
+assert(fs.readFileSync('vm/pod/boot.js', 'utf8').indexOf("s.integrity = '" + map[urls[0]] + "'") >= 0,
+  'the CDN entry also uses a script integrity attribute');
 
 ctx.demo.opfs.root = {};
 ctx.demo.opfs.chain = Promise.resolve();
@@ -72,7 +94,7 @@ var wait = async function(){
   }while(was !== ctx.demo.job);
 };
 
-wait().then(function(){
+wait().then(async function(){
   var got = out.join('');
   var real = fs.readFileSync('test/samples/darwin-arm64_user-log.txt', 'utf8');
   var git = got.indexOf('~ $ git clone https://github.com/acme/toy\r\n');
@@ -103,6 +125,36 @@ wait().then(function(){
   assert(cmds.indexOf('git clone https://github.com/acme/toy') >= 0, 'splitter sees the clone command');
   assert(cmds.indexOf('help') >= 0, 'splitter sees help after clone');
   assert(cmds.every(function(c){ return 0 !== c.indexOf('~ $') }), 'no unit keeps a stacked tip as its command');
+
+  ctx.Worker = function(){};
+  assert(!ctx.demo.pod.use('ls .'), 'small commands keep the instant demo path');
+  assert(ctx.demo.pod.use('node hello.js'), 'node selects the richer browser shell');
+  assert(ctx.demo.pod.use('echo one | wc -w'), 'pipes select the richer browser shell');
+  assert(ctx.demo.pod.use('grep one file'), 'missing POSIX tools select the richer browser shell');
+
+  var frame = [];
+  ctx.demo.say = function(s){ frame.push(s) };
+  ctx.demo.pod.mute = 0;
+  ctx.demo.pod.cmd = 1;
+  var tty = new ctx.demo.pod.Tty();
+  tty.write('node hello.js');
+  tty.write('\r\n');
+  tty.write('ok\r\n');
+  assert.strictEqual(frame.join(''), 'node hello.js\r\n\x1b[?2004l\rok\r\n', 'Nodepod output keeps the PTY command boundary');
+
+  var size;
+  tty.onResize(function(s){ size = s });
+  ctx.demo.pod.size({cols: 91, rows: 31});
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(size)), {cols: 91, rows: 31}, 'terminal resize reaches the richer shell');
+
+  var keys = [];
+  ctx.demo.pod.on = 1;
+  ctx.demo.pod.idle = 0;
+  ctx.demo.pod.term = {input: function(s){ keys.push(s) }};
+  ws.send('{"#":"9","$":"x"}');
+  await wait();
+  assert.deepStrictEqual(keys, ['x'], 'task envelopes feed one terminal input');
+  ctx.demo.pod.on = 0;
   console.log('PASS demo PTY stream');
 }).catch(function(err){
   console.error(err);

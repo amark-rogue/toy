@@ -19,7 +19,7 @@ VM.srv.url = function(path){
 };
 
 VM.srv.save = async function(path, bag){
-  var list = await demo.opfs.list(path);
+  var list = await demo.fs.list(path);
   var i, at, buf, ext, type;
   for(i = 0; i < list.length; i += 1){
     at = path.replace(/\/$/, '') + '/' + list[i].name;
@@ -27,7 +27,7 @@ VM.srv.save = async function(path, bag){
       await VM.srv.save(at, bag);
       continue;
     }
-    buf = await demo.opfs.read(at);
+    buf = await demo.fs.read(at);
     ext = (list[i].name.split('.').pop() || '').toLowerCase();
     type = VM.srv.mime[ext] || 'application/octet-stream';
     await bag.put(VM.srv.url(at), new Response(buf, {headers: {'Content-Type': type}}));
@@ -67,6 +67,13 @@ VM.srv.scan = function (out) {
 };
 
 VM.srv.fetch = function (port, path) {
+  if(window.demo && demo.pod && demo.pod.on && demo.pod.pod){
+    return demo.pod.pod.request(Number(port), {path: path || '/'}).then(function(res){
+      var body = res.body;
+      if('string' === typeof body) return body;
+      try{ return new TextDecoder('utf-8').decode(body) }catch(e){ return '' + body }
+    });
+  }
   if (!VM.emu || !VM.ready) return Promise.resolve("VM not ready");
   var id = Math.random().toString(36).slice(2, 8);
   var cmd =
@@ -109,18 +116,18 @@ kit.ear('fetch',(eve)=>{
     }
     var path = (window.demo && demo.path) ? demo.path.abs(d.file) : d.file;
     if(!path || '/' !== path.charAt(0)) path = '/' + path;
-    if(!window.demo || !demo.opfs || !demo.opfs.exists){
+    if(!window.demo || !demo.fs || !demo.fs.exists){
       kit.say({ id: d.id, err: path + ': OPFS not available' }, 'open');
       return;
     }
-    demo.opfs.exists(path).then(async function(hit){
+    demo.fs.exists(path).then(async function(hit){
       if(!hit || 'file' !== hit.kind){
         kit.say({ id: d.id, err: path + ': No such file' }, 'open');
         return;
       }
       var text = '';
       try{
-        var buf = await demo.opfs.read(path);
+        var buf = await demo.fs.read(path);
         text = new TextDecoder('utf-8').decode(buf);
       }catch(e){}
       try{
@@ -140,4 +147,3 @@ kit.ear('fetch',(eve)=>{
     kit.say({ id: d.id, html: html }, 'open');
   });
 });
-
