@@ -98,7 +98,7 @@ kit.ear('prompt',(eve)=>{
   //shell.$.removeAttribute('contenteditable');
   shell.live = shell.$.up('task')[0];
   shell.used = 1;
-  kit.say(cmd+'\r','host');
+  send(shell.live, cmd+'\r');
   screen.buzz();
 });
 kit.ear('prompt.set', function(eve, cmd, t, p){
@@ -138,7 +138,7 @@ kit.ear('prompt.same',(eve)=>{
   t.file = msg.file || '';
   shell.live = t;
   shell.used = 1;
-  kit.say(cmd+'\r','host');
+  send(t, cmd+'\r');
   screen.buzz();
 });
 
@@ -315,6 +315,13 @@ function out(t, r, i){
   if(i && i.parentNode){ i.parentNode.insertBefore(r, i) }
   else { t.append(r) }
   return r;
+}
+
+function send(t, raw){
+  if(!t){ return }
+  t.job || (t.job = '' + (++shell.seq));
+  t.setAttribute('job', t.job);
+  kit.say({'#': t.job, '$': raw}, 'host');
 }
 
 function fresh(t){
