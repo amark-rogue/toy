@@ -2,8 +2,8 @@
 
 <div class="wade">
 <list id="list">
-  <a id="up">../</a>
-  <a id="add">+</a>
+  <a id="up" class="as">../</a>
+  <a id="add" class="as">+</a>
 </list>
 </div>
 
@@ -54,10 +54,13 @@ body { display: block; min-height: 0; overflow: hidden; }
   back-ground: color-mix(in srgb, var(--pop) 8%, transparent);
   font-fam-ily: 'Courier New', monospace;
 }
-.ls a:hover, .ls a:active, list a:hover, list a:active {
+.ls a:hover, .ls a:active, list a:hover, list a:active, .as {
   background: var(--pop);
   color: var(--mood);
   transform: scale(0.9);
+}
+.as:hover, .as:active {
+  transform: scale(1);
 }
 </style>
 <script src="../gun/kit/dom.js"></script>
