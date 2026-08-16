@@ -167,13 +167,42 @@ kit.ear('host', function(eve, msg, id, t){
 });
 
 shell.raw = '';
+shell.exit = function(raw, t, code, line, hit){
+  if(!t || !t.tty){ return 0 }
+  code = t.code = ((t.code || '') + (raw || '')).slice(-4096);
+  if(/\x1b\[\?(?:47|1047|1049)l/.test(code)){ return 1 }
+  line = code.flat().split(/\r\n|\n|\r/).pop() || '';
+  hit = String.hit && String.hit(line);
+  return !!(hit && !hit.cmd);
+};
+shell.shut = function(t, i){
+  if(!t || t.shut){ return }
+  t.shut = 1;
+  i = t.all('iframe:not(.shut)')[0] || t.all('iframe')[0];
+  if(i){
+    i.classList.add('shut');
+    i.removeAttribute('src');
+  }
+  if(shell.active === t){ shell.active = null }
+  if(shell.live === t){ shell.live = null }
+  t.tty = null;
+  t.code = '';
+  t.job = '';
+  t.removeAttribute('job');
+  t.removeAttribute('bin');
+  next();
+};
 shell.stream = function(raw, t){
   var clean, part, done, i, want, cut, s;
   t = t || shell.active || shell.live;
   s = t || shell;
   if(t && 'term' === t.getAttribute('bin')){
     i = t.all('iframe:not(.shut)')[0] || t.all('iframe')[0];
-    if(i){ kit.say(raw, 'term', i); return }
+    if(i){
+      kit.say(raw, 'term', i);
+      if(shell.exit(raw, t)){ shell.shut(t, i) }
+      return;
+    }
   }
   (window.shellReply || {}).maybeContinue && window.shellReply.maybeContinue(raw, {state: s, send: function(c){ t ? send(t, c) : kit.say(c, 'host') }});
   if(s.tty){

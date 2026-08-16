@@ -56,7 +56,8 @@ function frame(id, bin, p, r, i, s){
     classList:{add:function(){}, remove:function(){}},
     parentNode:1,
     readyState:0,
-    getAttribute:function(){ return '' }
+    getAttribute:function(){ return '' },
+    removeAttribute:function(){}
   };
   return task[id] = {
     job:id,
@@ -71,7 +72,8 @@ function frame(id, bin, p, r, i, s){
       return [];
     },
     getAttribute:function(k){ return this.attr[k] || '' },
-    setAttribute:function(k, v){ this.attr[k] = v }
+    setAttribute:function(k, v){ this.attr[k] = v },
+    removeAttribute:function(k){ delete this.attr[k] }
   };
 }
 
@@ -81,6 +83,8 @@ eval(take('function text('));
 eval(take('function show('));
 eval(take('function out('));
 eval(take('shell.bash = function'));
+eval(take('shell.exit = function'));
+eval(take('shell.shut = function'));
 eval(take('shell.stream = function'));
 eval(take('shell.hook = function'));
 
@@ -100,6 +104,25 @@ shell.term = function(raw, mode, t){ got = {raw:raw, mode:mode, task:t} };
 shell.stream(fs.readFileSync(path.join(__dirname, 'samples', 'darwin-arm64_nano_unknown.txt'), 'utf8'), two);
 assert.strictEqual(got.task, two, 'terminal takeover stays on its task');
 assert.strictEqual(got.mode, 'alt', 'alternate screen starts the terminal fallback');
+
+var shut = frame('shut', 'term');
+var ran = 0;
+shut.setAttribute('bin', 'term');
+shut.tty = shut.all('iframe')[0];
+shut.tty.mode = 'alt';
+next = function(){ ran += 1 };
+shell.stream('\x1b[?1049l\r\nbash-3.2$ ', shut);
+assert.strictEqual(shut.getAttribute('job'), '', 'closed terminal task loses its route');
+assert.strictEqual(shut.getAttribute('bin'), '', 'closed terminal task no longer owns terminal input');
+assert.strictEqual(ran, 1, 'closed terminal task creates one fresh prompt');
+
+var back = frame('back', 'term');
+back.setAttribute('bin', 'term');
+back.tty = back.all('iframe')[0];
+back.tty.mode = 'full';
+shell.stream('\r\nbash-3.2$ ', back);
+assert.strictEqual(back.getAttribute('job'), '', 'returned shell prompt closes a non-alt terminal task');
+assert.strictEqual(ran, 2, 'returned shell prompt creates one fresh prompt');
 
 var three = frame('3');
 three.all('prompt')[0].textContent = 'node -v';
