@@ -55,9 +55,8 @@ run('vm/git.js');
 run('vm/js/help.js');
 
 var page = fs.readFileSync('app.html', 'utf8');
-var raw = page.match(/<script type="importmap">\s*([\s\S]*?)\s*<\/script>/);
-assert(raw, 'app declares module integrity metadata');
-var map = JSON.parse(raw[1]).integrity;
+assert(page.indexOf('type="importmap"') < 0, 'app does not eagerly declare the pod import map');
+var map = ctx.demo.pod.hash;
 var urls = Object.keys(map);
 assert.strictEqual(urls.length, 5, 'every Nodepod runtime module is integrity-pinned');
 urls.forEach(function(url){
@@ -65,10 +64,10 @@ urls.forEach(function(url){
     'Nodepod CDN URL pins the exact package version');
   assert(/^sha384-[A-Za-z0-9+/]{64}$/.test(map[url]), 'Nodepod module has a SHA-384 hash');
 });
-var main = fs.readFileSync('vm/pod/main.js', 'utf8');
-assert(main.indexOf(urls[0]) >= 0, 'the local bridge imports the pinned CDN entry');
-assert(fs.readFileSync('vm/pod/boot.js', 'utf8').indexOf("s.integrity = '" + map[urls[0]] + "'") >= 0,
+var boot = fs.readFileSync('vm/pod/boot.js', 'utf8');
+assert(boot.indexOf('s.integrity = pod.hash[pod.url]') >= 0,
   'the CDN entry also uses a script integrity attribute');
+assert(boot.indexOf('import(pod.url)') >= 0, 'the verified entry needs no local module bridge');
 
 ctx.demo.opfs.root = {};
 ctx.demo.opfs.chain = Promise.resolve();

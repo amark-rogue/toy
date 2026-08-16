@@ -7,6 +7,7 @@ pod.hot = 0;
 pod.bad = 0;
 pod.get = 0;
 pod.net = 0;
+pod.made = 0;
 pod.pod = 0;
 pod.term = 0;
 pod.tty = 0;
