@@ -162,50 +162,58 @@ kit.ear('host', function(eve, msg, id, t){
 });
 
 shell.raw = '';
-shell.stream = function(raw){
-  var clean, part, done, i, want, cut;
-  (window.shellReply || {}).maybeContinue && window.shellReply.maybeContinue(raw, {state: shell, send: function(c){ kit.say(c, 'host') }});
-  if(shell.tty){
-    kit.say(raw, 'term', shell.tty);
-    shell.code = ((shell.code || '') + (raw || '')).slice(-4096);
-    if(/\x1b\[\?(?:47|1047|1049)l/.test(shell.code) ||
-      ('alt' !== shell.tty.mode && /(?:^|\n)\S*[$#>%]\s*$/.test(shell.code.flat()))){
-      shell.tty = null;
-      shell.code = '';
-      shell.raw = '';
+shell.stream = function(raw, t){
+  var clean, part, done, i, want, cut, s;
+  t = t || shell.active || shell.live;
+  s = t || shell;
+  if(t && 'term' === t.getAttribute('bin')){
+    i = t.all('iframe:not(.shut)')[0] || t.all('iframe')[0];
+    if(i){ kit.say(raw, 'term', i); return }
+  }
+  (window.shellReply || {}).maybeContinue && window.shellReply.maybeContinue(raw, {state: s, send: function(c){ t ? send(t, c) : kit.say(c, 'host') }});
+  if(s.tty){
+    kit.say(raw, 'term', s.tty);
+    s.code = ((s.code || '') + (raw || '')).slice(-4096);
+    if(/\x1b\[\?(?:47|1047|1049)l/.test(s.code) ||
+      ('alt' !== s.tty.mode && /(?:^|\n)\S*[$#>%]\s*$/.test(s.code.flat()))){
+      s.tty = null;
+      s.code = '';
+      s.raw = '';
       next();
     }
     return;
   }
-  shell.raw += raw || '';
-  if(i = shell.raw.tty()){
-    shell.term(shell.raw, i);
+  s.raw = (s.raw || '') + (raw || '');
+  if(i = s.raw.tty()){
+    shell.term(s.raw, i, t);
     return;
   }
   if(window.shellReply){
-    want = (shell.live && shell.live.all && (shell.live.all('prompt')[0]||'').textContent || '').trim();
-    if(want && shellReply.seek && (cut = shellReply.seek(shell.raw, want))) shell.raw = cut;
-    if(shellReply.heal) shell.raw = shellReply.heal(shell.raw);
+    want = (t && t.all && (t.all('prompt')[0]||'').textContent || '').trim();
+    if(want && shellReply.seek && (cut = shellReply.seek(s.raw, want))) s.raw = cut;
+    if(shellReply.heal) s.raw = shellReply.heal(s.raw);
   }
-  clean = (window.shellReply || {}).clean ? window.shellReply.clean(shell.raw) : shell.raw;
+  clean = (window.shellReply || {}).clean ? window.shellReply.clean(s.raw) : s.raw;
   part = (String.prototype.splitPrompts ? clean.splitPrompts() : String.prompts(clean));
   if(part.length > 1){
     done = part.slice(0, -1);
-    shell.raw = part[part.length - 1];
-    if(window.shellReply && shellReply.heal) shell.raw = shellReply.heal(shell.raw);
-    for(i = 0; i < done.length; i += 1){ shell.bash(done[i]) }
+    s.raw = part[part.length - 1];
+    if(window.shellReply && shellReply.heal) s.raw = shellReply.heal(s.raw);
+    for(i = 0; i < done.length; i += 1){ shell.bash(done[i], t) }
   }
-  if(shell.live && shell.live.all){ text(out(shell.live), ((window.shellReply || {}).clean ? window.shellReply.clean(shell.raw) : shell.raw).flat()) }
+  if(t && t.all){ text(out(t), ((window.shellReply || {}).clean ? window.shellReply.clean(s.raw) : s.raw).flat()) }
+  else if(shell.live && shell.live.all){ text(out(shell.live), ((window.shellReply || {}).clean ? window.shellReply.clean(s.raw) : s.raw).flat()) }
 }
 shell.term = function(raw, mode, t, all){
-  t = shell.live;
+  t = t || shell.live;
   if(!t){ return }
   t.bin = 'term';
-  shell.raw = '';
-  shell.bash(raw);
+  t.raw = '';
+  shell.bash(raw, t);
   all = t.all('iframe:not(.shut)');
-  shell.tty = all[all.length - 1] || null;
-  if(shell.tty){ shell.tty.mode = mode; shell.tty.classList.add('term') }
+  t.tty = all[all.length - 1] || null;
+  if(t.tty){ t.tty.mode = mode; t.tty.classList.add('term') }
+  next();
 };
 shell.last = function(cmd, cut){
   while((cut = cmd.cut('&&', ESC))[1]){ cmd = cut[2] }
@@ -233,17 +241,20 @@ shell.head = function(raw, flat, line, hit, cmd, last, n){
 }
 shell.bash = function(raw, t, h, r, i, old, src){
   h = shell.head(raw);
+  h.bin = (t && t.bin) || h.bin;
+  h.cmd = h.cmd || (t && (t.cmd || (t.all && (t.all('prompt')[0]||'').textContent))) || '';
+  if('term' === h.bin && !h.cmd) h.cmd = 'term';
   if(!h.cmd){ return }
   if((/^stty\b|^clear$/.test(h.cmd) || /\$$/.test(h.cmd))
-    && !(shell.live && ((shell.live.all('prompt')[0]||'').textContent||'').trim() === h.cmd)){ return } // PTY init/echo noise (boot & reconnect) — never a task, never consumes shell.live
-  t = shell.live;
+    && !((t || shell.live) && ((((t || shell.live).all('prompt')[0]||'').textContent||'').trim() === h.cmd))){ return } // PTY init/echo noise (boot & reconnect) — never a task, never consumes shell.live
+  t = t || shell.live;
   if(!t){
     if(!shell.used){ return } // PTY boot noise (stty/clear echoes) — no task bubbles before first user input
     t = fresh();
   }
   t.job || (t.job = '' + (++shell.seq));
   t.setAttribute('job', t.job);
-  shell.live = null;
+  if(shell.live === t){ shell.live = null }
   h.bin = t.bin || h.bin;
   h.cmd = t.cmd || h.cmd;
   t.bin = '';
@@ -296,7 +307,12 @@ shell.hook = function(obj, t, i){
   if(!obj['#']){ return 0 }
   t = root.querySelector('task[job="' + String(obj['#']).replace(/"/g, '') + '"]');
   if(!t){ return obj.type? 1 : 0 } // typed reply for a dead task: drop, don't leak JSON into the stream
+  shell.active = t;
   i = t.all('iframe:not(.shut)')[0] || t.all('iframe')[0];
+  if('string' == typeof obj.$ && 'term' !== t.getAttribute('bin')){
+    shell.stream(obj.$, t);
+    return 1;
+  }
   if(!i){ return obj.type? 1 : 0 }
   kit.say(obj, obj.type || t.getAttribute('bin') || 'chat', i);
   return 1;
@@ -318,11 +334,12 @@ function out(t, r, i){
   return r;
 }
 
-function send(t, raw){
+function send(t, raw, msg){
   if(!t){ return }
   t.job || (t.job = '' + (++shell.seq));
   t.setAttribute('job', t.job);
-  kit.say({'#': t.job, '$': raw}, 'host');
+  msg = {'#': t.job, '$': raw};
+  kit.say(msg, 'host');
 }
 
 function fresh(t){
