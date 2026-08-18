@@ -1,0 +1,18 @@
+<link rel="stylesheet" href="../gun/kit/web.css"><script src="../gun/kit/web.js"></script>
+
+<list id="list"><i></i></list>
+<fit><i></i></fit>
+
+<style>
+body, list, i { display: block; }
+i { height: 20.25px; }
+fit { display: none; }
+</style>
+
+<script>
+kit.ear('fit', function(eve, n){
+  n = eve.detail || eve.data || 1;
+  list.textContent = '';
+  while(n--){ list.appendChild(document.querySelector('fit i').cloneNode()) }
+});
+</script>

@@ -40,6 +40,14 @@ When a device shows a bad terminal result:
 
 Never fix a capture by checking a program name. Test bytes and task ids instead.
 
+## Component sizing
+
+A nested Kit document defaults to intrinsic body height. Its `ResizeObserver` reports that body box to its direct parent, and that parent consumes the report after sizing the source iframe. A nested report must never be forwarded as the ancestor component's size.
+
+Keep component width, `min-height`, and `max-height` in ordinary CSS. Fixed and absolute children behave like they do in a div and do not enlarge the component. Do not add sizing flags or measure scroll geometry; use an explicit body height only when a component intentionally fills its viewport.
+
+Open `test/fit.html` through a static HTTP server and expect `PASS`. It checks fractional content, iframe borders, growth through `max-height`, and shrinking. Run `node test/test-fit.js` for the source-contract check.
+
 ## Platform captures
 
 On a machine with `node-pty`, run:
@@ -59,6 +67,7 @@ For each new frame, test at least these dimensions:
 - Interleave it with another task id while preserving byte order within each task.
 - Test an ordinary result, ANSI-coloured result, carriage-return progress result, and full-screen result.
 - Test initial task creation, task reuse from a component click, and terminal exit.
+- For task reuse, assert partial bytes stay hidden, the same renderer receives one complete frame, and its iframe does not navigate.
 - Test normal SSH, VM, demo, and Nodepod whenever a shared framing adapter changes.
 
 `testshell.js` already splits the Nodepod `node -v` frame at every byte boundary. Add the same kind of loop for every new framing bug; it is cheap and catches the chunking differences that browsers, WebSockets, and PTYs introduce.

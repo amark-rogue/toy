@@ -1,0 +1,24 @@
+<link rel="stylesheet" href="../gun/kit/web.css"><script src="../gun/kit/web.js"></script>
+
+<button id="grow">grow</button><button id="less">less</button><output id="result">WAIT</output>
+<iframe id="view" src="./fitbody.html"></iframe>
+
+<style>
+body { display: block; }
+#view { display: block; width: 14em; min-height: 0; max-height: 7em; border: 2px solid; transition: none; }
+</style>
+
+<script>
+FIT = {n:0};
+document.addEventListener('style', function(eve){ if(eve.target === view){ FIT.n += 1 } }, true);
+grow.onclick = function(){ kit.say(20, 'fit', view) };
+less.onclick = function(){ kit.say(1, 'fit', view) };
+FIT.wait = function(){ return new Promise(function(done){ setTimeout(done, 150) }) };
+FIT.test = async function(small, big, low, want){
+  await FIT.wait(); small = view.offsetHeight;
+  grow.click(); await FIT.wait(); big = view.offsetHeight; want = parseFloat(view.style.height);
+  less.click(); await FIT.wait(); low = view.offsetHeight;
+  result.textContent = (small <= 26 && big <= 150 && want > big && low === small && FIT.n <= 4) ? 'PASS' : 'FAIL';
+};
+view.addEventListener('load', FIT.test);
+</script>

@@ -14,15 +14,15 @@
 <iframe id="pop" src="./ls-pop.html"></iframe>
 
 <style>
-body { display: block; min-height: 0; overflow: hidden; }
-#pop { display: block; width: 100%; height: 0; position: absolute; top: 33%; }
-.ls, list {
+body { display: block; overflow: hidden; }
+#pop { display: block; visibility: hidden; pointer-events: none; width: 100%; position: fixed; top: 33%; }
+#pop.live { visibility: visible; pointer-events: auto; }
+list {
   text-align: center;
   display: block;
   scroll-padding-left: 50%;
   scroll-padding-right: 50%;
   width: 100%;
-  max-height: max(90vh, 26em);
   max-height: 26em;
   column-width: 8em;
   column-gap: 0.01em;
@@ -30,7 +30,7 @@ body { display: block; min-height: 0; overflow: hidden; }
   overflow-y: hidden;
   padding: 0 0.2em; /* undo item bleed */
 }
-.ls a, list a, list tap {
+list a {
   border: 1px solid var(--pop);
   border-radius: 0.6em;
   background: transparent;
@@ -46,15 +46,12 @@ body { display: block; min-height: 0; overflow: hidden; }
   -webkit-user-select: none;
   user-select: none;
   display: inline-block;
-  flex: 0 0 auto;
   white-space: normal;
   overflow-wrap: anywhere;
   word-break: break-all;
   line-height: 0.9em;
-  back-ground: color-mix(in srgb, var(--pop) 8%, transparent);
-  font-fam-ily: 'Courier New', monospace;
 }
-.ls a:hover, .ls a:active, list a:hover, list a:active, .as {
+list a:hover, list a:active, .as {
   background: var(--pop);
   color: var(--mood);
   transform: scale(0.9);
@@ -66,7 +63,7 @@ body { display: block; min-height: 0; overflow: hidden; }
 <script src="../gun/kit/dom.js"></script>
 <script src="../util.js"></script>
 <script>
-kit.ear('ls',function hear(eve){ hear.off();
+kit.ear('ls',function(eve){
   CMD.ls(eve.detail || eve.data, list);
 });
   
@@ -79,6 +76,8 @@ CMD = {};
 CMD.ls = function(s,v,f,cmd){
   cmd = (s=s.flat()).cut('\n',ESC); s = cmd[2]; cmd = cmd[0];
   CMD.base(cmd);
+
+  v.all('a:not(#up):not(#add)').forEach(function(a){ a.remove() });
   
   s = s.replaceAll('\r\n','\t').replaceAll('\r','\t').replaceAll('\n','\t').replaceAll(/\s{2,}/g,'\t');
   f = (s.indexOf('\t')+1)? '\t' : /\s+/;
@@ -111,9 +110,16 @@ CMD.go = function(item, part, out){
   return out.join('/') || '~';
 };
 CMD.arg = function(path){ return path.replace(/[^\w@%+=:,./~-]/g, '\\$&') };
+CMD.pop = function(item){
+  pop.classList.add('live');
+  kit.say({name:item.where, file:item.file}, 'ls.pop', pop);
+  navigator?.vibrate?.(33);
+};
 up.where = '..';
 
-B.ear('click',(eve, a, path, cmd)=>{ a = eve.target.closest('a');
+kit.ear('ls.hide', function(){ pop.classList.remove('live') });
+
+B.ear('click',(eve, a, path, cmd)=>{ a = eve.target.closest('list a');
   if(!a || !a.closest('list')){ return }
   if(!a.where){ return }
   if(a.file){
@@ -130,16 +136,14 @@ B.ear('click',(eve, a, path, cmd)=>{ a = eve.target.closest('a');
 B.ear('contextmenu', (eve, a)=>{ a = eve.target.closest('list a');
   if(!a || !a.where){ return }
   eve.preventDefault();
-  kit.say(a.where, 'ls.pop', pop);
-  navigator?.vibrate?.(33);
+  CMD.pop(a);
 });
 B.ear('touchstart', (eve, a)=>{
   a = eve.target.closest('list a');
   if(!a || !a.where){ return }
   clearTimeout(CMD.to);
   CMD.to = setTimeout(()=>{
-    kit.say(a.where, 'ls.pop', pop);
-    navigator?.vibrate?.(33);
+    CMD.pop(a);
   }, 999/2);
 });
 

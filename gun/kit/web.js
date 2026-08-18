@@ -1,5 +1,6 @@
 ;(function(){
 var W = window, D = document, SW = screen.width, SH = screen.height, ON = 'addEventListener', HI = 'createElement', ID = 'getElementById', U, DEV = ('file://'===location.origin);
+if(W.parent !== W){ D.documentElement.classList.add('part') }
 ;(function(){ if(screen.width > screen.height){ return } // phone only debug
   var add = function(){ if(console.view){ return } (console.view = document[HI]('textarea')).style="position:fixed; z-index:99999; inset:0; width:100%; height:4em; padding: 0; background:rgba(100%,100%,100%,0.8); color:black; transition: 0.5s all; white-space: pre-wrap; overflow-wrap: break-word; word-break: break-all;"; console.view.readOnly = 1; setTimeout(function(){D.body.appendChild(console.view);},99); console.view.onclick = function(eve){ console.view.style.height = ('4em'==console.view.style.height)?'50vh':'4em' ; console.view.select(); D.execCommand('copy'); navigator.clipboard.writeText(console.view.value) } }
   console.log = console.warn = console.error = function(...args){ if(console.off){ return } add(); console.view.value += JSON.stringify(args).slice(1,-1); console.view.scrollTop = console.view.scrollHeight; }
@@ -90,32 +91,28 @@ W[ON]('message',function(eve,data,i,tmp){
   kit._echo = {i:i,t:data.type}; kit.say(data.data||data.detail,data.type,i,data.wrap||1); kit._echo = null;
 });
 kit.views = new Map;
-(kit.size = function(b,d,h,w,last){
-  b = D.body; d = D.documentElement;
-  h = Math.max(
-    ((b||'').scrollHeight)||0, ((d||'').scrollHeight)||0,
-    ((b||'').offsetHeight)||0, ((d||'').offsetHeight)||0,
-    ((b||'').clientHeight)||0, ((d||'').clientHeight)||0
-  );
-  w = Math.max(
-    ((b||'').scrollWidth)||0, ((d||'').scrollWidth)||0,
-    ((b||'').offsetWidth)||0, ((d||'').offsetWidth)||0,
-    ((b||'').clientWidth)||0, ((d||'').clientWidth)||0
-  );
-  if((b||'').children && b.children.length){
-    last = b.children[b.children.length - 1];
-    h = Math.max(h, kit.watch.low(last), kit.watch.low(b));
-    w = Math.max(w, kit.watch.wide(last), kit.watch.wide(b));
-  }
-  return {height: Math.ceil(h), width: Math.ceil(w)};
+(kit.size = function(e,b,h){
+  b = ((e||[])[0]||'').borderBoxSize || '';
+  h = ((b[0]||b).blockSize);
+  if(U === h){ h = D.body ? D.body.getBoundingClientRect().height : 0 }
+  return {height: Math.ceil(h)};
 });
 kit.watch = {};
-kit.watch.resize = function(){
-  if(kit.watch.wait){ return }
-  kit.watch.wait = W.requestAnimationFrame(function(){
-    kit.watch.wait = 0;
-    kit.up(kit.size(),'style');
-  });
+kit.watch.resize = function(e,s){
+  s = kit.size(e);
+  if(s.height === kit.watch.last){ return }
+  kit.watch.last = s.height;
+  kit.up(s,'style');
+};
+kit.watch.start = function(){
+  if(!D.body || kit.watch.body === D.body || W === W.parent){ return }
+  kit.watch.body = D.body;
+  kit.watch.last = U;
+  if(kit.watch.ro){ kit.watch.ro.disconnect() }
+  if(W.ResizeObserver){
+    kit.watch.ro = new ResizeObserver(kit.watch.resize);
+    kit.watch.ro.observe(D.body);
+  } else { kit.watch.resize() }
 };
 kit.watch.join = function(node, all, i){
   if(!node || !node.nodeName){ return }
@@ -125,17 +122,14 @@ kit.watch.join = function(node, all, i){
   if(!all){ return }
   for(i = 0; i < all.length; i += 1){ kit.watch.join(all[i]) }
 };
-(kit.watch.observer = new MutationObserver(function(eve,b,low){eve.forEach(function(changes){changes.addedNodes.forEach(function(node){ //console.log("observed change on", node);
+(kit.watch.observer = new MutationObserver(function(eve){eve.forEach(function(changes){changes.addedNodes.forEach(function(node){ //console.log("observed change on", node);
   kit.watch.join(node);
-  //low = kit.watch.low(node, low); 
 })});
-  //console.log(location.pathname.split('/').slice(-1)[0], "LOWEST", low, kit.watch.low(D.body), D.body.scrollHeight);
+  kit.watch.start();
   if(kit.vars && kit.vars.sync){ kit.vars.sync() }
-  kit.watch.resize();
+  if(W !== W.parent && !kit.watch.ro){ kit.watch.resize() }
 })).observe(D.documentElement||D,{childList:true,subtree:true,characterData:true,attributes:true});
-
-kit.watch.low = function(v,l,f){ f='getBoundingClientRect'; return Math.max(((v[f]?v[f]():'').bottom||0) + (W.pageYOffset || D.documentElement.scrollTop),l||0) }
-kit.watch.wide = function(v,l,f){ f='getBoundingClientRect'; return Math.max(((v[f]?v[f]():'').right||0) + (W.pageXOffset || D.documentElement.scrollLeft),l||0) }
+kit.watch.start();
 kit.vars = {};
 kit.vars.fix = function(val, all, seen){
   return String(val || '').replace(/var\(\s*(--[\w-]+)\s*(?:,\s*([^)]+))?\)/g, function(_, key, alt){
@@ -333,21 +327,29 @@ kit.ear('join>iframe',kit.add=function(eve){
   kit.frame.refresh();
 });
 W[ON]('hashchange', kit.frame.refresh);
-W[ON]('load', kit.watch.resize);
 W[ON]('load', kit.vars.push);
-W[ON]('resize', kit.watch.resize);
 W[ON]('resize', kit.vars.sync);
-W[ON]('pageshow', kit.watch.resize);
 W[ON]('pageshow', kit.vars.push);
-W[ON]('transitionend', kit.watch.resize, true);
-W[ON]('animationend', kit.watch.resize, true);
 W[ON]('transitionend', kit.vars.push, true);
 W[ON]('animationend', kit.vars.push, true);
-if((D.fonts||'').ready){ D.fonts.ready.then(kit.watch.resize) }
 kit.ear('style',function(eve,i){
   if(!eve.target || !eve.target.style){ return }
+  eve.preventDefault();
   //console.log(location.pathname.split('/').slice(-1)[0], "resize:", eve.target, eve.detail);
-  var h = (eve.detail||'').height; if(h) eve.target.style.height = isNaN(h) ? h : h+'px';
+  var h = (eve.detail||'').height, val;
+  if(U !== h && null !== h && '' !== h){
+    if(isNaN(h)){ val = h }
+    else {
+      i = W.getComputedStyle(eve.target);
+      h = +h;
+      if('border-box' === i.boxSizing){
+        h += (parseFloat(i.borderTopWidth)||0) + (parseFloat(i.borderBottomWidth)||0) +
+          (parseFloat(i.paddingTop)||0) + (parseFloat(i.paddingBottom)||0);
+      }
+      val = Math.ceil(h)+'px';
+    }
+    if(eve.target.style.height !== val){ eve.target.style.height = val }
+  }
   // Allow width to remain responsive (e.g. 100%) rather than locking it to fixed pixels
   // var w = (eve.detail||'').width; if(w) eve.target.style.width = isNaN(w) ? w : w+'px';
 },document);

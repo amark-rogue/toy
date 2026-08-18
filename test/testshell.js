@@ -50,13 +50,14 @@ function take(key, at, end, i, c, out){
 
 function frame(id, bin, p, r, i, s){
   p = {textContent:'', removeAttribute:function(){}, setAttribute:function(){}};
-  r = {textContent:'', append:function(){}};
+  r = {textContent:'', parentNode:1, append:function(){}, remove:function(){ this.parentNode = 0 }};
   s = {textContent:'', append:function(){}};
   i = {
+    src:'',
     classList:{add:function(){}, remove:function(){}},
     parentNode:1,
     readyState:0,
-    getAttribute:function(){ return '' },
+    getAttribute:function(k){ return 'src' === k ? this.src : '' },
     removeAttribute:function(){}
   };
   return task[id] = {
@@ -139,6 +140,23 @@ for(var at = 1, id, four; at < fix.pod.length; at += 1){
   assert.strictEqual(four.all('raw')[0].textContent, 'v22.12.0\r\n', 'demo split ' + at + ' keeps its result');
 }
 
+var sent = [];
+var same = frame('same', 'ls');
+var keep = same.all('iframe')[0];
+same.all('prompt')[0].textContent = 'ls .';
+same.cmd = 'ls .';
+same.same = 1;
+keep.src = './cmd/ls.html';
+kit.say = function(data, type, target){ sent.push({data:data, type:type, target:target}) };
+shell.stream('bash-3.2$ ls .\r\nnew', same);
+assert.strictEqual(same.all('raw')[0].textContent, '', 'same-component partial data stays behind its iframe');
+shell.stream('.txt\r\nbash-3.2$ ', same);
+assert.strictEqual(sent.length, 1, 'same-component result is delivered once');
+assert.strictEqual(sent[0].type, 'ls', 'same-component result keeps its renderer');
+assert.strictEqual(sent[0].target, keep, 'same-component result reuses its iframe');
+assert.strictEqual(keep.src, './cmd/ls.html', 'same-component iframe is not navigated');
+assert.strictEqual(same.all('raw')[0].parentNode, 0, 'same-component raw data is never left visible');
+
 fs.readdirSync(path.join(__dirname, 'samples')).filter(function(name){
   return 0 <= name.indexOf('.shellnode.');
 }).forEach(function(name, raw, cut, part, done){
@@ -155,4 +173,4 @@ fs.readdirSync(path.join(__dirname, 'samples')).filter(function(name){
 assert(/task \{[\s\S]*?display: flow-root;/.test(src), 'task contains its prompt float');
 assert(/raw \{[\s\S]*?clear: both;/.test(src), 'output clears the prompt float');
 assert(!/['"](?:nano|vim|codex|claude|gemini|grok)['"]\s*===\s*h\.bin/.test(src), 'terminal mode has no command list');
-console.log('PASS task frames, terminal scope, demo frames, and prompt layout');
+console.log('PASS task frames, terminal scope, same-component refresh, demo frames, and prompt layout');

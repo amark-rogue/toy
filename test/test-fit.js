@@ -1,0 +1,22 @@
+var fs = require('fs'), assert = require('assert');
+var src = fs.readFileSync('gun/kit/web.js', 'utf8');
+var css = fs.readFileSync('gun/kit/web.css', 'utf8');
+var ls = fs.readFileSync('cmd/ls.html', 'utf8');
+var pop = fs.readFileSync('cmd/ls-pop.html', 'utf8');
+var size = src.slice(src.indexOf('(kit.size ='), src.indexOf('kit.watch ='));
+
+assert(src.includes('new ResizeObserver(kit.watch.resize)'), 'body box drives component size');
+assert(src.includes('borderBoxSize'), 'layout box is read without scroll geometry');
+assert(!/scrollHeight|offsetHeight|clientHeight|watch\.low|watch\.wide/.test(size), 'size has no overflow or viewport guesses');
+assert(!src.includes("transitionend', kit.watch.resize"), 'transitions do not guess at resize');
+assert(!src.includes("animationend', kit.watch.resize"), 'animations do not guess at resize');
+assert(!src.includes('data-fit'), 'components need no sizing opt-out');
+assert(src.includes('eve.preventDefault();'), 'a child size is consumed by its direct parent');
+assert(!ls.includes('data-fit'), 'popup uses ordinary layout sizing');
+assert(!ls.includes('height: 4em'), 'popup height comes from its contents');
+assert(!ls.includes('hear.off()'), 'list renderer accepts in-place updates');
+assert(ls.includes("a:not(#up):not(#add)"), 'list renderer replaces stale items');
+assert(/kit \{[^}]*visibility: hidden/.test(pop), 'hidden popup keeps a stable layout box');
+assert(css.includes(':where(html.part) body { height: max-content; }'), 'embedded body uses intrinsic height');
+assert(css.includes('scrollbar-gutter: stable'), 'scrollbar width cannot oscillate layout');
+console.log('PASS intrinsic iframe sizing contract');

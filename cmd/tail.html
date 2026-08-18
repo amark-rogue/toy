@@ -1,0 +1,19 @@
+<link rel="stylesheet" href="../gun/kit/web.css"><script src="../gun/kit/web.js"></script>
+
+<pre id="out"></pre>
+
+<style>
+body { display: block; min-height: 0; overflow: hidden; }
+pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; }
+</style>
+
+<script src="../util.js"></script>
+<script>
+kit.ear('tail', function hear(eve, raw, at, n){ hear.off();
+  raw = (eve.detail || eve.data || '').flat();
+  at = raw.search(/\r\n|\n|\r/);
+  if(at < 0){ out.textContent = raw; return }
+  n = '\r\n' === raw.slice(at, at + 2) ? 2 : 1;
+  out.textContent = raw.slice(at + n);
+});
+</script>

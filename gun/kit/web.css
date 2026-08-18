@@ -40,8 +40,11 @@ html, body /*, main, .page*/ {
   scrollbar-color: var(--pop) transparent;
   touch-action: manipulation;
 } body, main { display: grid; place-items: var(--drip); }
+:where(html.part), :where(html.part) body { min-height: 0; }
+:where(html.part) body { height: max-content; }
+html.part { scrollbar-gutter: stable; }
 /*.page { dis-play:none } .page:target { display:grid; }*/
-main, .page {
+main, iframe.page {
   position: absolute; inset: 0;
   width: 100%; min-height: 100vh; min-height: 100dvh;
 }

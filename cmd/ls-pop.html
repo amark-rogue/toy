@@ -5,14 +5,14 @@
   <button data-run="cp">cp</button>
   <button data-run="rm">rm</button>
   <button data-run="chmod">chmod</button>
-  <button data-run="tail">tail</button>
+  <button id="tail" data-run="tail">tail</button>
   <button id="shut">×</button>
 </tray></belt></tin></kit>
 
 <style>
 body { display: block; }
-kit { display: none; position: relative; right: auto; bottom: auto; width: 100%; height: auto; overflow: hidden; pointer-events: auto; }
-kit.live { display: block; }
+kit { display: block; visibility: hidden; position: relative; width: 100%; height: auto; overflow: hidden; pointer-events: none; }
+kit.live { visibility: visible; pointer-events: auto; }
 kit::before { display: none; }
 </style>
 
@@ -20,28 +20,33 @@ kit::before { display: none; }
 ;(function(pop){
 pop.hide = function(){
   menu.classList.remove('live');
-  kit.up({height:'0px'}, 'style');
+  kit.up('', 'ls.hide');
 };
 
 pop.show = function(eve, item){
   item = eve.detail || eve.data || item || '';
   if(!item){ return }
   pop.item = item;
-  name.textContent = item;
+  name.textContent = item.name;
+  tail.hidden = !item.file;
   menu.classList.add('live');
   navigator?.vibrate?.(32);
 };
 
 pop.quote = function(s){ return "'" + ('' + s).replace(/'/g, "'\\''") + "'" };
 
-pop.run = function(eve, run, cmd){
+pop.run = function(eve, run, cmd, item, file){
   run = (eve.target.closest('button') || '').dataset;
   run = (run || {}).run;
   if(!run || !pop.item){ return }
-  cmd = run + ' ' + pop.quote(pop.item);
-  if('cp' === run){ cmd += ' ' }
+  item = pop.quote(pop.item.name);
+  file = pop.item.file;
+  if('cp' === run){ cmd = 'cp ' + (file ? '' : '-R ') + item + ' ' + pop.quote(pop.item.name + '.copy') + ' && ls .' }
+  if('rm' === run){ cmd = 'rm ' + (file ? '' : '-r ') + item + ' && ls .' }
+  if('chmod' === run){ cmd = 'chmod ' + (file ? '644 ' : '755 ') + item + ' && ls .' }
+  if('tail' === run){ cmd = 'tail -n 20 ' + item }
   pop.hide();
-  kit.say(cmd, 'tail' === run ? 'prompt' : 'prompt.try');
+  kit.say({run:cmd, cmd:'tail' === run ? cmd : 'ls .', bin:'tail' === run ? 'tail' : 'ls'}, 'prompt.same');
 };
 
 kit.ear('ls.pop', pop.show);
