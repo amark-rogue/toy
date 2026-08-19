@@ -7,9 +7,13 @@ node test/testshell.js
 node test/test-demo.js
 node test/test-bash.js
 node test/test-term.js
+node test/test-task.js
+node test/test-pwd.js
 ```
 
 `testshell.js` runs the real shell stream, task router, result renderer, and terminal detection functions against saved PTY frames. `test-demo.js` runs the demo and Nodepod terminal adapter, then compares its `node -v` frame to the exact frame consumed by `testshell.js`.
+
+`test-task.js` checks task placement and navigation separately: string `same`/`add`/`back`/`next` actions, ID-only `#` targeting, command-derived inherited paths, and prompt history versus the preserved draft.
 
 ## Frames
 

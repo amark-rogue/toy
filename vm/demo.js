@@ -29,9 +29,13 @@ window.demo = {};
 demo.home = '/root';
 demo.cwd = demo.home;
 demo.say = function(){};
+demo.push = function(raw){
+  demo.say(demo.id ? JSON.stringify({'#':demo.id, '$':raw}) : raw);
+};
 demo.on = 0;
 demo.job = Promise.resolve();
 demo.rev = 0;
+demo.jobs = {};
 
 // --- path ---
 
@@ -507,7 +511,7 @@ demo.echo = function(msg, body){
   out += demo.path.tip();
   demo.at = 1;
   demo.tipped = 1;
-  demo.say(out);
+  demo.push(out);
 };
 
 // re-prompt only (routes call serial0_send("\n") when done — same as git/npm on VM)
@@ -516,7 +520,7 @@ demo.tip = function(){
   if(demo.at) return;
   demo.tipped = 1;
   demo.at = 1;
-  demo.say(demo.path.tip());
+  demo.push(demo.path.tip());
 };
 
 // like a login banner: ensure one prompt sits in shell.raw before any cmd
@@ -528,7 +532,7 @@ demo.prime = function(){
 // if a route forgot to close, push a fresh prompt so the splitter can resync
 demo.sync = function(){
   if(demo.at) return;
-  demo.say('\r\n');
+  demo.push('\r\n');
   demo.tip();
 };
 
@@ -560,7 +564,7 @@ demo.shim = function(){
   var core = VM.shim(demo.emu);
   return {
     readyState: 1,
-    send: function(msg){
+    send: function(msg, id){
       if(null == msg) return;
       msg = '' + msg;
       // optional JSON envelope some clients use; bare string is the ssh path
@@ -571,12 +575,21 @@ demo.shim = function(){
             if(demo.pod.ok) demo.pod.size(obj.size);
             return;
           }
+          id = obj['#'] || '';
           if(obj && null != obj.$) msg = '' + obj.$;
           else return;
         }catch(e){}
       }
       demo.wait(async function(){
         if(!demo.ok) return;
+        var state;
+        demo.id = id || '';
+        if(id){
+          state = demo.jobs[id] || (demo.jobs[id] = {cwd:demo.home, at:0});
+          demo.cwd = state.cwd;
+          demo.at = state.at;
+          demo.tipped = state.at;
+        }
         demo.prime();
         demo.route = 1;
         demo.end = 0;
@@ -605,6 +618,7 @@ demo.shim = function(){
           demo.echo(cmd, body);
         }finally{
           demo.route = 0;
+          if(state){ state.cwd = demo.cwd; state.at = demo.at }
           if(own) return;
           if(demo.end) demo.tip();
           else if(!demo.at) demo.sync();
@@ -629,7 +643,7 @@ demo.wire = function(){
   VM.say = function(s){
     if(!s) return;
     demo.at = 0;
-    demo.say(('' + s).replace(/\r?\n/g, '\r\n'));
+    demo.push(('' + s).replace(/\r?\n/g, '\r\n'));
   };
   VM.fs.hook = {
     dir: function(emu, path){
@@ -650,11 +664,13 @@ demo.wire = function(){
 demo.boot = function(opt){
   opt = opt || {};
   demo.say = opt.say || demo.say;
-  demo.fail = opt.fail || function(err){ demo.say('demo: ' + err + '\n') };
+  demo.fail = opt.fail || function(err){ demo.push('demo: ' + err + '\n') };
   demo.ok = 0;
   demo.tipped = 0;
   demo.at = 0;
   demo.job = Promise.resolve();
+  demo.jobs = {};
+  demo.id = '';
   demo.route = 0;
   demo.end = 0;
 

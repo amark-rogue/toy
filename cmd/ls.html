@@ -123,14 +123,13 @@ B.ear('click',(eve, a, path, cmd)=>{ a = eve.target.closest('list a');
   if(!a || !a.closest('list')){ return }
   if(!a.where){ return }
   if(a.file){
-    kit.say('cat '+a.where, 'prompt.set');
-    kit.say('cat '+a.where, 'prompt');
+    kit.say('cat '+CMD.arg(a.where), 'prompt.add');
     return;
   }
   path = CMD.go(a.where);
   cmd = 'cd '+CMD.arg(path)+' && ls .';
-  kit.say(localStorage.pwd = cmd, 'prompt.set');
-  kit.say({run:cmd, cmd:'ls .', bin:'ls'}, 'prompt.same');
+  localStorage.pwd = cmd;
+  kit.say(cmd, 'prompt.same');
 });
 
 B.ear('contextmenu', (eve, a)=>{ a = eve.target.closest('list a');

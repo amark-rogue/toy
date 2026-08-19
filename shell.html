@@ -80,6 +80,7 @@ var model = task.cloneNode(1);
 shell.seq = 0;
 shell.belt = {};
 shell.job = new WeakMap();
+task.open = 1;
 (shell.$ = task.all('prompt')[0]).focus();
 
 kit.ear('chat',(eve, raw)=>{ raw = eve.detail || eve.data || eve;
@@ -90,6 +91,7 @@ kit.ear('chat',(eve, raw)=>{ raw = eve.detail || eve.data || eve;
 shell.ear('keydown',function(eve){
   if(!eve.target.matches('prompt')){ return }
   shell.$ = eve.target;
+  if(shell.task){ shell.task.at = eve.target.closest('task') }
   if('enter' == eve.key.toLowerCase() && !eve.shiftKey){
     eve.preventDefault();
     kit.say('', 'prompt');
@@ -97,25 +99,19 @@ shell.ear('keydown',function(eve){
   }
 });
 kit.ear('prompt',(eve)=>{
+  if(shell.task && shell.task.run){ return shell.task.run(eve) }
   var cmd = eve.detail||eve.data;
   cmd = (cmd || shell.$.textContent || '').trim();
   shell.$.textContent = cmd;
   //shell.$.removeAttribute('contenteditable');
   shell.live = shell.$.up('task')[0];
+  shell.live.open = 0;
   shell.used = 1;
   send(shell.live, cmd+'\r');
   screen.buzz();
 });
-kit.ear('prompt.set', function(eve, cmd, t, p){
-  cmd = eve.detail || eve.data || '';
-  t = (eve.target && eve.target.up) ? eve.target.up('task')[0] : null;
-  p = t && t.all('prompt')[0];
-  if(p){
-    t.show = cmd;
-    p.textContent = cmd;
-  }
-});
 kit.ear('prompt.try',(eve, all, $, r, s)=>{
+  if(shell.task && shell.task.edit){ return shell.task.edit(eve) }
   var cmd = eve.detail || eve.data || '';
   if(!cmd){ return }
   next();
@@ -131,9 +127,10 @@ kit.ear('prompt.try',(eve, all, $, r, s)=>{
   s.addRange(r);
 });
 kit.ear('prompt.same',(eve)=>{
+  if(shell.task && shell.task.run){ return shell.task.run(eve) }
   var msg = eve.detail||eve.data||{};
   //console.log('prompt.same:', msg);
-  var cmd = (msg.run || msg.cmd || msg).trim();
+  var cmd = (msg.$ || msg.run || msg.cmd || msg).trim();
   var t = (eve.target && eve.target.up) ? eve.target.up('task')[0] : null;
   if(!cmd || !t){ return }
   t.bin = msg.bin || '';
@@ -279,6 +276,7 @@ shell.head = function(raw, flat, line, hit, cmd, last, n){
 shell.bash = function(raw, t, h, r, i, old, src){
   h = shell.head(raw);
   h.bin = (t && t.bin) || h.bin;
+  if(!h.cmd && !show(raw).flat().trim()){ return }
   h.cmd = h.cmd || (t && (t.cmd || (t.all && (t.all('prompt')[0]||'').textContent))) || '';
   if('term' === h.bin && !h.cmd) h.cmd = 'term';
   if(!h.cmd){ return }
@@ -294,6 +292,7 @@ shell.bash = function(raw, t, h, r, i, old, src){
   if(shell.live === t){ shell.live = null }
   h.bin = t.bin || h.bin;
   h.cmd = t.cmd || h.cmd;
+  if(String.dir && String.dir(h.path)){ t.path = h.path }
   t.bin = '';
   t.cmd = '';
   if(h.bin && /[^a-z0-9.+_-]/i.test(h.bin)) h.bin = '';
@@ -301,7 +300,7 @@ shell.bash = function(raw, t, h, r, i, old, src){
   text(t.all('symbol')[0], h.sign + ' ');
   text(t.all('prompt')[0], t.show || h.cmd);
   t.show = '';
-  t.all('prompt')[0].removeAttribute('contenteditable');
+  t.all('prompt')[0].setAttribute('contenteditable', 'true');
   r = out(t);
   if('term' === h.bin){ if(r.parentNode){ r.remove() } }
   else { text(r, show(raw).flat().replace(/^\r/, '')) }
@@ -350,6 +349,8 @@ shell.hook = function(obj, t, i){
   if(!obj['#']){ return 0 }
   t = root.querySelector('task[job="' + String(obj['#']).replace(/"/g, '') + '"]');
   if(!t){ return obj.type? 1 : 0 } // typed reply for a dead task: drop, don't leak JSON into the stream
+  if(obj.cwd){ t.path = obj.cwd }
+  if('string' === typeof obj.env){ t.env = obj.env }
   shell.active = t;
   i = t.all('iframe:not(.shut)')[0] || t.all('iframe')[0];
   if('string' == typeof obj.$ && 'term' !== t.getAttribute('bin')){
@@ -389,6 +390,7 @@ function send(t, raw, msg){
   if(!t){ return }
   t.job || (t.job = '' + (++shell.seq));
   t.setAttribute('job', t.job);
+  if(!t.getAttribute('no')){ t.setAttribute('no', t.job) }
   msg = {'#': t.job, '$': raw};
   kit.say(msg, 'host');
 }
@@ -397,6 +399,8 @@ function fresh(t){
   t = model.cloneNode(1);
   t.job = '' + (++shell.seq);
   t.setAttribute('job', t.job);
+  t.setAttribute('no', t.job);
+  t.open = 1;
   text(t.all('symbol')[0], '$ ');
   text(t.all('prompt')[0], '');
   t.all('prompt')[0].setAttribute('contenteditable', 'true');
@@ -406,7 +410,7 @@ function fresh(t){
 }
 
 function next(t){
-  if((root.lastElementChild || {}).all && root.lastElementChild.all('prompt[contenteditable=true]')[0]){ return }
+  if((root.lastElementChild || {}).open){ return }
   t = fresh();
   root.append(t);
   shell.$ = t.all('prompt')[0];
@@ -419,7 +423,7 @@ kit.ear('belt',(eve,t)=>{ eve = eve.detail;
   eve.forEach((cmd,b)=>{
     if((shell.belt||'')[cmd[0]]){ return }
     b = t.new('button');
-    b.onclick = function(){ kit.say(cmd[1], 'prompt') };
+    b.onclick = function(){ kit.say(cmd[1], 'prompt.add') };
     b.textContent = cmd[0];
     (shell.belt=shell.belt||{})[cmd[0]]=1;
     t.pin(b);
@@ -433,9 +437,13 @@ kit.ear('clear',(eve,v,p)=>{ // clear is the 1 special command exception.
   while(p = v.previousSibling){ v.remove(); v=p; }
   v.remove();
 });
-kit.say(localStorage.pwd||'ls .','prompt'); // this is an optional progressive enhancement, shell does not know about ls, it is just blindly calling for an enhancement.
+shell.core = {root:root, make:fresh, send:send, next:next, text:text};
 
 }(window.shell = document.body));
 </script>
+<script src="task.js"></script>
+<script src="run.js"></script>
+<script>kit.say(localStorage.pwd||'ls .','prompt')</script>
+<script src="was.js"></script>
 <script src="tab.js"></script>
 <script src="aid.js"></script>

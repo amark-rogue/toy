@@ -33,17 +33,17 @@ function run(item, act, eve){
 }
 
 assert.deepStrictEqual(run({name:'note.txt', file:1}, 'cp'),
-  {run:"cp 'note.txt' 'note.txt.copy' && ls .", cmd:'ls .', bin:'ls'});
+  "cp 'note.txt' 'note.txt.copy' && ls .");
 assert.deepStrictEqual(run({name:'notes', file:0}, 'cp'),
-  {run:"cp -R 'notes' 'notes.copy' && ls .", cmd:'ls .', bin:'ls'});
+  "cp -R 'notes' 'notes.copy' && ls .");
 assert.deepStrictEqual(run({name:'note.txt', file:1}, 'rm'),
-  {run:"rm 'note.txt' && ls .", cmd:'ls .', bin:'ls'});
+  "rm 'note.txt' && ls .");
 assert.deepStrictEqual(run({name:'notes', file:0}, 'rm'),
-  {run:"rm -r 'notes' && ls .", cmd:'ls .', bin:'ls'});
+  "rm -r 'notes' && ls .");
 assert.deepStrictEqual(run({name:'note.txt', file:1}, 'chmod'),
-  {run:"chmod 644 'note.txt' && ls .", cmd:'ls .', bin:'ls'});
+  "chmod 644 'note.txt' && ls .");
 assert.deepStrictEqual(run({name:'notes', file:0}, 'chmod'),
-  {run:"chmod 755 'notes' && ls .", cmd:'ls .', bin:'ls'});
+  "chmod 755 'notes' && ls .");
 assert.deepStrictEqual(run({name:'note.txt', file:1}, 'tail'),
-  {run:"tail -n 20 'note.txt'", cmd:"tail -n 20 'note.txt'", bin:'tail'});
+  "tail -n 20 'note.txt'");
 console.log('PASS ls popup commands stay in one task');

@@ -157,6 +157,23 @@ assert.strictEqual(sent[0].target, keep, 'same-component result reuses its ifram
 assert.strictEqual(keep.src, './cmd/ls.html', 'same-component iframe is not navigated');
 assert.strictEqual(same.all('raw')[0].parentNode, 0, 'same-component raw data is never left visible');
 
+sent = [];
+var dir = frame('dir', 'pwd');
+var view = dir.all('iframe')[0];
+dir.all('prompt')[0].textContent = 'pwd';
+dir.cmd = 'pwd';
+dir.show = 'pwd';
+view.readyState = 1;
+shell.bash('bash-3.2$ ', dir);
+assert.strictEqual(dir.cmd, 'pwd', 'a bare startup prompt does not consume the pending command');
+assert.strictEqual(view.src, '', 'a bare startup prompt does not open the pending component');
+shell.stream('bash-3.2$ pwd\r\n/Users/mars/toy\r\nbash-3.2$ ', dir);
+view.onload();
+assert.strictEqual(dir.all('prompt')[0].textContent, 'pwd', 'startup setup stays out of the visible prompt');
+assert.strictEqual(view.src, './cmd/pwd.html', 'pwd selects its component');
+assert.strictEqual(sent[0].type, 'pwd', 'pwd output reaches its component');
+assert(0 <= sent[0].data.indexOf('/Users/mars/toy'), 'pwd component receives the path bytes');
+
 fs.readdirSync(path.join(__dirname, 'samples')).filter(function(name){
   return 0 <= name.indexOf('.shellnode.');
 }).forEach(function(name, raw, cut, part, done){

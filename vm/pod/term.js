@@ -48,7 +48,7 @@ pod.Tty.prototype.write = function(raw){
     pod.cmd = 0;
     raw = raw.replace('\r\n', '\r\n' + demo.pty.off + '\r');
   }
-  demo.say(raw);
+  demo.push(raw);
 };
 pod.Tty.prototype.writeln = function(raw){ this.write((raw || '') + '\r\n') };
 

@@ -46,7 +46,7 @@ pop.run = function(eve, run, cmd, item, file){
   if('chmod' === run){ cmd = 'chmod ' + (file ? '644 ' : '755 ') + item + ' && ls .' }
   if('tail' === run){ cmd = 'tail -n 20 ' + item }
   pop.hide();
-  kit.say({run:cmd, cmd:'tail' === run ? cmd : 'ls .', bin:'tail' === run ? 'tail' : 'ls'}, 'prompt.same');
+  kit.say(cmd, 'prompt.same');
 };
 
 kit.ear('ls.pop', pop.show);

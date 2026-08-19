@@ -8,7 +8,7 @@ pod.start = async function(raw){
   var late = 0;
   var tick = old ? 0 : setTimeout(function(){
     late = 1;
-    demo.say(cmd + '\r\n' + demo.pty.off + '\rLoading browser shell...\r\n');
+    demo.push(cmd + '\r\n' + demo.pty.off + '\rLoading browser shell...\r\n');
   }, 180);
   try{
     await pod.prep();
@@ -22,7 +22,7 @@ pod.start = async function(raw){
     clearTimeout(tick);
     if(old) return 0;
     var why = 'demo: richer shell unavailable: ' + (e.message || e);
-    if(late){ demo.say(why + '\r\n' + demo.path.tip()) }
+    if(late){ demo.push(why + '\r\n' + demo.path.tip()) }
     else demo.echo(cmd, why + '\n');
   }
   return 1;

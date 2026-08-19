@@ -125,6 +125,17 @@ wait().then(async function(){
   assert(cmds.indexOf('help') >= 0, 'splitter sees help after clone');
   assert(cmds.every(function(c){ return 0 !== c.indexOf('~ $') }), 'no unit keeps a stacked tip as its command');
 
+  var routed = [];
+  ctx.demo.say = function(s){ routed.push(JSON.parse(s)) };
+  ctx.demo.jobs = {};
+  ctx.demo.id = '';
+  ctx.demo.tipped = ctx.demo.at = 0;
+  ws.send('{"#":"21","$":"help\\r"}');
+  await wait();
+  assert(routed.length > 1, 'a new demo task receives its opening prompt and result');
+  assert(routed.every(function(one){ return '21' === one['#'] }), 'demo output retains its task id');
+  assert(0 <= routed.map(function(one){ return one.$ }).join('').indexOf('~ $ help\r\n'), 'new demo task has a parseable prompt boundary');
+
   ctx.Worker = function(){};
   assert(!ctx.demo.pod.use('ls .'), 'small commands keep the instant demo path');
   assert(ctx.demo.pod.use('node hello.js'), 'node selects the richer browser shell');
@@ -134,6 +145,7 @@ wait().then(async function(){
   var frame = [];
   var fix = JSON.parse(fs.readFileSync('test/samples/shelltask.json', 'utf8'));
   ctx.demo.say = function(s){ frame.push(s) };
+  ctx.demo.id = '';
   ctx.demo.pod.mute = 0;
   ctx.demo.pod.cmd = 1;
   var tty = new ctx.demo.pod.Tty();
