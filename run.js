@@ -89,7 +89,8 @@ T.set = function(eve, msg, x){
   x.sel.addRange(x.ran);
   return x.task;
 };
-['back','next','pre','add'].forEach(function(to){ kit.ear('prompt.' + to, T.run) });
+kit.ear('prompt', T.run);
+['same','back','next','pre','add'].forEach(function(to){ kit.ear('prompt.' + to, T.run) });
 kit.ear('prompt.set', T.set);
 ['same','back','next','pre','add'].forEach(function(to){ kit.ear('prompt.' + to + '.set', T.set) });
 }(shell.task));

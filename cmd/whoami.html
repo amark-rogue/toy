@@ -18,9 +18,9 @@
 .inp { display: flex; align-items: flex-start; gap: 0.3em; width: 100%; }
 </style>
 <script>
-kit.http.createServer(function(req){
+kit.createServer(function(req){
   var s = ((req.body || {}).$ || '').flat().trim().split('\n');
   var u = s.slice(1).join('\n').trim() || s[0].replace(/^whoami\s*/,'').trim() || 'unknown';
   B.all('#user')[0].textContent = u;
-}).listen();
+});
 </script>

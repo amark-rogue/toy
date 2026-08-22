@@ -9,8 +9,8 @@ ECHO.draw = function(raw){
   var text = s.slice(1).join('\n').trim();
   B.all('#out')[0].textContent = text || s[0].replace(/^echo\s+/,'') || ' ';
 };
-kit.http.createServer(function(req){
+kit.createServer(function(req){
   ECHO.draw((req.body || {}).$);
-}).listen();
+});
 }(window.ECHO = {}));
 </script>

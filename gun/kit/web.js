@@ -342,33 +342,19 @@ kit.ear('style',function(eve,i){
   }
 },document);
 
-;(function(H){
-var tag=Date.now().toString(36)+Math.random().toString(36).slice(2),seq=0,job={},pool={},late=[],live=new WeakMap,nav=new WeakMap,busy=new WeakMap,server,skip;
-H.time = 5000;
-function head(raw,out,key){
-  out={};if(!raw){return out}
-  if(raw.forEach){ raw.forEach(function(val, name){ out[(''+name).toLowerCase()] = ''+val }); return out }
-  for(key in raw){ out[(''+key).toLowerCase()] = ''+raw[key] } return out;
-}
+;(function(){
+var tag=Math.random().toString(36).slice(2),seq=0,job={},pool={},late=[],live=new WeakMap,nav=new WeakMap,busy=new WeakMap,server,skip;
 function url(raw, out){
   out = new URL(raw || location.href, location.href);
-  if(DEV ? 'file:' !== out.protocol : location.origin !== out.origin){ throw new TypeError('Kit requests must stay on the same origin') }
+  if(DEV ? 'file:' !== out.protocol : location.origin !== out.origin){ throw new TypeError('Kit URL must be local') }
   out.hash = ''; return out.href;
 }
-function name(raw){raw=''+(raw||'');return raw&&'_'!==raw[0]?raw:''}
-function note(id,code,body,h){return {reply:id,code:code||200,head:head(h),body:null==body?'':body}}
-function wrap(msg, h){
-  h = head(msg.head);
-  return {status:msg.code, ok:200 <= msg.code && 300 > msg.code,
-    headers:{get:function(key){ return h[(''+key).toLowerCase()] || null }, forEach:function(fn){for(var key in h){fn(h[key],key)}}},
-    text:function(){ return Promise.resolve('string' === typeof msg.body ? msg.body : null == msg.body ? '' : JSON.stringify(msg.body)) },
-    json:function(){ return Promise.resolve('string' === typeof msg.body ? JSON.parse(msg.body || 'null') : msg.body) }};
-}
+function name(raw){raw=''+(raw||'');return '_'===raw[0]?'':raw}
 function say(view,msg){skip=msg;kit.say(msg,'http',view);skip=null}
 function keep(id, one){
   if(one = job[id]){ return one }
   one = job[id] = {};
-  one.stop = setTimeout(function(){ lose(id, 1) }, H.time+99);
+  one.stop = setTimeout(function(){ lose(id, 1) }, 5099);
   return one;
 }
 function lose(id, no, one, list, i){
@@ -383,34 +369,31 @@ function lose(id, no, one, list, i){
   if(no && one.no){ one.no(new Error) }
   return one;
 }
-function done(msg, one){
+function done(msg, one, err){
   one = lose(msg.reply);
-  if(one && one.ok){ one.ok(wrap(msg)); return }
+  if(one && one.ok){
+    if(300 > msg.code){ one.ok(msg.body) }
+    else { err = new Error(msg.body || msg.code); err.status = msg.code; err.body = msg.body; one.no(err) }
+    return;
+  }
   if(one && one.back){ say(one.back, msg); return }
   if(W !== W.parent){ kit.up(msg, 'http') }
 }
-function fail(req, code, text){ done(note(req.ask, code, text)) }
-function find(want, omit, all, out, i){
-  all = D.getElementsByTagName('iframe'); out = [];
-  for(i = 0; i < all.length; i += 1){ if(all[i] !== omit && want === (all[i].getAttribute('name') || '')){ out.push(all[i]) } }
-  return out;
-}
+function fail(req, code, body){ done({reply:req.ask, code:code, body:body}) }
+function find(want, omit){ return [].filter.call(D.getElementsByName(want), function(i){ return i !== omit && 'IFRAME' === i.tagName }) }
 function pump(view, list, req, src){
   if(busy.has(view)){ return }
   list = nav.get(view); if(!list || !list.length){ nav.delete(view); return }
   req = list[0];
   if(live.get(view) !== req.url){
-    src = view.getAttribute('src') || '';
-    try{ src = url(src) }catch(err){ src = '' }
-    if(!src || src !== req.url || view.readyState){ live.delete(view); view.readyState = 0; view.src = req.url }
+    try{ src = url(view.getAttribute('src')) }catch(err){ src = '' }
+    if(src !== req.url || view.readyState){ live.delete(view); view.readyState = 0; view.src = req.url }
     return;
   }
   list.shift(); busy.set(view, req.ask); req.to = ''; say(view, req);
 }
-function push(view, req, src, list){
+function push(view, req, list){
   if(!view || !view.contentWindow){ throw new TypeError }
-  src = view.getAttribute('src') || '';
-  if(!src && !req.url){ throw new TypeError('Kit iframe target has no component URL') }
   try{ if(view.readyState && url(view.contentWindow.location.href) === req.url){ live.set(view, req.url) } }catch(err){}
   list = nav.get(view) || []; list.push(req); nav.set(view, list);
   keep(req.ask).view = view; pump(view);
@@ -428,24 +411,11 @@ function seek(req, omit, hit){
   if(W !== W.parent){ kit.up(req, 'http'); return }
   fail(req, 404);
 }
-function out(req, res){
-  res = {statusCode:200, head:{}, part:[], sent:0};
-  res.getHeader = function(key){ return res.head[(''+key).toLowerCase()] };
-  res.setHeader = function(key, val){ res.head[(''+key).toLowerCase()] = ''+val; return res };
-  res.writeHead = function(code, h){ res.statusCode = code; Object.assign(res.head, head(h)); return res };
-  res.write = function(data){ if(!res.sent){ res.part.push(data) } return !res.sent };
-  res.end = function(data, body){
-    if(res.sent){ return } res.sent = 1; if(null != data){ res.part.push(data) }
-    body = 1 === res.part.length ? res.part[0] : res.part.every(function(bit){ return 'string' === typeof bit }) ? res.part.join('') : res.part;
-    done(note(req.ask, res.statusCode, body, res.head));
-  };
-  return res;
-}
-function take(req, res, got){
+function take(req, res){
   if(!server){ if('loading' === D.readyState){ late.push(req) } else { fail(req, 501) } return }
-  res = out(req);
-  try{ got = server(req, res) }catch(err){ res.writeHead(500); res.end(err.message || ''+err); return }
-  Promise.resolve(got).then(function(data){ if(!res.sent){ res.end(data) } }, function(err){ if(!res.sent){ res.writeHead(500); res.end(err.message || ''+err) } });
+  res = {status:200, sent:0};
+  res.end = function(body){ if(res.sent){ return } res.sent = 1; done({reply:req.ask, code:res.status, body:body}) };
+  Promise.resolve().then(function(){ return server(req, res) }).then(function(data){ if(!res.sent){ res.end(data) } }, function(err){ if(!res.sent){ res.status = 500; res.end(err.message || ''+err) } });
 }
 function drain(no, list){ list = late; late = []; list.forEach(function(req){ no && !server ? fail(req, 501) : take(req) }) }
 function ask(req, send){
@@ -459,27 +429,22 @@ function pod(src, view){
   view = D[HI]('iframe'); view.hidden = true; view.src = src; (D.body || D.documentElement).appendChild(view);
   return pool[src] = view;
 }
-kit.fetch = function(to, opt, view, src, req, aim){
-  opt = opt || {};
+kit.fetch = function(to, body, target, view, src, req, aim){
   try{
-    if(to && 'IFRAME' === to.tagName){ view = to; src = opt.url || view.getAttribute('src'); if(!src){ throw new TypeError('Kit iframe target has no component URL') } }
+    if(to && 'IFRAME' === to.tagName){ view = to; src = view.getAttribute('src'); if(!src){ throw new TypeError('Kit iframe needs a URL') } }
     else { src = to }
-    src = url(src); req = {url:src, method:(opt.method || 'GET').toUpperCase(), headers:head(opt.headers), body:opt.body, to:''};
+    src = url(src); req = {url:src, body:body, to:''};
     if(view){ return ask(req, function(msg){ push(view, msg) }) }
-    if(opt.target && 'IFRAME' === opt.target.tagName){ return ask(req, function(msg){ push(opt.target, msg) }) }
-    if(opt.target){
-      aim = name(opt.target);
-      if(!aim){ return Promise.resolve(wrap(note('', 400))) }
+    if(target && 'IFRAME' === target.tagName){ return ask(req, function(msg){ push(target, msg) }) }
+    if(target){
+      aim = name(target);
+      if(!aim){ return Promise.reject(Object.assign(new Error(400), {status:400})) }
       req.to = aim; return ask(req, function(msg){ seek(msg) });
     }
     return ask(req, function(msg){ push(pod(src), msg) });
   }catch(err){ return Promise.reject(err) }
 };
-H.post = function(to, body, opt){ return kit.fetch(to, Object.assign({}, opt, {method:'POST', body:body})) };
-H.createServer = function(fn, srv){
-  srv = {listen:function(port, ip, done){ server = fn || function(){}; drain(); if(done){ done() } return srv }};
-  return srv;
-};
+kit.createServer = function(fn){ server = fn || function(){}; drain() };
 kit.ears.http = 1;
 D[ON]('ready', wake);
 W[ON]('http', function(eve, msg, src, one){
@@ -491,16 +456,14 @@ W[ON]('http', function(eve, msg, src, one){
 });
 W[ON]('DOMContentLoaded', function(){ drain(1) });
 
-if(W.HTMLFormElement){
-  var form = HTMLFormElement.prototype, submit = form.submit, now;
-  H.use = function(f, aim){ aim = f && f.getAttribute('target') || ''; return !!(f && 'FORM' === f.tagName && 'post' === (f.getAttribute('method') || 'get').toLowerCase() && name(aim)) };
-  function body(f, data){ data = {}; new FormData(f).forEach(function(val, key){ if(U === data[key]){ data[key] = val } else { if(!Array.isArray(data[key])){ data[key] = [data[key]] } data[key].push(val) } }); return data }
-  function post(f){ return H.post(f.action || location.href, body(f), {target:f.getAttribute('target')}) }
-  W[ON]('submit', function(eve, one){ if(!H.use(eve.target)){ return } one = now = {form:eve.target, eve:eve}; setTimeout(function(){ if(now === one){ now = null } }, 0) }, true);
-  W[ON]('submit', function(eve){ if(!H.use(eve.target) || eve.defaultPrevented){ return } eve.preventDefault(); post(eve.target).catch(function(err){ setTimeout(function(){ throw err }) }) });
-  form.submit = function(){ if(!H.use(this)){ return submit.call(this) } if(now && now.form === this){ now.eve.preventDefault(); return now.ask || (now.ask = post(this)) } return post(this) };
-}
-}(kit.http = {}));
+function fields(f, data){ data = {}; new FormData(f).forEach(function(val, key){ data[key] = U === data[key] ? val : [].concat(data[key], val) }); return data }
+W[ON]('submit', function(eve, f, aim){
+  f = eve.target; aim = f && name(f.target);
+  if(!aim || 'FORM' !== f.tagName || 'post' !== f.method || eve.defaultPrevented){ return }
+  eve.preventDefault();
+  kit.fetch(f.action, fields(f), aim);
+});
+}());
 
 location.__dirname = location.href.split('/').slice(0,-1).join('/');
 Object.defineProperty(location, 'path', {

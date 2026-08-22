@@ -3,10 +3,8 @@
 ;(function(call){
 call.serve = async function(req, res){
   var body = req.body || {};
-  var reply = await kit.http.post(body.url, body.body, {target:body.target});
-  res.writeHead(reply.status, {'content-type':'application/json'});
-  res.end(await reply.json());
+  res.end(await kit.fetch(body.url, body.body, body.target));
 };
-kit.http.createServer(call.serve).listen();
+kit.createServer(call.serve);
 }(window.call = {}));
 </script>

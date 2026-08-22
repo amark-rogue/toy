@@ -23,7 +23,7 @@ G.route = function(raw, flat, line, cmd){
   (G.wait = G.wait || []).push(raw);
 };
 
-kit.http.createServer(function(req){
+kit.createServer(function(req){
   G.route((req.body || {}).$);
-}).listen();
+});
 }(window.GIT = window.GIT || {}));

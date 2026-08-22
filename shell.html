@@ -103,36 +103,6 @@ shell.ear('input', function(eve, t){
   t = eve.target.closest('task');
   if(t){ t.idle = 0 }
 });
-kit.ear('prompt',(eve)=>{
-  if(shell.task && shell.task.run){ return shell.task.run(eve) }
-  var cmd = eve.detail||eve.data;
-  cmd = (cmd || shell.$.textContent || '').trim();
-  shell.$.textContent = cmd;
-  //shell.$.removeAttribute('contenteditable');
-  shell.live = shell.$.up('task')[0];
-  shell.live.open = 0;
-  shell.used = 1;
-  send(shell.live, cmd+'\r');
-  screen.buzz();
-});
-kit.ear('prompt.same',(eve)=>{
-  if(shell.task && shell.task.run){ return shell.task.run(eve) }
-  var msg = eve.detail||eve.data||{};
-  //console.log('prompt.same:', msg);
-  var cmd = (msg.$ || msg.run || msg.cmd || msg).trim();
-  var t = (eve.target && eve.target.up) ? eve.target.up('task')[0] : null;
-  if(!cmd || !t){ return }
-  t.bin = msg.bin || '';
-  t.cmd = msg.cmd || cmd;
-  t.same = 1;
-  t.stay = msg.stay || 0;
-  t.file = msg.file || '';
-  shell.live = t;
-  shell.used = 1;
-  send(t, cmd+'\r');
-  screen.buzz();
-});
-
 kit.ear('host', function(eve, msg, id, t){
   if(!eve.target || !eve.target.matches || !eve.target.matches('task iframe')){ return }
   id = shell.job.get(eve.target);
@@ -156,11 +126,10 @@ shell.raw = '';
 shell.give = function(t, i, raw, type, data, r, msg){
   data = undefined === data ? raw : data;
   msg = {'#':t.job, '$':raw};
-  kit.http.post(i, msg).then(function(reply){
-    if(reply.ok){ return }
-    if(501 === reply.status){ kit.say(data, type, i); return }
+  kit.fetch(i, msg).catch(function(err){
+    if(501 === err.status){ kit.say(data, type, i); return }
     if(r && !r.parentNode && i.parentNode){ i.parentNode.insertBefore(r, i) }
-  }, function(){ if(r && !r.parentNode && i.parentNode){ i.parentNode.insertBefore(r, i) } });
+  });
 };
 shell.exit = function(raw, t, code, line, hit){
   if(!t || !t.tty){ return 0 }

@@ -39,7 +39,7 @@
 
 <script src="../util.js"></script>
 <script>
-kit.http.createServer(function(req){
+kit.createServer(function(req){
   var raw = ((req.body || {}).$ || '').flat();
   var lines = raw.trim().split('\n');
   var cmdLine = lines[0] || '';
@@ -62,7 +62,7 @@ kit.http.createServer(function(req){
   } else {
     err.textContent = 'Error: ' + out;
   }
-}).listen();
+});
 
 function showFix(suggestion) {
   fix.style.display = 'block';

@@ -106,9 +106,9 @@ CMD.go = function(item, part, out){
   return out.join('/') || '~';
 };
 CMD.arg = function(path){ return path.replace(/[^\w@%+=:,./~-]/g, '\\$&') };
-kit.http.createServer(function(req){
+kit.createServer(function(req){
   CMD.ls((req.body || {}).$, list);
-}).listen();
+});
 CMD.pop = function(item){
   pop.classList.add('live');
   kit.say({name:item.where, file:item.file}, 'ls.pop', pop);

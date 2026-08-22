@@ -20,84 +20,92 @@
 TEST.ok = function(got, want, note){
   if(got !== want){ throw new Error(note + ': got ' + got + ', want ' + want) }
 };
-TEST.early = kit.http.post(document.getElementById('late'), {word:'early'});
+TEST.early = kit.fetch(document.getElementById('late'), {word:'early'});
+TEST.wait = function(fn){
+  return new Promise(function(ok, no, end){
+    end = performance.now() + 2000;
+    (function poll(){ if(fn()){ ok(); return } if(performance.now() > end){ no(new Error('component update timed out')); return } setTimeout(poll, 10) }());
+  });
+};
 
 TEST.run = async function(){
-  var reply, body, both, view = document.getElementById('one');
+  var body, both, view = document.getElementById('one');
   var call = document.getElementById('call');
   var late = document.getElementById('late');
   var form = document.getElementById('form');
   var result = document.getElementById('result');
   TEST.step = 'direct iframe';
-  reply = await kit.fetch(view, {method:'POST', body:{word:'first'}});
-  body = await reply.json();
+  body = await kit.fetch(view, {word:'first'});
   TEST.ok(body.count, 1, 'direct iframe request');
-  TEST.ok(body.method, 'POST', 'explicit method');
   TEST.ok(body.word, 'first', 'target hydrates itself without parent DOM access');
-  TEST.ok(reply.headers.get('content-type'), 'application/json', 'response headers cross the component boundary');
+  TEST.ok(body.url, new URL('./http/one.html', location.href).href, 'component receives its URL');
 
   TEST.step = 'named target';
   TEST.at = performance.now();
-  reply = await kit.http.post('./http/one.html', {word:'second'}, {target:'one'});
-  body = await reply.json();
+  body = await kit.fetch('./http/one.html', {word:'second'}, 'one');
   TEST.ms = performance.now() - TEST.at;
   TEST.ok(body.count, 2, 'named target stays in place');
   if(500 <= TEST.ms){ throw new Error('reused target took ' + TEST.ms + 'ms') }
 
   TEST.step = 'nested target';
-  reply = await kit.http.post(call, {
+  body = await kit.fetch(call, {
     url:new URL('./http/one.html', location.href).href,
     target:'one',
     body:{word:'uncle'}
   });
-  body = await reply.json();
   TEST.ok(body.count, 3, 'nested caller reaches nearest uncle target');
   TEST.ok(body.word, 'uncle', 'uncle receives nested body');
 
   TEST.step = 'request before server declaration';
-  body = await (await TEST.early).json();
+  body = await TEST.early;
   TEST.ok(body.word, 'early', 'a request arriving while the component parses waits for its server');
 
   TEST.step = 'nested parent';
-  reply = await kit.http.post(late, {word:'late'});
-  body = await reply.json();
+  body = await kit.fetch(late, {word:'late'});
   TEST.ok(body.word, 'late', 'a late parent module discovers its existing child server');
 
   TEST.step = 'form submit';
   form.onsubmit = function(){
     this.querySelector('input').value += '!';
-    TEST.form = this.submit();
   };
   form.requestSubmit();
-  body = await (await TEST.form).json();
-  TEST.ok(body.count, 4, 'custom submit sends once');
-  TEST.ok(body.word, 'form!', 'custom submit sees edited form data');
-  TEST.ok(body.tag.join(','), 'one,two', 'repeated form fields stay repeated');
+  await TEST.wait(function(){ return 'form!' === view.contentDocument.getElementById('word').textContent });
+  body = await kit.fetch(view, {word:'after form'});
+  TEST.ok(body.count, 5, 'custom submit sends once');
+  TEST.ok(body.last.word, 'form!', 'custom submit sees edited form data');
+  TEST.ok(body.last.tag.join(','), 'one,two', 'repeated form fields stay repeated');
+
+  TEST.step = 'response status';
+  try{
+    await kit.fetch(view, {word:'teapot', status:418});
+    throw new Error('response status did not reject');
+  }catch(err){
+    if('response status did not reject' === err.message){ throw err }
+    TEST.ok(err.status, 418, 'res.status crosses the component boundary');
+    TEST.ok(err.body.word, 'teapot', 'res.end body is retained on an error');
+  }
 
   TEST.step = 'targetless request';
-  reply = await kit.http.post('./http/one.html', {word:'pool'});
-  body = await reply.json();
+  body = await kit.fetch('./http/one.html', {word:'pool'});
   TEST.ok(body.count, 1, 'targetless request uses a programmatic component');
   TEST.ok(body.word, 'pool', 'targetless response is returned');
 
   TEST.step = 'pooled request';
-  reply = await kit.http.post('./http/one.html', {word:'again'});
-  body = await reply.json();
+  body = await kit.fetch('./http/one.html', {word:'again'});
   TEST.ok(body.count, 2, 'programmatic component is preloaded and reused');
 
   TEST.step = 'target navigation';
-  reply = await kit.http.post('./http/one.html?move', {word:'move'}, {target:'move'});
-  body = await reply.json();
+  body = await kit.fetch('./http/one.html?move', {word:'move'}, 'move');
   TEST.ok(body.count, 1, 'navigated target waits for its exact new server');
   TEST.ok(body.word, 'move', 'navigated target receives its pending request');
 
   TEST.step = 'concurrent target navigation';
   both = await Promise.all([
-    kit.http.post('./http/one.html?first', {word:'first move', wait:30}, {target:'move'}),
-    kit.http.post('./http/one.html?second', {word:'second move'}, {target:'move'}),
-    kit.http.post('./http/one.html?first', {word:'last move'}, {target:'move'})
+    kit.fetch('./http/one.html?first', {word:'first move', wait:30}, 'move'),
+    kit.fetch('./http/one.html?second', {word:'second move'}, 'move'),
+    kit.fetch('./http/one.html?first', {word:'last move'}, 'move')
   ]);
-  body = await Promise.all([both[0].json(), both[1].json(), both[2].json()]);
+  body = both;
   TEST.ok(body[0].word, 'first move', 'first navigation reaches its own document');
   TEST.ok(body[1].word, 'second move', 'second navigation waits instead of stealing the first request');
   TEST.ok(body[2].count, 1, 'third navigation waits behind the different document instead of skipping ahead');
@@ -105,30 +113,38 @@ TEST.run = async function(){
 
   TEST.step = 'empty iframe';
   try{
-    await kit.http.post(document.getElementById('empty'), {word:'bad'});
+    await kit.fetch(document.getElementById('empty'), {word:'bad'});
     throw new Error('empty iframe request did not reject');
   }catch(err){
     if('empty iframe request did not reject' === err.message){ throw err }
-    TEST.ok(err.message, 'Kit iframe target has no component URL', 'empty iframe never loads the caller recursively');
+    TEST.ok(err.message, 'Kit iframe needs a URL', 'empty iframe never loads the caller recursively');
   }
 
   TEST.step = 'component without server';
-  reply = await kit.http.post(document.getElementById('plain'), {word:'none'});
-  TEST.ok(reply.status, 501, 'an event-only component declines finite requests promptly');
+  try{
+    await kit.fetch(document.getElementById('plain'), {word:'none'});
+    throw new Error('component without server did not reject');
+  }catch(err){
+    if('component without server did not reject' === err.message){ throw err }
+    TEST.ok(err.status, 501, 'an event-only component declines finite requests promptly');
+  }
 
   TEST.step = 'duplicate target';
-  reply = await kit.http.post('./http/one.html', {word:'bad'}, {target:'twice'});
-  TEST.ok(reply.status, 409, 'duplicate target names fail instead of guessing');
-  form.setAttribute('target', '_self');
-  TEST.ok(kit.http.use(form), false, 'browser target names stay native');
+  try{
+    await kit.fetch('./http/one.html', {word:'bad'}, 'twice');
+    throw new Error('duplicate target did not reject');
+  }catch(err){
+    if('duplicate target did not reject' === err.message){ throw err }
+    TEST.ok(err.status, 409, 'duplicate target names fail instead of guessing');
+  }
 
   TEST.step = 'cross-origin URL';
   try{
-    await kit.http.post('https://example.com/', {});
+    await kit.fetch('https://example.com/', {});
     throw new Error('cross-origin request did not reject');
   }catch(err){
     if('cross-origin request did not reject' === err.message){ throw err }
-    TEST.ok(err.message, 'Kit requests must stay on the same origin', 'component URLs cannot escape their origin');
+    TEST.ok(err.message, 'Kit URL must be local', 'component URLs cannot escape their origin');
   }
 
   TEST.step = 'URL page frame';

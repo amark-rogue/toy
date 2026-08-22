@@ -149,7 +149,7 @@ same.all('prompt')[0].textContent = 'ls .';
 same.cmd = 'ls .';
 same.same = 1;
 keep.src = './cmd/ls.html';
-kit.http = {post:function(){ return {then:function(done){ done({ok:false, status:501}) }} }};
+kit.fetch = function(){ return {catch:function(no){ no({status:501}) }} };
 kit.say = function(data, type, target){ sent.push({data:data, type:type, target:target}) };
 shell.stream('bash-3.2$ ls .\r\nnew', same);
 assert.strictEqual(same.all('raw')[0].textContent, '', 'same-component partial data stays behind its iframe');
@@ -167,11 +167,9 @@ finite.all('prompt')[0].textContent = 'ls .';
 finite.cmd = 'ls .';
 finite.same = 1;
 finiteView.src = './cmd/ls.html';
-kit.http = {
-  post:function(view, data){
-    posts.push({view:view, data:data});
-    return {then:function(done){ done({ok:true}) }};
-  }
+kit.fetch = function(view, data){
+  posts.push({view:view, data:data});
+  return {catch:function(){}};
 };
 kit.say = function(){ throw Error('a ready finite component must not receive the legacy event') };
 shell.bash('bash-3.2$ ls .\r\nfinite.txt\r\n', finite);
@@ -185,14 +183,14 @@ failed.all('prompt')[0].textContent = 'echo hello';
 failed.cmd = 'echo hello';
 failed.same = 1;
 failedView.src = './cmd/echo.html';
-kit.http = {post:function(){ return {then:function(done){ done({ok:false, status:500}) }} }};
+kit.fetch = function(){ return {catch:function(no){ no({status:500}) }} };
 kit.say = function(){ throw Error('a failed finite renderer must not become a command event') };
 shell.bash('bash-3.2$ echo hello\r\nhello\r\n', failed);
 assert.strictEqual(failed.all('raw')[0].parentNode, failedView.parentNode, 'a failed finite renderer restores plain output');
 assert(0 <= failed.all('raw')[0].textContent.indexOf('hello'), 'restored output keeps the command result');
 
 sent = [];
-kit.http = {post:function(){ return {then:function(done){ done({ok:false, status:501}) }} }};
+kit.fetch = function(){ return {catch:function(no){ no({status:501}) }} };
 kit.say = function(data, type, target){ sent.push({data:data, type:type, target:target}) };
 var dir = frame('dir', 'pwd');
 var view = dir.all('iframe')[0];

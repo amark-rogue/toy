@@ -9,11 +9,11 @@ pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; 
 
 <script src="../util.js"></script>
 <script>
-kit.http.createServer(function(req, raw, at, n){
+kit.createServer(function(req, raw, at, n){
   raw = ((req.body || {}).$ || '').flat();
   at = raw.search(/\r\n|\n|\r/);
   if(at < 0){ out.textContent = raw; return }
   n = '\r\n' === raw.slice(at, at + 2) ? 2 : 1;
   out.textContent = raw.slice(at + n);
-}).listen();
+});
 </script>

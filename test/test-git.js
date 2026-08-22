@@ -4,7 +4,7 @@ var ears = {};
 var kit = {
   say:function(data, type){ sent.push({data:data, type:type}) },
   ear:function(type, fn){ ears[type] = fn },
-  http:{createServer:function(fn){ kit.server = fn; return {listen:function(){}} }}
+  createServer:function(fn){ kit.server = fn }
 };
 
 eval(fs.readFileSync('cmd/git/grace.js', 'utf8'));

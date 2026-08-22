@@ -8,7 +8,7 @@
 }
 </style>
 <script>
-kit.http.createServer(function(req){ var f = (req.body || {}).$ || "";
+kit.createServer(function(req){ var f = (req.body || {}).$ || "";
   var lines = f.trim().split('\n').slice(1);
   lines.forEach(function(l){
     if(!l.trim()){ return }
@@ -36,7 +36,7 @@ kit.http.createServer(function(req){ var f = (req.body || {}).$ || "";
     };
     document.body.append(a);
   });
-}).listen();
+});
 </script>
 <script src="../gun/kit/dom.js"></script>
 <script src="../../util.js"></script>

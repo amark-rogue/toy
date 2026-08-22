@@ -18,7 +18,7 @@ mark { font-weight: bold; background: var(--pop); color: var(--mood, black); pad
 </style>
 <script src="../util.js"></script>
 <script>
-kit.http.createServer(function(req){
+kit.createServer(function(req){
   var s = ((req.body || {}).$ || '').flat().trim().split('\n');
   var m = s[0].match(/grep\s+(?:-[a-zA-Z]+\s+)?['"]?([^'"]+)['"]?/);
   var term = m ? m[1] : '?';
@@ -48,5 +48,5 @@ kit.http.createServer(function(req){
     });
   }
   out.scrollTop = out.scrollHeight;
-}).listen();
+});
 </script>

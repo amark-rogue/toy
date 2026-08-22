@@ -22,7 +22,7 @@ body { display: block; min-height: 0; overflow: hidden; }
 </style>
 <script src="../util.js"></script>
 <script>
-kit.http.createServer(function(req){
+kit.createServer(function(req){
   var s = ((req.body || {}).$ || '').flat().trim().split('\n');
   var tpl = B.all('#rowTpl')[0];
   var out = B.all('#out')[0];
@@ -42,5 +42,5 @@ kit.http.createServer(function(req){
     out.append(row);
   });
   out.scrollTop = out.scrollHeight;
-}).listen();
+});
 </script>

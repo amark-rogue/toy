@@ -38,6 +38,8 @@ var screen = {buzz:function(){}};
 
 eval(fs.readFileSync('task.js', 'utf8'));
 eval(fs.readFileSync('run.js', 'utf8'));
+assert.strictEqual(ears.prompt, shell.task.run, 'task runner owns generic prompt routing');
+assert.strictEqual(ears['prompt.same'], shell.task.run, 'task runner owns same-task prompt routing');
 
 var boot = make(0, 1);
 all = [boot]; link(); shell.task.at = boot;

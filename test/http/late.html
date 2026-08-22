@@ -2,9 +2,8 @@
 <iframe id="old" src="./one.html"></iframe>
 <script>
 ;(function(late){
-kit.http.createServer(async function(req){
-  var reply = await kit.http.post(document.getElementById('old'), req.body);
-  return reply.json();
-}).listen();
+kit.createServer(function(req){
+  return kit.fetch(document.getElementById('old'), req.body);
+});
 }(window.late = {}));
 </script>

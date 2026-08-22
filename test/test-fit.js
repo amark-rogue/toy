@@ -3,6 +3,7 @@ var src = fs.readFileSync('gun/kit/web.js', 'utf8');
 var css = fs.readFileSync('gun/kit/web.css', 'utf8');
 var ls = fs.readFileSync('cmd/ls.html', 'utf8');
 var pop = fs.readFileSync('cmd/ls-pop.html', 'utf8');
+var cat = fs.readFileSync('cmd/cat.html', 'utf8');
 var size = src.slice(src.indexOf('(kit.size ='), src.indexOf('kit.watch ='));
 
 assert(src.includes('new ResizeObserver(kit.watch.resize)'), 'body box drives component size');
@@ -19,4 +20,6 @@ assert(ls.includes("a:not(#up):not(#add)"), 'list renderer replaces stale items'
 assert(/kit \{[^}]*visibility: hidden/.test(pop), 'hidden popup keeps a stable layout box');
 assert(css.includes(':where(html.part) body { height: max-content; }'), 'embedded body uses intrinsic height');
 assert(css.includes('scrollbar-gutter: stable'), 'scrollbar width cannot oscillate layout');
+assert(!cat.includes("kit.say({height: '90dvh'}"), 'cat relies on shared intrinsic sizing');
+assert(!cat.includes('setTimeout(pan'), 'cat leaves no idle sizing poll');
 console.log('PASS intrinsic iframe sizing contract');

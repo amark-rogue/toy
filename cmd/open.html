@@ -261,7 +261,7 @@
             }
         };
         kit.ear("open", function (eve) { hear(eve.detail || eve.data) });
-        kit.http.createServer(function(req){ hear((req.body || {}).$) }).listen();
+        kit.createServer(function(req){ hear((req.body || {}).$) });
 
         document.getElementById("go").onclick = function () {
             load();
