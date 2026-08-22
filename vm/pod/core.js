@@ -24,12 +24,24 @@ pod.sown = 0;
 pod.rev = -1;
 
 pod.fast = {
+  aid: 1,
   cat: 1, cd: 1, clear: 1, cp: 1, echo: 1, help: 1,
   ls: 1, mkdir: 1, open: 1, pwd: 1, rm: 1, touch: 1,
   apk: 1, pip: 1
 };
 
+// bins that stay on the browser path even once the richer shell owns the screen
+pod.kept = {aid: 1};
+
+// last segment wins: cd ~ && aid x is an aid command
+pod.bin = function(cmd){
+  cmd = (cmd || '').trim();
+  var seg = (cmd.split(/\s*(?:&&|;)\s*/).pop() || '').split(/\s+/)[0];
+  return seg.toLowerCase();
+};
+
 pod.use = function(cmd){
+  if(pod.kept[pod.bin(cmd)]) return 0;
   if(pod.on) return 1;
   if(!window.Worker) return 0;
   cmd = (cmd || '').trim();

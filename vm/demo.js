@@ -597,7 +597,7 @@ demo.shim = function(){
         try{
           var cmd = (msg || '').replace(/[\r\n]+$/, '').trim();
           var job;
-          if(demo.pod.ok && demo.pod.on){
+          if(demo.pod.ok && demo.pod.on && demo.pod.use(cmd)){
             own = 1;
             demo.pod.send(msg);
             return;

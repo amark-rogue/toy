@@ -1,0 +1,38 @@
+<link rel="stylesheet" href="../gun/kit/web.css">
+<script src="../gun/kit/web.js"></script>
+<script src="../gun/kit/dom.js"></script>
+
+<div class="aid"></div>
+
+<!-- templates -->
+<div class="model">
+  <pre class="line"></pre>
+  <pre class="line step"></pre>
+</div>
+
+<style>
+body { display: block; min-height: 0; }
+.aid { margin: 0.3em 0.6em; }
+.line { white-space: pre-wrap; word-break: break-word; margin: 0 0 0.3em; font-family: 'Courier New', monospace; font-size: 0.85em; text-align: left; }
+.step { opacity: 0.6; border-left: 2px solid color-mix(in srgb, var(--pop) 40%, transparent); padding-left: 0.5em; }
+</style>
+
+<script src="../util.js"></script>
+<script>
+// aid — renders the browser agent stream; the agent lives beside the demo host in app.html
+var AID = {}, box = document.body.all('.aid')[0], mark = document.body.all('.model .line')[0];
+AID.seen = {};
+
+kit.ear('aid', function(eve){
+  var d = eve.detail || eve.data || {};
+  var key = (d['#'] || '') + ':' + (d.n || '');
+  if(!d.say || AID.seen[key]){ return } // relays may double deliver
+  AID.seen[key] = 1;
+  var v = mark.cloneNode(1);
+  v.classList.remove('step');
+  if('(' === d.say.charAt(0)){ v.classList.add('step') }
+  v.textContent = d.say;
+  box.pin(v);
+  kit.say({}, 'style');
+});
+</script>

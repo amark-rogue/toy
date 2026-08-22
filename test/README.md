@@ -11,6 +11,7 @@ node test/test-task.js
 node test/test-git.js
 node test/test-pwd.js
 node test/test-http.js
+node test/test-aid.js
 ```
 
 `testshell.js` runs the real shell stream, task router, result renderer, and terminal detection functions against saved PTY frames. `test-demo.js` runs the demo and Nodepod terminal adapter, then compares its `node -v` frame to the exact frame consumed by `testshell.js`.
