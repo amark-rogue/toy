@@ -230,9 +230,9 @@
             kit.say({}, "style");
         };
 
-        // receive response from VM.srv.fetch
-        kit.ear("open", function (eve) {
-            var d = eve.detail || eve.data || {};
+        // live responses from VM.srv.fetch
+        var hear = function (d) {
+            d = d || {};
             if (d.id && d.id !== id) return;
             if (d.port && d.path) {
                 // initial command: set port and load
@@ -259,7 +259,9 @@
             if (d.err) {
                 show(d.err);
             }
-        });
+        };
+        kit.ear("open", function (eve) { hear(eve.detail || eve.data) });
+        kit.http.createServer(function(req){ hear((req.body || {}).$) }).listen();
 
         document.getElementById("go").onclick = function () {
             load();

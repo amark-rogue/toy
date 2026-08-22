@@ -1,21 +1,2 @@
-<link rel="stylesheet" href="../gun/kit/web.css"><script src="../gun/kit/web.js"></script>
-<script src="../gun/kit/dom.js"></script>
-<div id="box" class="box">
-  <div class="bar">
-    <span class="tag"></span>
-    <span id="info" class="val"></span>
-  </div>
-</div>
-<style>
-body { display: block; min-height: 0; overflow: hidden; }
-</style>
-<script src="../util.js"></script>
-<script>
-kit.ear('mv', function hear(eve) { hear.off();
-  return; // no need to do anything!
-  var s = (eve.detail || eve.data || '').flat().trim().split('\n');
-  var args = s[0].replace(/^mv\s+(?:-[a-zA-Z]+\s+)?/,'').split(/\s+/);
-  var dst = args.pop(), src = args.join(' ');
-  B.all('#info')[0].textContent = src + ' → ' + dst;
-});
-</script>
+<script src="../gun/kit/web.js"></script>
+<script>kit.http.createServer().listen()</script>

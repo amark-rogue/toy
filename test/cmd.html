@@ -1,0 +1,35 @@
+<script src="../gun/kit/web.js"></script>
+<pre id="result">WAIT</pre>
+<script>
+;(function(TEST){
+TEST.data = {
+  cat:'bash-3.2$ cat note.txt\r\nhello\r\n',
+  cd:'bash-3.2$ cd /tmp\r\n',
+  cp:'bash-3.2$ cp one two\r\n',
+  echo:'bash-3.2$ echo hello\r\nhello\r\n',
+  git:'bash-3.2$ git status\r\nfatal: not a git repository\r\n',
+  grep:'bash-3.2$ grep hello note.txt\r\nnote.txt:hello\r\n',
+  ls:'bash-3.2$ ls .\r\none.txt\ttwo\r\n',
+  mkdir:'bash-3.2$ mkdir new\r\n',
+  mv:'bash-3.2$ mv one two\r\n',
+  npm:'bash-3.2$ npm test\r\npassed\r\n',
+  open:'bash-3.2$ open note.html\r\n',
+  ping:'bash-3.2$ ping host\r\n64 bytes\r\n',
+  ps:'bash-3.2$ ps\r\nPID TTY TIME CMD\r\n1 t 0 sh\r\n',
+  pwd:'bash-3.2$ pwd\r\n/tmp\r\n',
+  rm:'bash-3.2$ rm old\r\n',
+  tail:'bash-3.2$ tail note.txt\r\nlast\r\n',
+  touch:'bash-3.2$ touch new\r\n',
+  whoami:'bash-3.2$ whoami\r\nmars\r\n'
+};
+TEST.run = async function(){
+  var name, reply, start = performance.now();
+  for(name in TEST.data){
+    reply = await kit.http.post('../cmd/' + name + '.html', {'#':name, '$':TEST.data[name]});
+    if(!reply.ok){ throw new Error(name + ' returned ' + reply.status + ': ' + await reply.text()) }
+  }
+  result.textContent = 'PASS ' + Object.keys(TEST.data).length + ' finite command components (' + Math.ceil(performance.now() - start) + 'ms)';
+};
+window.addEventListener('load', function(){ TEST.run().catch(function(err){ result.textContent = 'FAIL ' + (err.stack || err) }) });
+}(window.TEST = {}));
+</script>

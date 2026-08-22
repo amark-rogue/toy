@@ -18,12 +18,13 @@ mark { font-weight: bold; background: var(--pop); color: var(--mood, black); pad
 </style>
 <script src="../util.js"></script>
 <script>
-kit.ear('grep', function hear(eve) { hear.off();
-  var s = (eve.detail || eve.data || '').flat().trim().split('\n');
+kit.http.createServer(function(req){
+  var s = ((req.body || {}).$ || '').flat().trim().split('\n');
   var m = s[0].match(/grep\s+(?:-[a-zA-Z]+\s+)?['"]?([^'"]+)['"]?/);
   var term = m ? m[1] : '?';
   var tpl = B.all('#hitTpl')[0];
   var out = B.all('#out')[0];
+  out.replaceChildren();
   B.all('#query')[0].textContent = term;
   var lines = s.slice(1).filter(function(l){ return l.trim() });
   if(!lines.length) {
@@ -42,10 +43,10 @@ kit.ear('grep', function hear(eve) { hear.off();
         } else { item.append(document.createTextNode(p)); }
       });
       var fm = l.match(/^([^:]+):/);
-      if(fm) { item.onclick = function(){ kit.say('cat ' + fm[1], 'prompt.try') } }
+      if(fm) { item.onclick = function(){ kit.say('cat ' + fm[1], 'prompt.add.set') } }
       out.append(item);
     });
   }
   out.scrollTop = out.scrollHeight;
-});
+}).listen();
 </script>

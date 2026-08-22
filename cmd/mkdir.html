@@ -13,10 +13,12 @@ body { display: block; min-height: 0; overflow: hidden; }
 </style>
 <script src="../util.js"></script>
 <script>
-kit.ear('mkdir', function hear(eve) { hear.off();
-  var s = (eve.detail || eve.data || '').flat().trim().split('\n');
+kit.http.createServer(function(req){
+  var s = ((req.body || {}).$ || '').flat().trim().split('\n');
   var out = s.slice(1).join('\n').trim();
   var name = s[0].replace(/^mkdir\s+(?:-p\s+)?/,'').trim();
+  box.tag('err', 0);
+  B.all('#lbl')[0].textContent = 'mkdir';
   if(out && (out.toLowerCase().includes('exist') || out.toLowerCase().includes('denied'))) {
     box.tag('err', 1);
     B.all('#lbl')[0].textContent = 'error';
@@ -24,5 +26,5 @@ kit.ear('mkdir', function hear(eve) { hear.off();
   } else {
     B.all('#fname')[0].textContent = name;
   }
-});
+}).listen();
 </script>

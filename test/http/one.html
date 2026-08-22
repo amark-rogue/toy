@@ -1,0 +1,17 @@
+<script src="../../gun/kit/web.js"></script>
+<output id="word"></output>
+<script>
+;(function(one){
+one.count = 0;
+one.serve = function(req, res){
+  var body = req.body || {}, data;
+  one.count += 1;
+  word.textContent = body.word || '';
+  res.setHeader('content-type', 'application/json');
+  data = {count:one.count, word:word.textContent, tag:body.tag, method:req.method};
+  if(body.wait){ return new Promise(function(ok){ setTimeout(function(){ ok(data) }, body.wait) }) }
+  res.end(data);
+};
+kit.http.createServer(one.serve).listen();
+}(window.one = {}));
+</script>

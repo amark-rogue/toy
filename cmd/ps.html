@@ -22,10 +22,11 @@ body { display: block; min-height: 0; overflow: hidden; }
 </style>
 <script src="../util.js"></script>
 <script>
-kit.ear('ps', function hear(eve) { hear.off();
-  var s = (eve.detail || eve.data || '').flat().trim().split('\n');
+kit.http.createServer(function(req){
+  var s = ((req.body || {}).$ || '').flat().trim().split('\n');
   var tpl = B.all('#rowTpl')[0];
   var out = B.all('#out')[0];
+  out.replaceChildren();
   var lines = s.slice(1);
   if(lines.length && lines[0].includes('PID')) lines = lines.slice(1);
   lines.forEach(function(l) {
@@ -37,9 +38,9 @@ kit.ear('ps', function hear(eve) { hear.off();
     row.id = ''; row.classList.remove('model');
     row.all('.pid')[0].textContent = pid;
     row.all('.pname')[0].textContent = name;
-    row.all('.kill')[0].onclick = function(){ kit.say('kill -9 '+pid,'prompt.try') };
+    row.all('.kill')[0].onclick = function(){ kit.say('kill -9 '+pid,'prompt.add.set') };
     out.append(row);
   });
   out.scrollTop = out.scrollHeight;
-});
+}).listen();
 </script>

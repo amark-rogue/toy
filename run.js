@@ -28,6 +28,7 @@ T.run = function(eve, msg, to, from, t, cmd, raw, first, id, has, p){
   if(first && t.env){ raw = t.env + '; ' + raw }
   t.path = msg.path || msg.cwd || T.dir(t.path, cmd);
   t.open = 0;
+  t.idle = 0;
   T.keep(t, cmd);
   t.bin = msg.bin || shell.head('$ ' + (msg.cmd || cmd)).bin;
   t.cmd = msg.cmd || cmd;
@@ -42,15 +43,53 @@ T.run = function(eve, msg, to, from, t, cmd, raw, first, id, has, p){
   shell.used = 1;
   C.send(t, raw + '\r');
   screen.buzz();
+  return t;
 };
-T.edit = function(eve, msg, from, t, p){
-  msg = eve.detail || eve.data || '';
-  if(!msg){ return }
-  from = T.src(eve, {});
-  t = T.get('add', from) || from;
-  p = t.querySelector('prompt');
-  p.textContent = msg;
-  (shell.$ = p).focus();
+T.set = function(eve, msg, x){
+  x = {};
+  msg = eve.detail || eve.data || msg || {};
+  msg = 'object' === typeof msg ? msg : {'$':msg};
+  x.from = T.src(eve, msg);
+  x.cmd = (msg.$ || msg.run || msg.cmd || '').trim();
+  if(!x.cmd){ return }
+  x.has = null != msg['#'];
+  x.id = x.has ? ('' + msg['#']).replace(/^#/, '') : '';
+  if(x.has && !/^\d+$/.test(x.id)){ return }
+  x.hit = eve.type.match(/^prompt\.(same|back|next|pre|add)\.set$/);
+  x.to = x.has ? '#' + x.id : msg.to || (x.hit ? x.hit[1] : 'same');
+  x.task = T.get(x.to, x.from);
+  if(!x.task && !x.has){ x.task = x.from }
+  if(!x.task){ return }
+  x.next = x.task.nextElementSibling;
+  if(x.next && x.next.open && x.next.idle){ x.next.remove() }
+  x.task.open = 1;
+  x.task.idle = 0;
+  x.task.bin = x.task.cmd = x.task.show = '';
+  x.task.same = x.task.stay = 0;
+  x.task.removeAttribute('bin');
+  x.task.was = x.task.was || [];
+  x.task.pos = x.task.was.length;
+  x.task.note = x.cmd;
+  x.raw = x.task.querySelector('raw');
+  if(x.raw){ x.raw.textContent = '' }
+  x.view = x.task.querySelector('iframe:not(.shut)') || x.task.querySelector('iframe');
+  if(x.view){ x.view.classList.add('shut'); x.view.onload = null; x.view.removeAttribute('src') }
+  if(shell.active === x.task){ shell.active = null }
+  if(shell.live === x.task){ shell.live = null }
+  x.ask = x.task.querySelector('prompt');
+  x.ask.textContent = x.cmd;
+  x.ask.setAttribute('contenteditable', 'true');
+  T.at = x.task;
+  (shell.$ = x.ask).focus();
+  x.ran = document.createRange();
+  x.ran.selectNodeContents(x.ask);
+  x.ran.collapse(false);
+  x.sel = getSelection();
+  x.sel.removeAllRanges();
+  x.sel.addRange(x.ran);
+  return x.task;
 };
 ['back','next','pre','add'].forEach(function(to){ kit.ear('prompt.' + to, T.run) });
+kit.ear('prompt.set', T.set);
+['same','back','next','pre','add'].forEach(function(to){ kit.ear('prompt.' + to + '.set', T.set) });
 }(shell.task));

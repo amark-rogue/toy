@@ -2,8 +2,8 @@
 <span id="err" style="color: var(--err);"></span>
 <script src="../util.js"></script>
 <script>
-kit.ear('cd', function hear(eve) { hear.off();
-  var raw = (eve.detail || eve.data || '').flat();
+kit.http.createServer(function(req){
+  var raw = ((req.body || {}).$ || '').flat();
   var lines = raw.trim().split('\n');
   var out = lines.slice(1).join('\n').trim();
   
@@ -40,5 +40,5 @@ kit.ear('cd', function hear(eve) { hear.off();
     return;
   }
   err.textContent = out;
-});
+}).listen();
 </script>

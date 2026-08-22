@@ -1,0 +1,49 @@
+<script src="../gun/kit/web.js"></script>
+<script>
+localStorage.pwd = 'ls .';
+;(function(TEST){
+TEST.reply = function(msg, cmd, out, raw){
+  cmd = (msg.$ || '').trim();
+  if(/\bls(?:\s|$)/.test(cmd)){ out = 'alpha.txt\tfolder' }
+  else if(/\bpwd(?:\s|$)/.test(cmd)){ out = '/tmp/toy' }
+  else if(/\bterm(?:\s|$)/.test(cmd)){ out = 'live stream' }
+  else { out = 'ok' }
+  raw = 'bash-3.2$ ' + cmd + '\r\n' + out + '\r\nbash-3.2$ ';
+  setTimeout(function(){ kit.say(JSON.stringify({'#':msg['#'], '$':raw}), 'chat', document.getElementById('toy')) }, 0);
+};
+kit.ear('host', function(eve, msg){ msg = eve.detail; if(msg && msg['#']){ TEST.reply(msg) } });
+}(window.TEST = {}));
+</script>
+<iframe id="toy" src="../shell.html"></iframe>
+<pre id="result">WAIT</pre>
+<script>
+;(function(TEST){
+TEST.start = function(){
+  var end = performance.now() + 8000, sent = 0;
+  function check(doc, tasks, frame, text){
+    doc = toy.contentDocument; tasks = doc && doc.querySelectorAll('task');
+    if(tasks && tasks[0]){
+      frame = tasks[0].querySelector('iframe:not(.shut)');
+      text = frame && frame.contentDocument && frame.contentDocument.body && frame.contentDocument.body.textContent;
+      if(!sent && /alpha\.txt/.test(text || '')){ sent = 1; kit.say('pwd', 'prompt.add', toy) }
+    }
+    if(sent && tasks && tasks[1]){
+      frame = tasks[1].querySelector('iframe:not(.shut)');
+      text = frame && frame.contentDocument && frame.contentDocument.body && frame.contentDocument.body.textContent;
+      if(1 === sent && /tmp.*toy/.test(text || '')){
+        sent = 2;
+        toy.contentWindow.addEventListener('term', function(eve){ TEST.live = eve.detail }, {once:true});
+        kit.say('term', 'prompt.add', toy);
+      }
+    }
+    if(2 === sent && /live stream/.test(TEST.live || '')){
+      result.textContent = 'PASS shell routes finite requests and live stream fallback'; return
+    }
+    if(performance.now() > end){ result.textContent = 'FAIL shell/component request timed out at ' + sent + ' with ' + (tasks && tasks.length || 0) + ' tasks: ' + (text || '').slice(-120); return }
+    setTimeout(check, 20);
+  }
+  check();
+};
+window.addEventListener('load', TEST.start);
+}(window.TEST));
+</script>

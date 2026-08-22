@@ -22,9 +22,8 @@ body { display: block; min-height: 0; overflow: hidden; }
 </style>
 <script src="../util.js"></script>
 <script>
-console.off = 1;
-kit.ear('npm', function hear(eve) {
-  var raw = (eve.detail || eve.data || '').flat().trim();
+kit.http.createServer(function(req) {
+  var raw = ((req.body || {}).$ || '').flat().trim();
   var s = raw.split('\n').map(function(l) {
     var parts = l.split('\r');
     for(var i = parts.length - 1; i >= 0; i--) {
@@ -37,6 +36,5 @@ kit.ear('npm', function hear(eve) {
   var head = (s[0] || '').replace(/^.*?[$#>%]\s*/, '').replace(/^npm\s+/, '');
   B.all('#sub')[0].textContent = head.split(/\s+/)[0] || '?';
   B.all('#out')[0].textContent = s.slice(1).join('\n');
-  hear.off();
-});
+}).listen();
 </script>

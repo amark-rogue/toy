@@ -1,16 +1,2 @@
-<link rel="stylesheet" href="../gun/kit/web.css"><script src="../gun/kit/web.js"></script>
-<script src="../gun/kit/dom.js"></script>
-<div id="box" class="box">
-  <div class="bar">
-    <span class="tag"></span>
-    <span id="fname" class="val"></span>
-  </div>
-</div>
-<script src="../util.js"></script>
-<script>
-kit.ear('touch', function hear(eve) { hear.off();
-  return; // no need to do anything!
-  var s = (eve.detail || eve.data || '').flat().trim().split('\n');
-  B.all('#fname')[0].textContent = s[0].replace(/^touch\s+/,'').trim();
-});
-</script>
+<script src="../gun/kit/web.js"></script>
+<script>kit.http.createServer().listen()</script>

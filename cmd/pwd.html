@@ -48,7 +48,7 @@ PWD.draw = function(path, view, parts, now){
   });
 };
 
-kit.ear('pwd', function hear(eve) { hear.off();
-  PWD.draw(PWD.read(eve.detail || eve.data || ''));
-});
+kit.http.createServer(function(req){
+  PWD.draw(PWD.read((req.body || {}).$));
+}).listen();
 </script>

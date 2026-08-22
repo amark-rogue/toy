@@ -8,9 +8,9 @@
 <script src="../gun/kit/dom.js"></script>
 <script src="../../util.js"></script>
 <script>
-kit.ear('status', function hear(f){ hear.off(); f = f.detail || f.data || "";
+kit.http.createServer(function(req){ var f = (req.body || {}).$ || "";
   Branch.innerText = ((f.cut('On branch')[2]||'').cut(['\r','\n'])[0]||'').trim();
   Status.innerText = ((f.cut('branch is')[2]||'').cut('with')[0]||'').trim();
   Upstream.innerText = ((f.cut('with')[2]||'').cut('.')[0]||'').trim();
-});
+}).listen();
 </script>

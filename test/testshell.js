@@ -49,13 +49,14 @@ function take(key, at, end, i, c, out){
 }
 
 function frame(id, bin, p, r, i, s){
+  var box = {insertBefore:function(node){ node.parentNode = this }};
   p = {textContent:'', removeAttribute:function(){}, setAttribute:function(){}};
-  r = {textContent:'', parentNode:1, append:function(){}, remove:function(){ this.parentNode = 0 }};
+  r = {textContent:'', parentNode:box, append:function(){}, remove:function(){ this.parentNode = 0 }};
   s = {textContent:'', append:function(){}};
   i = {
     src:'',
     classList:{add:function(){}, remove:function(){}},
-    parentNode:1,
+    parentNode:box,
     readyState:0,
     getAttribute:function(k){ return 'src' === k ? this.src : '' },
     removeAttribute:function(){}
@@ -83,6 +84,7 @@ eval(take('shell.head = function'));
 eval(take('function text('));
 eval(take('function show('));
 eval(take('function out('));
+eval(take('shell.give = function'));
 eval(take('shell.bash = function'));
 eval(take('shell.exit = function'));
 eval(take('shell.shut = function'));
@@ -147,6 +149,7 @@ same.all('prompt')[0].textContent = 'ls .';
 same.cmd = 'ls .';
 same.same = 1;
 keep.src = './cmd/ls.html';
+kit.http = {post:function(){ return {then:function(done){ done({ok:false, status:501}) }} }};
 kit.say = function(data, type, target){ sent.push({data:data, type:type, target:target}) };
 shell.stream('bash-3.2$ ls .\r\nnew', same);
 assert.strictEqual(same.all('raw')[0].textContent, '', 'same-component partial data stays behind its iframe');
@@ -157,7 +160,40 @@ assert.strictEqual(sent[0].target, keep, 'same-component result reuses its ifram
 assert.strictEqual(keep.src, './cmd/ls.html', 'same-component iframe is not navigated');
 assert.strictEqual(same.all('raw')[0].parentNode, 0, 'same-component raw data is never left visible');
 
+var posts = [];
+var finite = frame('finite', 'ls');
+var finiteView = finite.all('iframe')[0];
+finite.all('prompt')[0].textContent = 'ls .';
+finite.cmd = 'ls .';
+finite.same = 1;
+finiteView.src = './cmd/ls.html';
+kit.http = {
+  post:function(view, data){
+    posts.push({view:view, data:data});
+    return {then:function(done){ done({ok:true}) }};
+  }
+};
+kit.say = function(){ throw Error('a ready finite component must not receive the legacy event') };
+shell.bash('bash-3.2$ ls .\r\nfinite.txt\r\n', finite);
+assert.strictEqual(posts.length, 1, 'same-component refresh uses one finite request');
+assert.strictEqual(posts[0].view, finiteView, 'finite request targets the existing iframe exactly');
+assert.deepStrictEqual(posts[0].data, {'#':'finite', '$':'bash-3.2$ ls .\r\nfinite.txt\r\n'}, 'finite request carries the task and raw frame');
+
+var failed = frame('failed', 'echo');
+var failedView = failed.all('iframe')[0];
+failed.all('prompt')[0].textContent = 'echo hello';
+failed.cmd = 'echo hello';
+failed.same = 1;
+failedView.src = './cmd/echo.html';
+kit.http = {post:function(){ return {then:function(done){ done({ok:false, status:500}) }} }};
+kit.say = function(){ throw Error('a failed finite renderer must not become a command event') };
+shell.bash('bash-3.2$ echo hello\r\nhello\r\n', failed);
+assert.strictEqual(failed.all('raw')[0].parentNode, failedView.parentNode, 'a failed finite renderer restores plain output');
+assert(0 <= failed.all('raw')[0].textContent.indexOf('hello'), 'restored output keeps the command result');
+
 sent = [];
+kit.http = {post:function(){ return {then:function(done){ done({ok:false, status:501}) }} }};
+kit.say = function(data, type, target){ sent.push({data:data, type:type, target:target}) };
 var dir = frame('dir', 'pwd');
 var view = dir.all('iframe')[0];
 dir.all('prompt')[0].textContent = 'pwd';

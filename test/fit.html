@@ -18,7 +18,7 @@ FIT.test = async function(small, big, low, want){
   await FIT.wait(); small = view.offsetHeight;
   grow.click(); await FIT.wait(); big = view.offsetHeight; want = parseFloat(view.style.height);
   less.click(); await FIT.wait(); low = view.offsetHeight;
-  result.textContent = (small <= 26 && big <= 150 && want > big && low === small && FIT.n <= 4) ? 'PASS' : 'FAIL';
+  result.textContent = (small <= 26 && big <= 150 && want > big && low === small && FIT.n <= 4) ? 'PASS' : 'FAIL ' + [small,big,want,low,FIT.n].join(',');
 };
 view.addEventListener('load', FIT.test);
 </script>

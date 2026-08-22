@@ -1,0 +1,147 @@
+<script src="../gun/kit/web.js"></script>
+
+<form id="form" action="./http/one.html" method="post" target="one">
+  <input name="word" value="form">
+  <input name="tag" value="one"><input name="tag" value="two">
+  <button>send</button>
+</form>
+<iframe id="one" name="one" src="./http/one.html"></iframe>
+<iframe id="call" name="call" src="./http/call.html"></iframe>
+<iframe id="late" name="late" src="./http/late.html"></iframe>
+<iframe id="move" name="move" src="./http/one.html"></iframe>
+<iframe id="empty"></iframe>
+<iframe id="plain" src="./http/plain.html"></iframe>
+<iframe name="twice" src="./http/one.html"></iframe>
+<iframe name="twice" src="./http/one.html"></iframe>
+<pre id="result">WAIT</pre>
+
+<script>
+;(function(TEST){
+TEST.ok = function(got, want, note){
+  if(got !== want){ throw new Error(note + ': got ' + got + ', want ' + want) }
+};
+TEST.early = kit.http.post(document.getElementById('late'), {word:'early'});
+
+TEST.run = async function(){
+  var reply, body, both, view = document.getElementById('one');
+  var call = document.getElementById('call');
+  var late = document.getElementById('late');
+  var form = document.getElementById('form');
+  var result = document.getElementById('result');
+  TEST.step = 'direct iframe';
+  reply = await kit.fetch(view, {method:'POST', body:{word:'first'}});
+  body = await reply.json();
+  TEST.ok(body.count, 1, 'direct iframe request');
+  TEST.ok(body.method, 'POST', 'explicit method');
+  TEST.ok(body.word, 'first', 'target hydrates itself without parent DOM access');
+  TEST.ok(reply.headers.get('content-type'), 'application/json', 'response headers cross the component boundary');
+
+  TEST.step = 'named target';
+  TEST.at = performance.now();
+  reply = await kit.http.post('./http/one.html', {word:'second'}, {target:'one'});
+  body = await reply.json();
+  TEST.ms = performance.now() - TEST.at;
+  TEST.ok(body.count, 2, 'named target stays in place');
+  if(500 <= TEST.ms){ throw new Error('reused target took ' + TEST.ms + 'ms') }
+
+  TEST.step = 'nested target';
+  reply = await kit.http.post(call, {
+    url:new URL('./http/one.html', location.href).href,
+    target:'one',
+    body:{word:'uncle'}
+  });
+  body = await reply.json();
+  TEST.ok(body.count, 3, 'nested caller reaches nearest uncle target');
+  TEST.ok(body.word, 'uncle', 'uncle receives nested body');
+
+  TEST.step = 'request before server declaration';
+  body = await (await TEST.early).json();
+  TEST.ok(body.word, 'early', 'a request arriving while the component parses waits for its server');
+
+  TEST.step = 'nested parent';
+  reply = await kit.http.post(late, {word:'late'});
+  body = await reply.json();
+  TEST.ok(body.word, 'late', 'a late parent module discovers its existing child server');
+
+  TEST.step = 'form submit';
+  form.onsubmit = function(){
+    this.querySelector('input').value += '!';
+    TEST.form = this.submit();
+  };
+  form.requestSubmit();
+  body = await (await TEST.form).json();
+  TEST.ok(body.count, 4, 'custom submit sends once');
+  TEST.ok(body.word, 'form!', 'custom submit sees edited form data');
+  TEST.ok(body.tag.join(','), 'one,two', 'repeated form fields stay repeated');
+
+  TEST.step = 'targetless request';
+  reply = await kit.http.post('./http/one.html', {word:'pool'});
+  body = await reply.json();
+  TEST.ok(body.count, 1, 'targetless request uses a programmatic component');
+  TEST.ok(body.word, 'pool', 'targetless response is returned');
+
+  TEST.step = 'pooled request';
+  reply = await kit.http.post('./http/one.html', {word:'again'});
+  body = await reply.json();
+  TEST.ok(body.count, 2, 'programmatic component is preloaded and reused');
+
+  TEST.step = 'target navigation';
+  reply = await kit.http.post('./http/one.html?move', {word:'move'}, {target:'move'});
+  body = await reply.json();
+  TEST.ok(body.count, 1, 'navigated target waits for its exact new server');
+  TEST.ok(body.word, 'move', 'navigated target receives its pending request');
+
+  TEST.step = 'concurrent target navigation';
+  both = await Promise.all([
+    kit.http.post('./http/one.html?first', {word:'first move', wait:30}, {target:'move'}),
+    kit.http.post('./http/one.html?second', {word:'second move'}, {target:'move'}),
+    kit.http.post('./http/one.html?first', {word:'last move'}, {target:'move'})
+  ]);
+  body = await Promise.all([both[0].json(), both[1].json(), both[2].json()]);
+  TEST.ok(body[0].word, 'first move', 'first navigation reaches its own document');
+  TEST.ok(body[1].word, 'second move', 'second navigation waits instead of stealing the first request');
+  TEST.ok(body[2].count, 1, 'third navigation waits behind the different document instead of skipping ahead');
+  TEST.ok(body[2].word, 'last move', 'A-B-A navigation preserves request order');
+
+  TEST.step = 'empty iframe';
+  try{
+    await kit.http.post(document.getElementById('empty'), {word:'bad'});
+    throw new Error('empty iframe request did not reject');
+  }catch(err){
+    if('empty iframe request did not reject' === err.message){ throw err }
+    TEST.ok(err.message, 'Kit iframe target has no component URL', 'empty iframe never loads the caller recursively');
+  }
+
+  TEST.step = 'component without server';
+  reply = await kit.http.post(document.getElementById('plain'), {word:'none'});
+  TEST.ok(reply.status, 501, 'an event-only component declines finite requests promptly');
+
+  TEST.step = 'duplicate target';
+  reply = await kit.http.post('./http/one.html', {word:'bad'}, {target:'twice'});
+  TEST.ok(reply.status, 409, 'duplicate target names fail instead of guessing');
+  form.setAttribute('target', '_self');
+  TEST.ok(kit.http.use(form), false, 'browser target names stay native');
+
+  TEST.step = 'cross-origin URL';
+  try{
+    await kit.http.post('https://example.com/', {});
+    throw new Error('cross-origin request did not reject');
+  }catch(err){
+    if('cross-origin request did not reject' === err.message){ throw err }
+    TEST.ok(err.message, 'Kit requests must stay on the same origin', 'component URLs cannot escape their origin');
+  }
+
+  TEST.step = 'URL page frame';
+  location.path = './http/plain.html';
+  view = document.getElementById('http/plain.html');
+  TEST.ok(!!view, true, 'location.path opens a component directly');
+  TEST.ok(view.getAttribute('src'), 'http/plain.html', 'location.path keeps the requested URL');
+
+  result.textContent = 'PASS Kit component requests, scoped targets, forms, and replies (' + Math.ceil(TEST.ms) + 'ms reused)';
+};
+
+window.addEventListener('load', function(){
+  TEST.run().catch(function(err){ result.textContent = 'FAIL ' + TEST.step + '\n' + (err.stack || err) });
+});
+}(window.TEST = {}));
+</script>

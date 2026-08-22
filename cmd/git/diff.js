@@ -39,7 +39,7 @@ window.renderDiff = function(diffText, containerEl) {
         };
         btn.onpointerdown = function(e) {
             e.stopPropagation();
-            window.kit.say(diffCmd(card.cm ? card.cm.getValue() : raw), 'prompt.try');
+            window.kit.say(diffCmd(card.cm ? card.cm.getValue() : raw), 'prompt.add.set');
         };
         btn.onclick = function(e) {
             e.stopPropagation();

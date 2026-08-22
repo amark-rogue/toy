@@ -12,15 +12,13 @@ body { display: block; min-height: 0; overflow: hidden; }
 </style>
 <script src="../util.js"></script>
 <script>
-console.off = 1;
-kit.ear('ping', function hear(eve) {
-  var s = (eve.detail || eve.data || '').flat().trim().split('\n');
+kit.http.createServer(function(req){
+  var s = ((req.body || {}).$ || '').flat().trim().split('\n');
   var m = s[0].match(/ping\s+(?:-[a-zA-Z0-9]+\s+)*([^\s]+)/);
   var el = B.all('#out')[0];
   B.all('#host')[0].textContent = m ? m[1] : '?';
   var atBot = el.scrollHeight - el.scrollTop - el.clientHeight < 50;
   el.textContent = s.slice(1).join('\n');
   if(atBot) el.scrollTop = el.scrollHeight;
-  hear.off();
-});
+}).listen();
 </script>

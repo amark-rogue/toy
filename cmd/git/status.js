@@ -71,8 +71,8 @@ function statusCard(fileStr, statusStr) {
     tag.textContent = '[' + statusStr + ']';
     tag.style.color = info.color;
     a.onpointerdown = function() {
-        if (statusStr.indexOf('?') >= 0) { window.kit.say('cat "' + fileStr + '"', 'prompt.try'); }
-        else { window.kit.say('git diff ' + diffFlag + ' "' + fileStr + '"', 'prompt.try'); }
+        if (statusStr.indexOf('?') >= 0) { window.kit.say('cat "' + fileStr + '"', 'prompt.add.set'); }
+        else { window.kit.say('git diff ' + diffFlag + ' "' + fileStr + '"', 'prompt.add.set'); }
     };
     a.onclick = function() {
         if (statusStr.indexOf('?') >= 0) { window.kit.say('cat "' + fileStr + '"', 'prompt'); }

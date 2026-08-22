@@ -8,12 +8,22 @@ node test/test-demo.js
 node test/test-bash.js
 node test/test-term.js
 node test/test-task.js
+node test/test-git.js
 node test/test-pwd.js
+node test/test-http.js
 ```
 
 `testshell.js` runs the real shell stream, task router, result renderer, and terminal detection functions against saved PTY frames. `test-demo.js` runs the demo and Nodepod terminal adapter, then compares its `node -v` frame to the exact frame consumed by `testshell.js`.
 
-`test-task.js` checks task placement and navigation separately: string `same`/`add`/`back`/`next` actions, ID-only `#` targeting, command-derived inherited paths, and prompt history versus the preserved draft.
+`test-task.js` checks task placement and navigation separately: string `same`/`add`/`back`/`next` actions, targeted `.set` drafts, ID-only `#` targeting, command-derived inherited paths, and prompt history versus the preserved draft.
+
+## Component requests
+
+Open `test/http.html` in Chrome through a static HTTP server and expect `PASS`. The same fixture can be opened directly with `file://` when testing local-file deployment. It loads only `gun/kit/web.js` and exercises a request arriving before server declaration, direct and named iframe requests, repeated in-place hydration, a nested component targeting an uncle, targetless programmatic responses and reuse, concurrent navigation of one target to different URLs, explicit no-server fallback, edited form submission without duplicate sends, reserved browser names, duplicate-name rejection, and `location.path` page framing. Do not replace these with source-shape assertions: ordering, iframe navigation, opaque origins, routing, and form submission must run in a browser.
+
+Open `test/cmd.html` the same way and expect `PASS`. It sends saved command frames through the real finite servers for every lightweight TOY command component; add a sample whenever a command renderer is added or its input shape changes.
+
+Open `test/stack.html` through a same-origin static server and expect `PASS`. It drives real task replies through `shell.html`, verifies that separate `ls` and `pwd` tasks hydrate their iframe components through Kit requests, then verifies that an event-only terminal declines the finite request and receives the same data through the live stream fallback. This fixture inspects the nested shell DOM, so opening the fixture itself through `file://` cannot report its result under browsers that give local files separate opaque origins; the component request and sizing fixtures above remain the direct-file checks.
 
 ## Frames
 

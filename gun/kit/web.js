@@ -1,23 +1,17 @@
 ;(function(){
-var W = window, D = document, SW = screen.width, SH = screen.height, ON = 'addEventListener', HI = 'createElement', ID = 'getElementById', U, DEV = ('file://'===location.origin);
+var W = window, D = document, ON = 'addEventListener', HI = 'createElement', ID = 'getElementById', U, DEV = ('file:'===location.protocol);
 if(W.parent !== W){ D.documentElement.classList.add('part') }
+var tmp = D[HI]('meta'); tmp.name = 'viewport'; tmp.content = 'width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content'; D.head.appendChild(tmp);
+tmp = D.head.parentNode.style; if(W.parent === W) { tmp['overscroll-behavior-y'] = 'contain'; tmp['background-color'] = 'var(--fill)'; } else { tmp['overflow-y'] = 'auto'; tmp['overscroll-behavior-y'] = 'auto'; }
 ;(function(){ if(screen.width > screen.height){ return } // phone only debug
   var add = function(){ if(console.view){ return } (console.view = document[HI]('textarea')).style="position:fixed; z-index:99999; inset:0; width:100%; height:4em; padding: 0; background:rgba(100%,100%,100%,0.8); color:black; transition: 0.5s all; white-space: pre-wrap; overflow-wrap: break-word; word-break: break-all;"; console.view.readOnly = 1; setTimeout(function(){D.body.appendChild(console.view);},99); console.view.onclick = function(eve){ console.view.style.height = ('4em'==console.view.style.height)?'50vh':'4em' ; console.view.select(); D.execCommand('copy'); navigator.clipboard.writeText(console.view.value) } }
   console.log = console.warn = console.error = function(...args){ if(console.off){ return } add(); console.view.value += JSON.stringify(args).slice(1,-1); console.view.scrollTop = console.view.scrollHeight; }
   window.onerror = window.onunhandledrejection = console.log;
 }());
-var tmp = D[HI]('meta'); tmp.name = 'viewport'; tmp.content = 'width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content'; D.head.appendChild(tmp);
-//(tmp=D[HI]('link')).rel="stylesheet"; tmp.href=((D.currentScript||'').src||'').replace('.js','.css'); D.head.appendChild(tmp); // auto-add CSS?
-tmp = D.head.parentNode.style; if(W.parent === W) { tmp['overscroll-behavior-y'] = 'contain'; tmp['background-color'] = 'var(--fill)'; } else { tmp['overflow-y'] = 'auto'; tmp['overscroll-behavior-y'] = 'auto'; }
-function LOAD(src, h, s){ (s = D[HI]('script')).onload = h; s.src = src; D.head.appendChild(s) };
-function MAP(scroll, screen){ return (scroll / screen)>>0 }; // scroll, screen
 kit = function(){};
 kit.ears = kit.ears || {};
 kit.q = kit.q || {};
-kit.ios = /iP(ad|hone|od)/.test(navigator.userAgent) || navigator.platform == 'MacIntel' && navigator.maxTouchPoints > 1; // belts scroll natively on every platform — the iOS-only belt.js physics fork is retired
-// dip, dive, into, eat, lid, tin, key, face
-//kit.ear = function(h,e,v){ (v=v||W)[ON](e=(h.call?(h.where=e):(e.where=h,(h=e).where))||'',h); h.off = function(){ v.removeEventListener(e,h) }; W===v&&kit.up(e,'ear'); return h; };
-//kit.say = function(d,e,v,s){ (v=v||W).dispatchEvent(new CustomEvent(e=e||'',{detail:d,bubbles:true})); !s&&(W===v)&&kit.up(d,e) };
+kit.ios = /iP(ad|hone|od)/.test(navigator.userAgent) || navigator.platform == 'MacIntel' && navigator.maxTouchPoints > 1;
 kit.ear = function(h,e,v){
   (v=v||W)[ON](e=(h.call?(h.where=e):(e.where=h,(h=e).where))||'',h);
   v.tagName === 'IFRAME' && v.contentWindow && kit.views.set(v.contentWindow, v);
@@ -54,23 +48,22 @@ kit.say = function(d,e,v,s){
     if(v.readyState){ send() } else { kit.ear('ready', send, v) }
   }
 };
-kit.up = function up(data,type,tmp){
+kit.up = function up(data,type){
   if(W === W.parent){ return }
-  if(U === data){ return } // TODO: BUG? maybe allow?
+  if(U === data){ return }
   if('message' == type){ return }
-  //console.log(location.pathname.split('/').slice(-1)[0], "SENDING UP", type, data);
   W.parent.postMessage({detail:data,type:type,wrap:1},DEV?'*':location.origin);
 }
-W[ON]('message',function(eve,data,i,tmp){
+W[ON]('message',function(eve,data,i){
   if(W === eve.source){ return }
-  if(eve.origin !== (DEV?'null':location.origin)){//.replace('file://','')||'null')){
+  if(eve.origin !== (DEV?'null':location.origin)){
     eve.preventDefault();
     eve.stopImmediatePropagation();
     eve.stopPropagation();
     return;
   }
-  if(U === (data = eve.data||eve.detail)){ return } // TODO: BUG? maybe allow?
-  if(!(i = kit.views.get(eve.source))){ // no iframe view? then message coming down to us from above.
+  if(U === (data = eve.data||eve.detail)){ return }
+  if(!(i = kit.views.get(eve.source))){
     try { i = eve.source.frameElement; } catch(e) {}
     if(i && i.ownerDocument !== D) i = null;
     if(i){
@@ -78,13 +71,11 @@ W[ON]('message',function(eve,data,i,tmp){
       kit.frame.lockScroll(i);
       kit.frame.refresh();
     } else {
-      //console.log(location.pathname.split('/').slice(-1)[0], "GOT FROM ABOVE:", eve);
+      if(eve.source !== W.parent){ return }
       kit.say(data.data||data.detail,data.type,0,data.wrap||-1);
       return;
     }
   }
-  //if('ear'==data.type){ kit.ear(data.detail||data.data,function hear(eve){ if(!(i||'').contentWindow){hear.off(); return } if(kit._echo && kit._echo.i === i && kit._echo.t === eve.type){ return } i.contentWindow.postMessage({data:eve.detail||eve.data,type:eve.type,wrap:-1}, DEV?'*':location.origin) }); return; }
-
   i.readyState = 1;
 
   if('ear'==data.type){ kit.ear(data.detail||data.data,function hear(eve){ if(!(i||'').contentWindow){hear.off(); return } if(kit._echo && kit._echo.i === i && kit._echo.t === eve.type){ return } if(((eve.target||'').tagName) === 'IFRAME'){ return } i.contentWindow.postMessage({data:eve.detail||eve.data,type:eve.type,wrap:-1}, DEV?'*':location.origin) }); return; }
@@ -122,12 +113,12 @@ kit.watch.join = function(node, all, i){
   if(!all){ return }
   for(i = 0; i < all.length; i += 1){ kit.watch.join(all[i]) }
 };
-(kit.watch.observer = new MutationObserver(function(eve){eve.forEach(function(changes){changes.addedNodes.forEach(function(node){ //console.log("observed change on", node);
+(kit.watch.observer = new MutationObserver(function(eve){eve.forEach(function(changes){changes.addedNodes.forEach(function(node){
   kit.watch.join(node);
 })});
   kit.watch.start();
   if(kit.vars && kit.vars.sync){ kit.vars.sync() }
-  if(W !== W.parent && !kit.watch.ro){ kit.watch.resize() }
+  if(W !== W.parent){ kit.watch.resize() }
 })).observe(D.documentElement||D,{childList:true,subtree:true,characterData:true,attributes:true});
 kit.watch.start();
 kit.vars = {};
@@ -161,7 +152,7 @@ kit.vars.rule = function(el, out, rules, i, rule, css){
   }
   return out;
 };
-kit.vars.get = function(el, out, css, i, key, val){
+kit.vars.get = function(el, out, css, i, key){
   out = {};
   for(i = 0; i < D.styleSheets.length; i += 1){
     try{ kit.vars.rule(el, out, D.styleSheets[i].cssRules) }catch(e){}
@@ -335,7 +326,6 @@ W[ON]('animationend', kit.vars.push, true);
 kit.ear('style',function(eve,i){
   if(!eve.target || !eve.target.style){ return }
   eve.preventDefault();
-  //console.log(location.pathname.split('/').slice(-1)[0], "resize:", eve.target, eve.detail);
   var h = (eve.detail||'').height, val;
   if(U !== h && null !== h && '' !== h){
     if(isNaN(h)){ val = h }
@@ -350,57 +340,184 @@ kit.ear('style',function(eve,i){
     }
     if(eve.target.style.height !== val){ eve.target.style.height = val }
   }
-  // Allow width to remain responsive (e.g. 100%) rather than locking it to fixed pixels
-  // var w = (eve.detail||'').width; if(w) eve.target.style.width = isNaN(w) ? w : w+'px';
 },document);
-kit.http = {createServer: function(h){
-  h.listen = function(port,ip,cb){cb&&cb()};
-  return kit.server = h;
-},serve: function(req, res){ if(W.parent !== W){ return }
-  kit.fs.createReadStream(req.url).pipe(res);
-},req:function(path,body){ return this._last={url:path,
-  method:body?'POST':'GET',body:body,
-  headers:{},rawHeaders:[],rawTrailers:[],
-  socket:tmp={},client:tmp,connection:tmp,
-  resume: function(){},
-  pause: function(){},
-  isPaused: function(){}
-}},res:function(end){ return {_req:this._last,
-  end: end||kit.http.end,
-  getHeader: function(){},
-  setHeader: function(name, value){},
-  writeHead: function(statusCode,headers){},
-  write: function(data){},
-  pipe: function(){}
-}},end:function(data,id,i){
-  id = this._req.url.replace(location.__dirname,'').replace('file://','')/*.replace('.html','')*/.split('#')[0];
-  //console.log("http.end", id, data, 'URL:', this._req.url);
-  //(i = ((data||'').src? data : (D[ID](id) || D[HI]('iframe')))).id || (i.id = id);
-  (i = D[ID](id) || D[HI]('iframe')).id || (i.id = id);
-  D.querySelectorAll('.main').forEach(function(e){ e.classList.remove('main') });
-  i.className = 'main page'; i.src||(i===D.body)||(i.srcdoc = data, D.body.appendChild(i)); location.hash = i.id; // TODO: BUG? Prevent double hash change
-  kit.frame && kit.frame.refresh && kit.frame.refresh();
-}};
-W[ON]('submit', function(eve, act){ eve.preventDefault();
-  act = (eve.target.action||'').replace(location.__dirname+'/','').split('#')[0];
-  //console.log(location.pathname.split('/').slice(-1)[0], 'submit', act);
-  (kit.server||kit.http.serve)(
-    kit.http.req(act,Object.fromEntries(new FormData(eve.target))),
-    kit.http.res()
-  );
+
+;(function(H){
+var tag=Date.now().toString(36)+Math.random().toString(36).slice(2),seq=0,job={},pool={},late=[],live=new WeakMap,nav=new WeakMap,busy=new WeakMap,server,skip;
+H.time = 5000;
+function head(raw,out,key){
+  out={};if(!raw){return out}
+  if(raw.forEach){ raw.forEach(function(val, name){ out[(''+name).toLowerCase()] = ''+val }); return out }
+  for(key in raw){ out[(''+key).toLowerCase()] = ''+raw[key] } return out;
+}
+function url(raw, out){
+  out = new URL(raw || location.href, location.href);
+  if(DEV ? 'file:' !== out.protocol : location.origin !== out.origin){ throw new TypeError('Kit requests must stay on the same origin') }
+  out.hash = ''; return out.href;
+}
+function name(raw){raw=''+(raw||'');return raw&&'_'!==raw[0]?raw:''}
+function note(id,code,body,h){return {reply:id,code:code||200,head:head(h),body:null==body?'':body}}
+function wrap(msg, h){
+  h = head(msg.head);
+  return {status:msg.code, ok:200 <= msg.code && 300 > msg.code,
+    headers:{get:function(key){ return h[(''+key).toLowerCase()] || null }, forEach:function(fn){for(var key in h){fn(h[key],key)}}},
+    text:function(){ return Promise.resolve('string' === typeof msg.body ? msg.body : null == msg.body ? '' : JSON.stringify(msg.body)) },
+    json:function(){ return Promise.resolve('string' === typeof msg.body ? JSON.parse(msg.body || 'null') : msg.body) }};
+}
+function say(view,msg){skip=msg;kit.say(msg,'http',view);skip=null}
+function keep(id, one){
+  if(one = job[id]){ return one }
+  one = job[id] = {};
+  one.stop = setTimeout(function(){ lose(id, 1) }, H.time+99);
+  return one;
+}
+function lose(id, no, one, list, i){
+  if(!(one = job[id])){ return }
+  delete job[id]; clearTimeout(one.stop);
+  if(one.view){
+    list = nav.get(one.view) || [];
+    for(i = 0; i < list.length; i += 1){ if(list[i].ask === id){ list.splice(i, 1); break } }
+    if(busy.get(one.view) === id){ busy.delete(one.view) }
+    pump(one.view);
+  }
+  if(no && one.no){ one.no(new Error) }
+  return one;
+}
+function done(msg, one){
+  one = lose(msg.reply);
+  if(one && one.ok){ one.ok(wrap(msg)); return }
+  if(one && one.back){ say(one.back, msg); return }
+  if(W !== W.parent){ kit.up(msg, 'http') }
+}
+function fail(req, code, text){ done(note(req.ask, code, text)) }
+function find(want, omit, all, out, i){
+  all = D.getElementsByTagName('iframe'); out = [];
+  for(i = 0; i < all.length; i += 1){ if(all[i] !== omit && want === (all[i].getAttribute('name') || '')){ out.push(all[i]) } }
+  return out;
+}
+function pump(view, list, req, src){
+  if(busy.has(view)){ return }
+  list = nav.get(view); if(!list || !list.length){ nav.delete(view); return }
+  req = list[0];
+  if(live.get(view) !== req.url){
+    src = view.getAttribute('src') || '';
+    try{ src = url(src) }catch(err){ src = '' }
+    if(!src || src !== req.url || view.readyState){ live.delete(view); view.readyState = 0; view.src = req.url }
+    return;
+  }
+  list.shift(); busy.set(view, req.ask); req.to = ''; say(view, req);
+}
+function push(view, req, src, list){
+  if(!view || !view.contentWindow){ throw new TypeError }
+  src = view.getAttribute('src') || '';
+  if(!src && !req.url){ throw new TypeError('Kit iframe target has no component URL') }
+  try{ if(view.readyState && url(view.contentWindow.location.href) === req.url){ live.set(view, req.url) } }catch(err){}
+  list = nav.get(view) || []; list.push(req); nav.set(view, list);
+  keep(req.ask).view = view; pump(view);
+}
+function wake(eve, view, src){
+  view = eve.target; if(!view || 'IFRAME' !== view.tagName){ return }
+  try{ src = url(eve.detail || view.getAttribute('src')) }catch(err){ return }
+  if(src !== url(view.getAttribute('src'))){ return }
+  live.set(view, src); pump(view);
+}
+function seek(req, omit, hit){
+  hit = find(req.to, omit);
+  if(1 < hit.length){ fail(req, 409); return }
+  if(hit.length){ try{ push(hit[0], req) }catch(err){ fail(req, 410) } return }
+  if(W !== W.parent){ kit.up(req, 'http'); return }
+  fail(req, 404);
+}
+function out(req, res){
+  res = {statusCode:200, head:{}, part:[], sent:0};
+  res.getHeader = function(key){ return res.head[(''+key).toLowerCase()] };
+  res.setHeader = function(key, val){ res.head[(''+key).toLowerCase()] = ''+val; return res };
+  res.writeHead = function(code, h){ res.statusCode = code; Object.assign(res.head, head(h)); return res };
+  res.write = function(data){ if(!res.sent){ res.part.push(data) } return !res.sent };
+  res.end = function(data, body){
+    if(res.sent){ return } res.sent = 1; if(null != data){ res.part.push(data) }
+    body = 1 === res.part.length ? res.part[0] : res.part.every(function(bit){ return 'string' === typeof bit }) ? res.part.join('') : res.part;
+    done(note(req.ask, res.statusCode, body, res.head));
+  };
+  return res;
+}
+function take(req, res, got){
+  if(!server){ if('loading' === D.readyState){ late.push(req) } else { fail(req, 501) } return }
+  res = out(req);
+  try{ got = server(req, res) }catch(err){ res.writeHead(500); res.end(err.message || ''+err); return }
+  Promise.resolve(got).then(function(data){ if(!res.sent){ res.end(data) } }, function(err){ if(!res.sent){ res.writeHead(500); res.end(err.message || ''+err) } });
+}
+function drain(no, list){ list = late; late = []; list.forEach(function(req){ no && !server ? fail(req, 501) : take(req) }) }
+function ask(req, send){
+  return new Promise(function(ok, no, id, one){
+    req.ask = id = tag+(++seq); one = keep(id); one.ok = ok; one.no = no;
+    try{ send(req) }catch(err){ lose(id); no(err) }
+  });
+}
+function pod(src, view){
+  view = pool[src]; if(view && view.isConnected){ return view }
+  view = D[HI]('iframe'); view.hidden = true; view.src = src; (D.body || D.documentElement).appendChild(view);
+  return pool[src] = view;
+}
+kit.fetch = function(to, opt, view, src, req, aim){
+  opt = opt || {};
+  try{
+    if(to && 'IFRAME' === to.tagName){ view = to; src = opt.url || view.getAttribute('src'); if(!src){ throw new TypeError('Kit iframe target has no component URL') } }
+    else { src = to }
+    src = url(src); req = {url:src, method:(opt.method || 'GET').toUpperCase(), headers:head(opt.headers), body:opt.body, to:''};
+    if(view){ return ask(req, function(msg){ push(view, msg) }) }
+    if(opt.target && 'IFRAME' === opt.target.tagName){ return ask(req, function(msg){ push(opt.target, msg) }) }
+    if(opt.target){
+      aim = name(opt.target);
+      if(!aim){ return Promise.resolve(wrap(note('', 400))) }
+      req.to = aim; return ask(req, function(msg){ seek(msg) });
+    }
+    return ask(req, function(msg){ push(pod(src), msg) });
+  }catch(err){ return Promise.reject(err) }
+};
+H.post = function(to, body, opt){ return kit.fetch(to, Object.assign({}, opt, {method:'POST', body:body})) };
+H.createServer = function(fn, srv){
+  srv = {listen:function(port, ip, done){ server = fn || function(){}; drain(); if(done){ done() } return srv }};
+  return srv;
+};
+kit.ears.http = 1;
+D[ON]('ready', wake);
+W[ON]('http', function(eve, msg, src, one){
+  msg = eve.detail; if(!msg || skip === msg){ return }
+  if(msg.reply){ done(msg); return } if(!msg.ask){ return }
+  src = eve.target && 'IFRAME' === eve.target.tagName ? eve.target : null;
+  if(src){ one = keep(msg.ask); one.back = src }
+  msg.to ? seek(msg, src) : take(msg);
 });
+W[ON]('DOMContentLoaded', function(){ drain(1) });
+
+if(W.HTMLFormElement){
+  var form = HTMLFormElement.prototype, submit = form.submit, now;
+  H.use = function(f, aim){ aim = f && f.getAttribute('target') || ''; return !!(f && 'FORM' === f.tagName && 'post' === (f.getAttribute('method') || 'get').toLowerCase() && name(aim)) };
+  function body(f, data){ data = {}; new FormData(f).forEach(function(val, key){ if(U === data[key]){ data[key] = val } else { if(!Array.isArray(data[key])){ data[key] = [data[key]] } data[key].push(val) } }); return data }
+  function post(f){ return H.post(f.action || location.href, body(f), {target:f.getAttribute('target')}) }
+  W[ON]('submit', function(eve, one){ if(!H.use(eve.target)){ return } one = now = {form:eve.target, eve:eve}; setTimeout(function(){ if(now === one){ now = null } }, 0) }, true);
+  W[ON]('submit', function(eve){ if(!H.use(eve.target) || eve.defaultPrevented){ return } eve.preventDefault(); post(eve.target).catch(function(err){ setTimeout(function(){ throw err }) }) });
+  form.submit = function(){ if(!H.use(this)){ return submit.call(this) } if(now && now.form === this){ now.eve.preventDefault(); return now.ask || (now.ask = post(this)) } return post(this) };
+}
+}(kit.http = {}));
+
 location.__dirname = location.href.split('/').slice(0,-1).join('/');
 Object.defineProperty(location, 'path', {
-  get(){ return kit.path },
-  set(path){ if(!path){ return }
-    path = path.replace(location.__dirname,'');
-    if('.' == path[0]){ path = path.slice(1) }
-    if('/' == path[0]){  path = path.slice(1) }
-    //console.log(location.pathname.split('/').slice(-1)[0], 'path=', path, kit.path);
+  get:function(){ return kit.path },
+  set:function(path, view){
+    if(!path){ return }
+    path = path.replace(location.__dirname,'').replace(/^\.?\//,'');
     if(kit.path === (kit.path = path)){ return }
-    (kit.server||kit.http.serve)(kit.http.req(path),kit.http.res());
+    view = D.getElementById(path);
+    if(!view){ view = D[HI]('iframe'); view.id = path; view.src = path; D.body.appendChild(view) }
+    D.querySelectorAll('.main').forEach(function(one){ one.classList.remove('main') });
+    view.classList.add('main','page');
+    if(location.hash.slice(1) !== path){ location.hash = path }
+    kit.frame.refresh();
   }
 });
+
 kit.querystring = {
   parse: function(qs){ return Object.fromEntries((new URLSearchParams(qs)).entries()) }
 }
@@ -441,22 +558,18 @@ kit.fs = {files:{},
 
   }
 };
+
 W[ON]('DOMContentLoaded',function(m){
-  //m = D[HI]('main'); while(D.body.firstChild){ m.appendChild(D.body.firstChild) } D.body.appendChild(m);
-  m=D.body;m.className = 'main page'; m.id = (kit.path = location.href.replace(location.__dirname+'/','').split('#')[0])/*.replace('.html','')*/;
-  //console.log(location.pathname.split('/').slice(-1)[0], "kit hash add!");
+  m=D.body;m.classList.add('main','page'); m.id = (kit.path = location.href.replace(location.__dirname+'/','').split('#')[0]);
   (function(){ function change(eve){ eve = eve||''; eve = eve.detail||eve.data||eve;
     var hash = (eve.newURL||'').split('#')[1]||'';
     if('.' == hash[0]){ location.hash = hash.slice(1); return; }
     if('/' == hash[0]){ location.hash = hash.slice(1); return; }
-    //console.log(location.pathname.split('/').slice(-1)[0], "kit hashchange", hash, 'eve:', eve);
     if(!eve && !hash){ return }
     location.path = hash;
     eve && kit.up({newURL: eve.newURL, oldURL: eve.oldURL},'hashchange');
   }; W[ON]('hashchange',change) }());
-  kit.frame && kit.frame.refresh && kit.frame.refresh();
-  return;
-  //if(location.hash){ kit.say('','hashchange') }
+  kit.frame.refresh();
 });
 var p = HTMLIFrameElement.prototype, _ifL;
 while(p && !(_ifL = Object.getOwnPropertyDescriptor(p, 'onload'))) p = Object.getPrototypeOf(p);
@@ -475,5 +588,5 @@ Object.defineProperty(HTMLIFrameElement.prototype, 'onload', {
     _ifL.set ? _ifL.set.call(i, w) : i.addEventListener('load', w);
   }
 });
-kit.up('','ready');
+kit.up(location.href,'ready');
 }());

@@ -8,12 +8,15 @@ function link(){
   });
 }
 function make(no, open, p){
-  p = {textContent:'', removeAttribute:function(k){ this.edit = 'contenteditable' === k ? 0 : this.edit }, focus:function(){}};
-  return {no:'' + no, open:open, was:[], attr:{no:'' + no}, parentNode:root,
+  p = {textContent:'', attr:{}, removeAttribute:function(k){ this.edit = 'contenteditable' === k ? 0 : this.edit }, setAttribute:function(k,v){ this.attr[k] = v }, focus:function(){}};
+  return {no:'' + no, open:open, idle:open ? 1 : 0, was:[], attr:{no:'' + no}, parentNode:root,
     matches:function(s){ return 'task' === s },
-    querySelector:function(s){ return 'prompt' === s ? p : null },
+    raw:{textContent:'old status'}, frame:{src:'cmd/git.html', classList:{add:function(){ this.shut = 1 }}, removeAttribute:function(k){ if('src' === k){ this.src = '' } }},
+    querySelector:function(s){ return 'prompt' === s ? p : 'raw' === s ? this.raw : 0 === s.indexOf('iframe') ? this.frame : null },
     getAttribute:function(k){ return this.attr[k] || '' },
-    setAttribute:function(k,v){ this.attr[k] = '' + v }
+    setAttribute:function(k,v){ this.attr[k] = '' + v },
+    removeAttribute:function(k){ delete this.attr[k] },
+    remove:function(){ var i = all.indexOf(this); if(0 <= i){ all.splice(i, 1); link() } this.parentNode = null }
   };
 }
 var root = {
@@ -52,7 +55,15 @@ assert.strictEqual(sent[0].t, draft, 'belt command reuses the draft after its so
 assert.strictEqual(sent[0].raw, 'cd ~/notes && codex\r', 'new belt task inherits its source directory');
 assert.strictEqual(draft.show, 'codex', 'context setup stays out of the shown prompt');
 
+var base = make(3, 0), ready = make(4, 1);
+base.path = '~/ready'; base.was = ['ls .']; all = [base, ready]; link(); shell.task.at = ready; sent = [];
+shell.task.run({type:'prompt.add', target:{}, detail:'git status'});
+assert.strictEqual(sent[0].t, ready, 'belt command consumes the focused untouched automatic draft');
+assert.strictEqual(sent[0].raw, 'cd ~/ready && git status\r', 'consumed automatic draft inherits its preceding task context');
+assert.deepStrictEqual(all, [base, ready], 'belt command does not leave an automatic draft before its task');
+
 sent = [];
+all = [ls, draft]; link(); shell.task.at = ls;
 shell.task.run({type:'prompt.add', target:{closest:function(){ return ls }}, detail:'cat todo.txt'});
 assert.deepStrictEqual(all.map(function(t){ return t.show || 'ls' }), ['ls','cat todo.txt','codex'], 'add inserts immediately after its source');
 assert.strictEqual(sent[0].raw, 'cd ~/notes && cat todo.txt\r', 'file task inherits the list directory');
@@ -90,12 +101,62 @@ sent = [];
 shell.task.run({type:'prompt', target:{}, detail:{'$':'false', '#':'same'}});
 assert.strictEqual(sent.length, 0, 'a hash target cannot use a routing name');
 
+var range = {selectNodeContents:function(){}, collapse:function(){}};
+global.document = {createRange:function(){ return range }};
+global.getSelection = function(){ return {removeAllRanges:function(){}, addRange:function(){}} };
+
+var home = make(30, 0), room = make(31, 1);
+home.path = '~/demo'; home.was = ['ls .'];
+all = [home, room]; link(); shell.task.at = home; sent = [];
+var hand = shell.task('git status', 'prompt.add');
+assert.strictEqual(hand.id, '31', 'shell.task returns the stable identity of the task it opened');
+assert.strictEqual(sent[0].t, room, 'the task handle points at the newly added task');
+assert.strictEqual(sent[0].raw, 'cd ~/demo && git status\r', 'the task handle inherits its source context');
+assert.strictEqual(hand.set('git clone https://github.com/'), hand, 'setting a handle keeps the same identity');
+assert.strictEqual(room.querySelector('prompt').textContent, 'git clone https://github.com/', 'a handle sets its exact task');
+sent = [];
+assert.strictEqual(hand.run('pwd'), hand, 'running a handle reuses its exact task by default');
+assert.strictEqual(sent[0].raw, 'pwd\r', 'a reused handle keeps the live task context');
+sent = [];
+var after = hand.run('whoami', 'prompt.add');
+assert.notStrictEqual(after, hand, 'a routed handle returns the other task it created');
+assert.strictEqual(sent[0].raw, 'cd ~/demo && whoami\r', 'a routed handle composes placement with inherited context');
+
+var spare = make(40, 1);
+all = [ls, spare]; link();
+ls.attr.bin = 'git'; ls.job = '1'; ls.was.push('git status'); ls.pos = ls.was.length - 1; ls.querySelector('prompt').textContent = 'git status';
+shell.active = shell.live = ls;
+ears['prompt.set']({type:'prompt.set', target:{closest:function(){ return ls }}, detail:'git clone https://github.com/'});
+assert.strictEqual(ls.querySelector('prompt').textContent, 'git clone https://github.com/', 'prompt.set replaces the command in its task');
+assert.strictEqual(ls.raw.textContent, '', 'prompt.set clears the old result');
+assert.strictEqual(ls.frame.src, '', 'prompt.set unloads the old component without removing its slot');
+assert.strictEqual(ls.job, '1', 'prompt.set preserves the task session');
+assert.strictEqual(ls.path, '~/work', 'prompt.set preserves the working directory');
+assert.deepStrictEqual(all, [ls], 'prompt.set removes the adjacent untouched automatic draft');
+
+var done = make(41, 0), typed = make(42, 1);
+typed.idle = 0; typed.querySelector('prompt').textContent = 'my draft';
+all = [done, typed]; link();
+ears['prompt.set']({type:'prompt.set', target:{closest:function(){ return done }}, detail:'retry'});
+assert.deepStrictEqual(all, [done, typed], 'prompt.set preserves an adjacent draft the user touched');
+
+var one = make(20, 0), two = make(21, 1);
+one.path = '~/repo'; one.was = ['ls .']; all = [one, two]; link(); sent = [];
+ears['prompt.add.set']({type:'prompt.add.set', target:{closest:function(){ return one }}, detail:'cat readme.md'});
+assert.strictEqual(two.querySelector('prompt').textContent, 'cat readme.md', 'prompt.add.set prefills its targeted new task');
+assert.strictEqual(two.path, '~/repo', 'a prefilled new task inherits its source directory');
+assert.strictEqual(sent.length, 0, 'setting a prompt does not run it');
+
 global.getSelection = function(){ return {} };
 global.document = {createRange:function(){ return {} }};
 shell.ear = function(){};
 eval(fs.readFileSync('was.js', 'utf8'));
 var W = shell.was;
 W.go = function(){};
+W.step(ls, ls.querySelector('prompt'), -1);
+assert.strictEqual(ls.querySelector('prompt').textContent, 'git status', 'left from a set draft recalls the command that ran before it');
+W.step(ls, ls.querySelector('prompt'), 1);
+assert.strictEqual(ls.querySelector('prompt').textContent, 'git clone https://github.com/', 'right restores the set draft');
 var p = {textContent:'cat todo.txt'};
 var t = {was:['ls .','cd notes','cat todo.txt'], pos:2, note:''};
 W.step(t, p, -1);

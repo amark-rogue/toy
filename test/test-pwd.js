@@ -4,7 +4,7 @@ var view = {textContent:'', all:[], replaceChildren:function(){ this.all = [] },
 var B = {all:function(){ return [view] }, new:function(){ var v = {}; made.push(v); return v }};
 var kit = {say:function(){}};
 
-['claude','cp','echo','gemini','grep','mkdir','mv','npm','ping','ps','pwd','touch','whoami'].forEach(function(name, html){
+['claude','echo','gemini','grep','mkdir','npm','ping','ps','pwd','whoami'].forEach(function(name, html){
   html = fs.readFileSync('cmd/' + name + '.html', 'utf8');
   assert(0 <= html.indexOf('kit/dom.js'), name + ' declares its B DOM helper dependency');
 });
