@@ -35,7 +35,7 @@ PWD.draw = function(path, view, parts, now){
   parts = path.split('/').filter(Boolean);
   if('/' === path.charAt(0)){
     now = B.new('div'); now.className = 'crumb'; now.textContent = '/';
-    now.onclick = function(){ kit.say('cd /', 'prompt.same') };
+    now.onclick = function(){ kit.say('cd /', 'prompt') };
     view.appendChild(now);
   }
   now = '/' === path.charAt(0) ? '' : '.';
@@ -43,7 +43,7 @@ PWD.draw = function(path, view, parts, now){
     now += '/' + part;
     go = now;
     crumb = B.new('div'); crumb.className = 'crumb'; crumb.textContent = part;
-    crumb.onclick = function(){ kit.say('cd ' + go, 'prompt.same') };
+    crumb.onclick = function(){ kit.say('cd ' + go, 'prompt') };
     view.appendChild(crumb);
   });
 };

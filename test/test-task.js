@@ -39,11 +39,11 @@ var screen = {buzz:function(){}};
 eval(fs.readFileSync('task.js', 'utf8'));
 eval(fs.readFileSync('run.js', 'utf8'));
 assert.strictEqual(ears.prompt, shell.task.run, 'task runner owns generic prompt routing');
-assert.strictEqual(ears['prompt.same'], shell.task.run, 'task runner owns same-task prompt routing');
+assert(!Object.keys(ears).some(function(name){ return 0 <= name.indexOf('.same') }), 'same-task routing has one canonical event');
 
 var boot = make(0, 1);
 all = [boot]; link(); shell.task.at = boot;
-shell.task.run({type:'prompt.same', target:{closest:function(){ return boot }}, detail:'cd ~/work && ls .'});
+shell.task.run({type:'prompt', target:{closest:function(){ return boot }}, detail:'cd ~/work && ls .'});
 assert.strictEqual(sent[0].raw, 'cd ~/work && ls .\r', 'an initial cd command is not prefixed with itself');
 assert.strictEqual(boot.path, '~/work', 'an initial string command records its directory');
 sent = [];
@@ -85,8 +85,8 @@ assert.strictEqual(shell.task.dir('~/notes/src', 'cd .. && ls .'), '~/notes', 'c
 assert.strictEqual(shell.task.dir('~/notes', 'cd docs\\ and\\ help && ls .'), '~/notes/docs and help', 'escaped paths update task directories');
 
 sent = []; shell.task.at = ls;
-shell.task.run({type:'prompt.same', target:{closest:function(){ return ls }}, detail:'cd ~/work && ls .'});
-assert.strictEqual(ls.path, '~/work', 'a plain prompt.same command updates its task directory');
+shell.task.run({type:'prompt', target:{closest:function(){ return ls }}, detail:'cd ~/work && ls .'});
+assert.strictEqual(ls.path, '~/work', 'a plain prompt command updates its task directory');
 assert.strictEqual(ls.querySelector('prompt').textContent, 'cd ~/work && ls .', 'the runner updates the prompt without a prompt.set event');
 sent = [];
 shell.task.run({type:'prompt.add', target:{}, detail:'node -v'});

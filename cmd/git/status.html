@@ -1,6 +1,6 @@
 <link rel="stylesheet" href="../../gun/kit/web.css"><script src="../../gun/kit/web.js"></script>
 
-<p id="all" hidden>Branch <a id="bran" onclick="kit.say('git branch -a','prompt')"></a><span id="stat"> is <span id="note"></span></span><span id="sync"> with <a id="up"></a></span>.</p>
+<p id="all" hidden>Branch <a id="branch" onclick="kit.say('git branch -a','prompt')"></a><span id="stat"> is <span id="note"></span></span><span id="sync"> with <a id="up"></a></span>.</p>
 
 <link rel="stylesheet" href="../../app.css">
 <style>
@@ -9,7 +9,7 @@
 <script src="../../util.js"></script>
 <script>
 var view = {
-  all:document.getElementById('all'), bran:document.getElementById('bran'),
+  all:document.getElementById('all'), bran:document.getElementById('branch'),
   stat:document.getElementById('stat'), note:document.getElementById('note'),
   sync:document.getElementById('sync'), up:document.getElementById('up')
 };

@@ -16,7 +16,7 @@ T.run = function(eve, msg, to, from, t, cmd, raw, first, id, has, p){
   has = null != msg['#'];
   id = has ? ('' + msg['#']).replace(/^#/, '') : '';
   if(has && !/^\d+$/.test(id)){ return }
-  to = has ? '#' + id : msg.to || (0 === eve.type.indexOf('prompt.') ? eve.type.slice(7) : 'same');
+  to = has ? '#' + id : msg.to || ((eve.type.match(/^prompt\.(back|next|pre|add)$/) || [])[1] || 'same');
   t = T.get(to, from);
   if(!t && !has){ t = from }
   if(!t){ return }
@@ -55,7 +55,7 @@ T.set = function(eve, msg, x){
   x.has = null != msg['#'];
   x.id = x.has ? ('' + msg['#']).replace(/^#/, '') : '';
   if(x.has && !/^\d+$/.test(x.id)){ return }
-  x.hit = eve.type.match(/^prompt\.(same|back|next|pre|add)\.set$/);
+  x.hit = eve.type.match(/^prompt\.(back|next|pre|add)\.set$/);
   x.to = x.has ? '#' + x.id : msg.to || (x.hit ? x.hit[1] : 'same');
   x.task = T.get(x.to, x.from);
   if(!x.task && !x.has){ x.task = x.from }
@@ -90,7 +90,7 @@ T.set = function(eve, msg, x){
   return x.task;
 };
 kit.ear('prompt', T.run);
-['same','back','next','pre','add'].forEach(function(to){ kit.ear('prompt.' + to, T.run) });
+['back','next','pre','add'].forEach(function(to){ kit.ear('prompt.' + to, T.run) });
 kit.ear('prompt.set', T.set);
-['same','back','next','pre','add'].forEach(function(to){ kit.ear('prompt.' + to + '.set', T.set) });
+['back','next','pre','add'].forEach(function(to){ kit.ear('prompt.' + to + '.set', T.set) });
 }(shell.task));

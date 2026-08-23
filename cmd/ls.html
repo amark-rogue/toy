@@ -128,7 +128,7 @@ B.ear('click',(eve, a, path, cmd)=>{ a = eve.target.closest('list a');
   path = CMD.go(a.where);
   cmd = 'cd '+CMD.arg(path)+' && ls .';
   localStorage.pwd = cmd;
-  kit.say(cmd, 'prompt.same');
+  kit.say(cmd, 'prompt');
 });
 
 B.ear('contextmenu', (eve, a)=>{ a = eve.target.closest('list a');

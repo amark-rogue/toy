@@ -28,7 +28,7 @@ function run(item, act, eve){
   eve = {target:{closest:function(){ return {dataset:{run:act}} }}};
   pop.run(eve);
   assert.strictEqual(sent.length, 1, act + ' submits once');
-  assert.strictEqual(sent[0].type, 'prompt.same', act + ' stays in its task');
+  assert.strictEqual(sent[0].type, 'prompt', act + ' stays in its task');
   return sent[0].data;
 }
 
