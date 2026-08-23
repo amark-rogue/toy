@@ -597,6 +597,11 @@ demo.shim = function(){
         try{
           var cmd = (msg || '').replace(/[\r\n]+$/, '').trim();
           var job;
+          if(VM.ready && (job = VM.cmd.route(cmd, demo.emu))){
+            demo.at = 0;
+            if(job && job.then) await job;
+            return;
+          }
           if(demo.pod.ok && demo.pod.on && demo.pod.use(cmd)){
             own = 1;
             demo.pod.send(msg);
@@ -605,11 +610,6 @@ demo.shim = function(){
           if(demo.pod.ok && demo.pod.use(cmd)){
             own = await demo.pod.start(msg);
             if(own) return;
-          }
-          if(VM.ready && (job = VM.cmd.route(cmd, demo.emu))){
-            demo.at = 0;
-            if(job && job.then) await job;
-            return;
           }
           demo.route = 0;
           cmd = (msg || '').replace(/[\r\n]+$/, '');

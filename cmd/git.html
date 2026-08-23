@@ -125,10 +125,8 @@ GIT.show = function(s){
   if(!cmd){ app.textContent = f; return }
 
     B.append(i = B.new('iframe'));
-    i.onload = function(e){
-        if(!i.readyState){ return i.remove() }
-        kit.say(f, cmd, i);
-    }; i.src = './git/'+cmd+'.html';
+    i.src = './git/'+cmd+'.html';
+    kit.fetch(i, {'$':f}).catch(function(){ i.remove(); app.textContent = f });
 
 };
 (GIT.wait || []).splice(0).forEach(GIT.show);

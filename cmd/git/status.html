@@ -1,16 +1,37 @@
 <link rel="stylesheet" href="../../gun/kit/web.css"><script src="../../gun/kit/web.js"></script>
 
-<p>Branch <a id="Branch" onclick="kit.say('git branch -a','prompt')"></a> is <span id="Status"></span> with <a id="Upstream"></a>.</p>
+<p id="all" hidden>Branch <a id="bran" onclick="kit.say('git branch -a','prompt')"></a><span id="stat"> is <span id="note"></span></span><span id="sync"> with <a id="up"></a></span>.</p>
 
 <link rel="stylesheet" href="../../app.css">
 <style>
 </style>
-<script src="../gun/kit/dom.js"></script>
+<script src="../../gun/kit/dom.js"></script>
 <script src="../../util.js"></script>
 <script>
-kit.createServer(function(req){ var f = (req.body || {}).$ || "";
-  Branch.innerText = ((f.cut('On branch')[2]||'').cut(['\r','\n'])[0]||'').trim();
-  Status.innerText = ((f.cut('branch is')[2]||'').cut('with')[0]||'').trim();
-  Upstream.innerText = ((f.cut('with')[2]||'').cut('.')[0]||'').trim();
+var view = {
+  all:document.getElementById('all'), bran:document.getElementById('bran'),
+  stat:document.getElementById('stat'), note:document.getElementById('note'),
+  sync:document.getElementById('sync'), up:document.getElementById('up')
+};
+kit.createServer(function(req, raw, hit, line, ref, text){
+  raw = ((req.body || {}).$ || '').flat();
+  hit = raw.match(/(?:^|[\r\n])On branch ([^\r\n]+)/);
+  if(!hit){
+    hit = raw.match(/(?:^|[\r\n])HEAD detached (?:at|from) ([^\r\n]+)/);
+    if(hit){ text = 'detached' }
+  }
+  if(!hit){ throw Error('git status has no branch') }
+  view.bran.textContent = hit[1].trim();
+  line = (raw.match(/(?:^|[\r\n])(Your branch[^\r\n]*)/) || [])[1] || '';
+  ref = (line.match(/'([^']+)'/) || [])[1] || '';
+  if(line){
+    text = line.replace(/^Your branch(?: is| and)?\s*/, '').replace("'" + ref + "'", '').replace(/\b(?:with|of)\b/, '').replace(/[.,]\s*$/, '').replace(/\s+/g, ' ').trim();
+    if(/diverged/.test(line)){ text = 'diverged' }
+  }
+  view.note.textContent = text || '';
+  view.stat.hidden = !text;
+  view.up.textContent = ref;
+  view.sync.hidden = !ref;
+  view.all.hidden = false;
 });
 </script>

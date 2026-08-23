@@ -142,6 +142,17 @@ wait().then(async function(){
   assert(ctx.demo.pod.use('echo one | wc -w'), 'pipes select the richer browser shell');
   assert(ctx.demo.pod.use('grep one file'), 'missing POSIX tools select the richer browser shell');
 
+  var podin = [], clone = 0, was = ctx.VM.git.run;
+  ctx.demo.pod.on = 1;
+  ctx.demo.pod.term = {input: function(s){ podin.push(s) }};
+  ctx.VM.git.run = function(){ clone += 1; return true };
+  ws.send('{"#":"22","$":"git clone https://github.com/acme/toy\\r"}');
+  await wait();
+  ctx.VM.git.run = was;
+  ctx.demo.pod.on = 0;
+  assert.strictEqual(clone, 1, 'git clone keeps the explicit VM route when Nodepod is live');
+  assert.deepStrictEqual(podin, [], 'Nodepod never receives a routed clone');
+
   var frame = [];
   var fix = JSON.parse(fs.readFileSync('test/samples/shelltask.json', 'utf8'));
   ctx.demo.say = function(s){ frame.push(s) };

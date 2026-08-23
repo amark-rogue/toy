@@ -7,7 +7,7 @@ TEST.data = {
   cd:'bash-3.2$ cd /tmp\r\n',
   cp:'bash-3.2$ cp one two\r\n',
   echo:'bash-3.2$ echo hello\r\nhello\r\n',
-  git:'bash-3.2$ git status\r\nfatal: not a git repository\r\n',
+  git:"bash-3.2$ git status\r\nOn branch main\r\nYour branch is up to date with 'origin/main'.\r\n\r\nnothing to commit, working tree clean\r\n",
   grep:'bash-3.2$ grep hello note.txt\r\nnote.txt:hello\r\n',
   ls:'bash-3.2$ ls .\r\none.txt\ttwo\r\n',
   mkdir:'bash-3.2$ mkdir new\r\n',
@@ -22,11 +22,32 @@ TEST.data = {
   touch:'bash-3.2$ touch new\r\n',
   whoami:'bash-3.2$ whoami\r\nmars\r\n'
 };
+TEST.git = function(all, i, doc, view, text){
+  all = document.querySelectorAll('iframe');
+  for(i = 0; i < all.length; i += 1){
+    if(!/\/cmd\/git\.html(?:[?#]|$)/.test(all[i].src)){ continue }
+    doc = all[i].contentDocument;
+    view = doc && doc.querySelector('body > iframe');
+    doc = view && view.contentDocument;
+    view = doc && doc.getElementById('all');
+    text = view && view.textContent.replace(/\s+/g, ' ').trim();
+    TEST.seen = text || TEST.seen;
+    if(view && !view.hidden && 'Branch main is up to date with origin/main.' === text){ return true }
+  }
+};
+TEST.wait = async function(fn, i){
+  for(i = 0; i < 100; i += 1){
+    if(fn()){ return }
+    await new Promise(function(ok){ setTimeout(ok, 20) });
+  }
+  throw Error('git status rendered ' + (TEST.seen || 'nothing'));
+};
 TEST.run = async function(){
   var name, start = performance.now();
   for(name in TEST.data){
     await kit.fetch('../cmd/' + name + '.html', {'#':name, '$':TEST.data[name]});
   }
+  await TEST.wait(TEST.git);
   result.textContent = 'PASS ' + Object.keys(TEST.data).length + ' finite command components (' + Math.ceil(performance.now() - start) + 'ms)';
 };
 window.addEventListener('load', function(){ TEST.run().catch(function(err){ result.textContent = 'FAIL ' + (err.stack || err) }) });
