@@ -1,0 +1,13 @@
+body { display: block; min-height: 0; overflow: hidden; }
+.box { width: 100%; display: block; }
+.bar { display: flex; align-items: center; gap: 0.4em; padding: 0.3em 0.6em; border-bottom: 1px solid var(--pop); width: 100%; box-sizing: border-box; }
+.tag { font-weight: 900; white-space: nowrap; }
+.val { flex: 1; min-width: 0; background: transparent; border: none; color: inherit; font: inherit; font-size: 0.8em; padding: 0.2em; }
+.act { background: transparent; border: 1px solid var(--pop); color: var(--pop); border-radius: 0.3em; padding: 0.2em 0.5em; font-size: 0.8em; cursor: pointer; white-space: nowrap; min-width: auto; }
+.act:active { background: var(--pop); color: var(--mood); }
+#view { display: block; padding: 0; width: 100%; min-height: 4em; }
+#view iframe { width: 100%; height: 33em; height: min(70dvh, 42em); border: none; display: block; background: white; }
+.err, .load { padding: 0.6em; font-family: monospace; font-size: 0.85em; display: block; text-align: left; }
+.err { color: var(--err); }
+.load { opacity: 0.5; }
+[hidden] { display: none !important; }

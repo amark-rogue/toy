@@ -1,0 +1,49 @@
+<script src="../gun/kit/web.js"></script>
+<script>
+window.VM = {cmd:{routes:[]}, say:function(){}};
+window.demo = {id:'', cwd:'/root', home:'/root'};
+</script>
+<script src="../cmd/aid/aid.js"></script>
+
+<iframe id="early"></iframe>
+<iframe id="view" src="../cmd/aid.html"></iframe>
+<pre id="result">WAIT</pre>
+
+<script>
+;(function(TEST){
+TEST.wait = async function(fn, note){
+  var i; for(i = 0; i < 100; i++){ if(fn()){ return } await new Promise(function(ok){ setTimeout(ok, 20) }) }
+  throw Error(note);
+};
+TEST.run = async function(){
+  var doc, got = '', rush = document.getElementById('early'), start = performance.now();
+  await Promise.all(aid.part.map(aid.one));
+  TEST.ms = Math.ceil(performance.now() - start);
+  if('function' !== typeof aid.task || 'function' !== typeof aid.use.edit || 'function' !== typeof aid.use.task || 'function' !== typeof aid.use.web){ throw Error('lazy agent parts did not compose') }
+  rush.readyState = 0; rush.src = '../cmd/aid.html';
+  kit.say({kind:'head', n:1, '#':'6', say:'early · work · /root'}, 'aid', rush);
+  await TEST.wait(function(){ return rush.contentDocument && 'early · work · /root' === (rush.contentDocument.querySelector('.title') || {}).textContent }, 'an update sent during navigation did not reach the component');
+  kit.ear('aid.ok', function(eve){ got = (eve.detail || {}).say || '' });
+  kit.say({kind:'head', n:1, '#':'7', say:'run · work · /root'}, 'aid', view);
+  kit.say({kind:'tool', n:2, '#':'7', id:'call1', name:'read', say:'{"path":"."}'}, 'aid', view);
+  kit.say({kind:'tool', n:3, '#':'7', id:'call1', name:'read', say:'app.js', done:1}, 'aid', view);
+  kit.say({kind:'ask', n:4, '#':'7', id:'ask1', gate:'gate', say:'Allow sh?', pick:['once','deny']}, 'aid', view);
+  doc = view.contentDocument;
+  await TEST.wait(function(){ return doc.querySelectorAll('.feed .tool').length === 1 && doc.querySelector('.feed .ask') }, 'cards did not render');
+  if('app.js' !== doc.querySelector('.feed .tool pre').textContent){ throw Error('tool update duplicated instead of replacing') }
+  doc.querySelector('.feed .ask .picks button').click();
+  await TEST.wait(function(){ return 'once' === got }, 'approval did not cross the iframe boundary');
+  got = ''; kit.say({kind:'ask', n:5, '#':'7', id:'key1', gate:'key', say:'Paste key', pick:[], secret:true}, 'aid', view);
+  await TEST.wait(function(){ return doc.querySelector('.feed .ask input[type="password"]') }, 'credential field was not private');
+  doc.querySelector('.feed .ask input').value = 'secret'; doc.querySelector('.feed .ask form').requestSubmit();
+  await TEST.wait(function(){ return 'secret' === got }, 'credential reply did not cross the iframe boundary');
+  await kit.fetch(view, '$ aid hello\r\n## Remote answer\r\nordinary **host** text');
+  await TEST.wait(function(){ return doc.querySelector('.feed [data-id="host"] h2') }, 'plain host aid output disappeared');
+  if('Remote answer' !== doc.querySelector('.feed [data-id="host"] h2').textContent || !doc.querySelector('.feed [data-id="host"] strong')){ throw Error('plain host output did not use the safe fallback') }
+  kit.say({kind:'done', n:6, '#':'7', say:'Done'}, 'aid', view);
+  await TEST.wait(function(){ return doc.querySelector('.feed .done') }, 'done card did not render');
+  result.textContent = 'PASS aid lazy parts (' + TEST.ms + 'ms), early stream, cards, host fallback, updates, and approval reply';
+};
+view.addEventListener('load', function(){ TEST.run().catch(function(err){ result.textContent = 'FAIL\n' + (err.stack || err) }) });
+}(window.TEST = {}));
+</script>

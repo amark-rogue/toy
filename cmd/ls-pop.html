@@ -1,11 +1,11 @@
-<link rel="stylesheet" href="../gun/kit/web.css"><script src="../gun/kit/web.js"></script>
+<link rel="stylesheet" href="../gun/kit/web.css"><script src="../gun/kit/web.js"></script><script src="../gun/kit/dom.js"></script>
 
 <kit id="menu"><tin><belt><tray>
-  <b id="name"></b>
-  <button data-run="cp">cp</button>
-  <button data-run="rm">rm</button>
-  <button data-run="chmod">chmod</button>
-  <button id="tail" data-run="tail">tail</button>
+  <!-- b name="name"></b -->
+  <button value="cp">cp</button>
+  <button value="rm">rm</button>
+  <button value="chmod">chmod</button>
+  <button name="file" hidden value="tail">tail</button>
   <button id="shut">×</button>
 </tray></belt></tin></kit>
 
@@ -18,39 +18,36 @@ kit::before { display: none; }
 
 <script>
 ;(function(pop){
+kit.createServer(function(req, res){
+  res.send(kit.bind(document, pop.show(req.body)));
+});
+
+var B = document.body;
+pop.menu = B.all('#menu')[0];
+pop.shut = B.all('#shut')[0];
+pop.show = function(item){
+  if(!item || !item.name){ pop.item = null; pop.menu.tag('live', -1); return {name:'', file:false} }
+  pop.item = item; pop.menu.tag('live', 1);
+  if(navigator.vibrate){ navigator.vibrate(32) }
+  return {name:item.name, file:item.file ? {} : false};
+};
 pop.hide = function(){
-  menu.classList.remove('live');
+  pop.item = null; pop.menu.tag('live', -1);
   kit.up('', 'ls.hide');
 };
-
-pop.show = function(eve, item){
-  item = eve.detail || eve.data || item || '';
-  if(!item){ return }
-  pop.item = item;
-  name.textContent = item.name;
-  tail.hidden = !item.file;
-  menu.classList.add('live');
-  navigator?.vibrate?.(32);
-};
-
 pop.quote = function(s){ return "'" + ('' + s).replace(/'/g, "'\\''") + "'" };
-
 pop.run = function(eve, run, cmd, item, file){
-  run = (eve.target.closest('button') || '').dataset;
-  run = (run || {}).run;
+  run = eve.target.closest('button') || {};
+  run = run.value || (run.dataset || {}).run;
   if(!run || !pop.item){ return }
-  item = pop.quote(pop.item.name);
-  file = pop.item.file;
+  item = pop.quote(pop.item.name); file = pop.item.file;
   if('cp' === run){ cmd = 'cp ' + (file ? '' : '-R ') + item + ' ' + pop.quote(pop.item.name + '.copy') + ' && ls .' }
   if('rm' === run){ cmd = 'rm ' + (file ? '' : '-r ') + item + ' && ls .' }
   if('chmod' === run){ cmd = 'chmod ' + (file ? '644 ' : '755 ') + item + ' && ls .' }
   if('tail' === run){ cmd = 'tail -n 20 ' + item }
-  pop.hide();
-  kit.say(cmd, 'prompt');
+  pop.hide(); kit.say(cmd, 'prompt');
 };
-
-kit.ear('ls.pop', pop.show);
-menu.addEventListener('click', pop.run);
-shut.addEventListener('click', pop.hide);
+pop.menu.ear('click', pop.run);
+pop.shut.ear('click', pop.hide);
 }(window.pop = {}));
 </script>

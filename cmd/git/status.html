@@ -1,37 +1,39 @@
 <link rel="stylesheet" href="../../gun/kit/web.css"><script src="../../gun/kit/web.js"></script>
-
-<p id="all" hidden>Branch <a id="branch" onclick="kit.say('git branch -a','prompt')"></a><span id="stat"> is <span id="note"></span></span><span id="sync"> with <a id="up"></a></span>.</p>
-
 <link rel="stylesheet" href="../../app.css">
-<style>
-</style>
-<script src="../../gun/kit/dom.js"></script>
-<script src="../../util.js"></script>
+
+<p name="body" hidden>Branch <a name="branch" onclick="kit.say('git branch -a','prompt')"></a><span name="stat" hidden> is <span name="note"></span></span><span name="sync" hidden> with <a name="up"></a></span>.</p>
+
 <script>
-var view = {
-  all:document.getElementById('all'), bran:document.getElementById('branch'),
-  stat:document.getElementById('stat'), note:document.getElementById('note'),
-  sync:document.getElementById('sync'), up:document.getElementById('up')
+;(function(G){
+kit.createServer(function(req, res){
+  res.send(kit.bind(document, {body:G.read(req.body)}));
+});
+
+G.text = function(raw, out, i){
+  if(raw && 'object' === typeof raw && !Array.isArray(raw)){ raw = raw.$ || raw.raw || '' }
+  if(Array.isArray(raw)){
+    out = '';
+    for(i = 0; i < raw.length; i += 1){ out += G.text(raw[i]) }
+    raw = out;
+  }
+  return String(raw || '').replace(/\x1B(?:\[[0-?]*[ -\/]*[@-~]|\][^\x07]+\x07)/g, '');
 };
-kit.createServer(function(req, raw, hit, line, ref, text){
-  raw = ((req.body || {}).$ || '').flat();
+
+G.read = function(raw, hit, line, ref, text){
+  raw = G.text(raw);
   hit = raw.match(/(?:^|[\r\n])On branch ([^\r\n]+)/);
   if(!hit){
     hit = raw.match(/(?:^|[\r\n])HEAD detached (?:at|from) ([^\r\n]+)/);
     if(hit){ text = 'detached' }
   }
   if(!hit){ throw Error('git status has no branch') }
-  view.bran.textContent = hit[1].trim();
   line = (raw.match(/(?:^|[\r\n])(Your branch[^\r\n]*)/) || [])[1] || '';
   ref = (line.match(/'([^']+)'/) || [])[1] || '';
   if(line){
     text = line.replace(/^Your branch(?: is| and)?\s*/, '').replace("'" + ref + "'", '').replace(/\b(?:with|of)\b/, '').replace(/[.,]\s*$/, '').replace(/\s+/g, ' ').trim();
     if(/diverged/.test(line)){ text = 'diverged' }
   }
-  view.note.textContent = text || '';
-  view.stat.hidden = !text;
-  view.up.textContent = ref;
-  view.sync.hidden = !ref;
-  view.all.hidden = false;
-});
+  return {branch:hit[1].trim(), stat:text ? {note:text} : false, sync:ref ? {up:ref} : false};
+};
+}(window.GIT = {}));
 </script>

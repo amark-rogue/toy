@@ -6,6 +6,7 @@
   </div>
   <div id="content" class="crumbs"></div>
 </div>
+<template id="crumb"><div class="crumb"></div></template>
 <style>
 body { display: block; min-height: 0; overflow: hidden; }
 .crumbs { display: flex; flex-wrap: wrap; gap: 0.3em; padding: 0.5em 0.8em; font-family: 'Courier New', monospace; font-weight: 900; }
@@ -14,7 +15,12 @@ body { display: block; min-height: 0; overflow: hidden; }
 </style>
 <script src="../util.js"></script>
 <script>
-PWD = {};
+kit.createServer(function(req, res){
+  PWD.draw(PWD.read(req.body));
+  res.send(document);
+});
+var PWD = {};
+PWD.row = B.all('#crumb')[0];
 PWD.read = function(s, at, n, all, line){
   s = (s || '').flat();
   at = s.search(/\r\n|\n|\r/);
@@ -34,21 +40,17 @@ PWD.draw = function(path, view, parts, now){
   if(!path){ view.textContent = 'UNKNOWN PATH'; return }
   parts = path.split('/').filter(Boolean);
   if('/' === path.charAt(0)){
-    now = B.new('div'); now.className = 'crumb'; now.textContent = '/';
-    now.onclick = function(){ kit.say('cd /', 'prompt') };
-    view.appendChild(now);
+    now = PWD.row.content.firstElementChild.cloneNode(true); now.textContent = '/';
+    now.ear('click', function(){ kit.say('cd /', 'prompt') });
+    view.pin(now);
   }
   now = '/' === path.charAt(0) ? '' : '.';
   parts.forEach(function(part, crumb, go){
     now += '/' + part;
     go = now;
-    crumb = B.new('div'); crumb.className = 'crumb'; crumb.textContent = part;
-    crumb.onclick = function(){ kit.say('cd ' + go, 'prompt') };
-    view.appendChild(crumb);
+    crumb = PWD.row.content.firstElementChild.cloneNode(true); crumb.textContent = part;
+    crumb.ear('click', function(){ kit.say('cd ' + go, 'prompt') });
+    view.pin(crumb);
   });
 };
-
-kit.createServer(function(req){
-  PWD.draw(PWD.read((req.body || {}).$));
-});
 </script>

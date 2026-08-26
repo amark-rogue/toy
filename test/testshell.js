@@ -24,12 +24,19 @@ var src = fs.readFileSync(path.join(__dirname, '..', 'shell.html'), 'utf8');
 var fix = JSON.parse(fs.readFileSync(path.join(__dirname, 'samples', 'shelltask.json'), 'utf8'));
 var shell = {raw:'', used:1, job:new WeakMap()};
 var task = {};
+function dom(v){
+  v.pin = function(node, place){ node.parentNode = place ? this.parentNode : this; return this };
+  v.tag = function(){ return this };
+  v.new = function(){ return dom({}) };
+  return v;
+}
 var root = {
-  querySelector: function(sel, id){
+  all: function(sel, id){
     id = sel.match(/job="([^"]+)/);
-    return id && task[id[1]];
+    return id && task[id[1]] ? [task[id[1]]] : [];
   }
 };
+dom(root);
 var model = {};
 var ESC = {};
 var kit = {say:function(){}};
@@ -50,18 +57,18 @@ function take(key, at, end, i, c, out){
 
 function frame(id, bin, p, r, i, s){
   var box = {insertBefore:function(node){ node.parentNode = this }};
-  p = {textContent:'', removeAttribute:function(){}, setAttribute:function(){}};
+  p = dom({textContent:'', removeAttribute:function(){}, setAttribute:function(){}});
   r = {textContent:'', parentNode:box, append:function(){}, remove:function(){ this.parentNode = 0 }};
-  s = {textContent:'', append:function(){}};
-  i = {
+  s = dom({textContent:''});
+  i = dom({
     src:'',
     classList:{add:function(){}, remove:function(){}},
     parentNode:box,
     readyState:0,
     getAttribute:function(k){ return 'src' === k ? this.src : '' },
     removeAttribute:function(){}
-  };
-  return task[id] = {
+  });
+  return task[id] = dom({
     job:id,
     bin:bin || '',
     attr:{},
@@ -76,7 +83,7 @@ function frame(id, bin, p, r, i, s){
     getAttribute:function(k){ return this.attr[k] || '' },
     setAttribute:function(k, v){ this.attr[k] = v },
     removeAttribute:function(k){ delete this.attr[k] }
-  };
+  });
 }
 
 eval(take('shell.last = function'));
@@ -90,6 +97,16 @@ eval(take('shell.exit = function'));
 eval(take('shell.shut = function'));
 eval(take('shell.stream = function'));
 eval(take('shell.hook = function'));
+
+var sent = [];
+kit.say = function(data, type, target){ sent.push({data:data, type:type, target:target}) };
+var live = frame('live', 'aid'), liveView = live.all('iframe')[0];
+shell.hook({'#':'live', type:'aid', kind:'head', n:1});
+assert.strictEqual(liveView.src, './cmd/aid.html', 'a typed stream opens its component before the command ends');
+assert.strictEqual(live.getAttribute('bin'), 'aid', 'the early component owns its renderer type');
+assert.strictEqual(live.stay, 1, 'PTY reconciliation keeps the early component in place');
+assert.strictEqual(shell.job.get(liveView), 'live', 'the early component inherits its task route');
+assert.strictEqual(sent[0].target, liveView, 'the first typed update targets the opened component');
 
 var one = frame('1');
 var two = frame('2');
@@ -127,6 +144,15 @@ shell.stream('\r\nbash-3.2$ ', back);
 assert.strictEqual(back.getAttribute('job'), '', 'returned shell prompt closes a non-alt terminal task');
 assert.strictEqual(ran, 2, 'returned shell prompt creates one fresh prompt');
 
+sent = [];
+kit.say = function(data, type, target){ sent.push({data:data, type:type, target:target}) };
+var hop = frame('hop', 'ssh'), hopView = hop.all('iframe')[0];
+hop.tty = hopView; hop.tty.mode = 'shell';
+shell.stream('\x1b[?1049l\r\nremote$ ', hop);
+assert.strictEqual(hop.job, 'hop', 'nested shell prompts and alternate-screen exits keep the outer SSH task alive');
+assert.strictEqual(sent[0].type, 'term', 'nested shell bytes stay opaque until its component parses them');
+assert.strictEqual(sent[0].target, hopView, 'nested shell bytes return to the owning proxy component');
+
 var three = frame('3');
 three.all('prompt')[0].textContent = 'node -v';
 shell.hook({'#':'3', '$':fix.pod});
@@ -142,7 +168,7 @@ for(var at = 1, id, four; at < fix.pod.length; at += 1){
   assert.strictEqual(four.all('raw')[0].textContent, 'v22.12.0\r\n', 'demo split ' + at + ' keeps its result');
 }
 
-var sent = [];
+sent = [];
 var same = frame('same', 'ls');
 var keep = same.all('iframe')[0];
 same.all('prompt')[0].textContent = 'ls .';
@@ -175,7 +201,7 @@ kit.say = function(){ throw Error('a ready finite component must not receive the
 shell.bash('bash-3.2$ ls .\r\nfinite.txt\r\n', finite);
 assert.strictEqual(posts.length, 1, 'same-component refresh uses one finite request');
 assert.strictEqual(posts[0].view, finiteView, 'finite request targets the existing iframe exactly');
-assert.deepStrictEqual(posts[0].data, {'#':'finite', '$':'bash-3.2$ ls .\r\nfinite.txt\r\n'}, 'finite request carries the task and raw frame');
+assert.strictEqual(posts[0].data, 'bash-3.2$ ls .\r\nfinite.txt\r\n', 'finite request carries the raw frame without a routing envelope');
 
 var failed = frame('failed', 'echo');
 var failedView = failed.all('iframe')[0];

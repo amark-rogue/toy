@@ -1,0 +1,63 @@
+<script>
+window.OPENCASE = {};
+OPENCASE.wait = new Promise(function(ok){ OPENCASE.ok = ok });
+addEventListener('message', function(eve){
+  if(eve.data && 'open-safe' === eve.data.kind){ OPENCASE.ok(eve.data) }
+});
+</script>
+<script src="../gun/kit/web.js"></script>
+
+<iframe id="view" src="../cmd/open.html"></iframe>
+<pre id="result">WAIT</pre>
+<textarea id="attack" hidden>&lt;script>
+;(async function(out){
+  out = {kind:'open-safe'};
+  try{ parent.document.body.dataset.open = 'bad'; out.parent = 1 }catch(err){ out.parent = 0 }
+  try{ top.document.body.dataset.open = 'bad'; out.top = 1 }catch(err){ out.top = 0 }
+  try{ localStorage.setItem('open.safe', 'bad'); out.store = 1 }catch(err){ out.store = 0 }
+  try{ frameElement.removeAttribute('sandbox'); out.frame = 1 }catch(err){ out.frame = 0 }
+  try{ out.pop = !!open('about:blank') }catch(err){ out.pop = 0 }
+  try{ await fetch('data:text/plain,bad'); out.net = 1 }catch(err){ out.net = 0 }
+  out.rtc = typeof RTCPeerConnection + ':' + typeof webkitRTCPeerConnection;
+  out.origin = location.origin; out.ref = document.referrer; out.base = document.baseURI;
+  parent.postMessage({data:'bad', type:'open.pwn', wrap:1}, '*');
+  top.postMessage(out, '*');
+}());
+&lt;/script></textarea>
+
+<script>
+;(function(TEST){
+TEST.ok = function(got, want, note){ if(got !== want){ throw Error(note + ': got ' + got + ', want ' + want) } };
+TEST.run = async function(){
+  var out, doc = view.contentDocument, page, forged = 0;
+  document.body.dataset.open = 'safe'; localStorage.setItem('open.safe', 'safe');
+  kit.ear('open.pwn', function(){ forged += 1 });
+  if(doc){ doc.defaultView.kit.ear('open.pwn', function(){ doc.body.dataset.pwn = 'bad' }) }
+  out = OPENCASE.wait;
+  await kit.fetch(view, {html:attack.value});
+  out = await out;
+  TEST.ok(out.parent, 0, 'preview cannot read or change its parent DOM');
+  TEST.ok(out.top, 0, 'preview cannot read or change its top DOM');
+  TEST.ok(out.store, 0, 'preview has no origin storage');
+  TEST.ok(out.frame, 0, 'preview cannot remove its sandbox');
+  TEST.ok(out.pop, false, 'preview cannot open a popup');
+  TEST.ok(out.net, 0, 'preview CSP blocks network requests');
+  TEST.ok(out.rtc, 'undefined:undefined', 'preview cannot open a peer connection');
+  TEST.ok(out.origin, 'null', 'preview receives an opaque origin');
+  TEST.ok(out.ref, '', 'preview cannot read its parent URL as a referrer');
+  TEST.ok(out.base, 'about:blank', 'preview cannot read its parent URL as a base');
+  TEST.ok(forged, 0, 'preview cannot forge a Kit event');
+  TEST.ok(doc ? doc.body.dataset.pwn : undefined, undefined, 'preview message is rejected by its direct parent');
+  TEST.ok(document.body.dataset.open, 'safe', 'top DOM stayed unchanged');
+  TEST.ok(localStorage.getItem('open.safe'), 'safe', 'top storage stayed unchanged');
+  page = doc && doc.getElementById('page');
+  if(page){
+    TEST.ok(page.getAttribute('sandbox'), 'allow-scripts', 'only scripts are restored inside the sandbox');
+    TEST.ok(page.getAttribute('referrerpolicy'), 'no-referrer', 'preview sends no referrer');
+    TEST.ok(page.hasAttribute('src'), false, 'untrusted HTML never becomes a direct iframe URL');
+  }
+  result.textContent = 'PASS open isolates hostile HTML, storage, network, popups, and Kit messages';
+};
+addEventListener('load', function(){ TEST.run().catch(function(err){ result.textContent = 'FAIL\n' + (err.stack || err) }) });
+}(window.TEST = {}));
+</script>

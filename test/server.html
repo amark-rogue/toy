@@ -1,0 +1,13 @@
+<script src="../gun/kit/web.js"></script>
+<link rel="stylesheet" href="../gun/kit/web.css">
+
+<h3>URL parameters</h3>
+<p>source: <output name="source"></output></p>
+<p>color: <output name="color"></output></p>
+<p>mode: <output name="mode"></output></p>
+
+<script>
+kit.createServer(function(req, res){
+  res.send(kit.bind(document, req.body));
+});
+</script>

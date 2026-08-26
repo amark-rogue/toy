@@ -1,0 +1,55 @@
+[
+  {
+    "name": "fenced explicit",
+    "text": "```tool\n{\"tool\":\"read\",\"path\":\"a.js\"}\n```",
+    "calls": [{"name":"read","args":{"path":"a.js"}}]
+  },
+  {
+    "name": "keyed provider output",
+    "text": "{\"find\":\".map()\",\"path\":\"/root/gun.js\"}",
+    "calls": [{"name":"find","args":{"word":".map()","path":"/root/gun.js"}}]
+  },
+  {
+    "name": "keyed provider property order",
+    "text": "{\"path\":\"/root/gun.js\",\"find\":\".map()\"}",
+    "calls": [{"name":"find","args":{"word":".map()","path":"/root/gun.js"}}]
+  },
+  {
+    "name": "keyed nested arguments",
+    "text": "```json\n{\"write\":{\"path\":\"a.js\",\"text\":\"ok\"}}\n```",
+    "calls": [{"name":"write","args":{"path":"a.js","text":"ok"}}]
+  },
+  {
+    "name": "keyed call list",
+    "text": "{\"calls\":[{\"read\":\"a\"},{\"find\":\"x\",\"path\":\".\"}]}",
+    "calls": [{"name":"read","args":{"path":"a"}},{"name":"find","args":{"word":"x","path":"."}}]
+  },
+  {
+    "name": "tool name also used as an argument",
+    "text": "{\"task\":\"inspect it\",\"role\":\"auto\",\"mode\":\"plan\"}",
+    "calls": [{"name":"task","args":{"ask":"inspect it","role":"auto","mode":"plan"}}]
+  },
+  {
+    "name": "prose before call",
+    "text": "I will inspect it.\n{\"tool\":\"read\",\"path\":\".\"}",
+    "note": "I will inspect it.",
+    "calls": [{"name":"read","args":{"path":"."}}]
+  },
+  {
+    "name": "ordinary named data",
+    "text": "{\"name\":\"Mars\",\"status\":\"ready\"}",
+    "calls": []
+  },
+  {
+    "name": "malformed explicit call",
+    "text": "{\"tool\":\"find\",\".map()\",\"path\":\"/root/gun.js\"}",
+    "calls": [],
+    "miss": true
+  },
+  {
+    "name": "unfinished keyed call",
+    "text": "{\"find\":\".map()\"",
+    "calls": [],
+    "miss": true
+  }
+]

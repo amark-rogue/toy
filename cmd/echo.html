@@ -1,16 +1,14 @@
 <link rel="stylesheet" href="../gun/kit/web.css"><script src="../gun/kit/web.js"></script>
-<script src="../gun/kit/dom.js"></script>
-<pre id="out" class="out"></pre>
+<pre name="out" class="out"></pre>
 <script src="../util.js"></script>
 <script>
 ;(function(ECHO){
-ECHO.draw = function(raw){
-  var s = (raw || '').flat().trim().split('\n');
-  var text = s.slice(1).join('\n').trim();
-  B.all('#out')[0].textContent = text || s[0].replace(/^echo\s+/,'') || ' ';
-};
-kit.createServer(function(req){
-  ECHO.draw((req.body || {}).$);
+kit.createServer(function(req, res){
+  res.send(kit.bind(document, ECHO.read(req.body)));
 });
+ECHO.read = function(raw){
+  var s = String(raw || '').flat().trim().split(/\r\n|\n|\r/);
+  return {out:s.slice(1).join('\n').trim() || s[0].replace(/^echo\s+/,'') || ' '};
+};
 }(window.ECHO = {}));
 </script>

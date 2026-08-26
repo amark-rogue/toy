@@ -1,5 +1,5 @@
 var assert = require('assert'), fs = require('fs'), sent = [];
-var window = {};
+var window = {}, document = {};
 var ears = {};
 var kit = {
   say:function(data, type){ sent.push({data:data, type:type}) },
@@ -18,6 +18,6 @@ assert.strictEqual(window.GIT.cmd('~ $ cd ~ && git status'), 'git status', 'git 
 window.GIT.try();
 assert.deepStrictEqual(sent[0], {data:'git clone https://github.com/', type:'prompt.set'});
 sent = [];
-kit.server({body:{'$':'\u001b[?2004h~ $ cd ~ && git status\r\n\u001b[?2004l\rsh: git: not found\r\n'}});
+kit.server({body:'\u001b[?2004h~ $ cd ~ && git status\r\n\u001b[?2004l\rsh: git: not found\r\n'}, {send:function(){}});
 assert.deepStrictEqual(sent[0], {data:'git clone https://github.com/', type:'prompt.set'}, 'the demo frame edits the Git task before optional UI loads');
 console.log('PASS git status failure edits its task into a clone prompt');

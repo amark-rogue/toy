@@ -1,52 +1,63 @@
-<link rel="stylesheet" href="../gun/kit/web.css"><script src="../gun/kit/web.js"></script>
-<script src="../gun/kit/dom.js"></script>
+<link rel="stylesheet" href="../gun/kit/web.css"><script src="../gun/kit/web.js"></script><script src="../gun/kit/dom.js"></script>
+
 <div class="box">
-  <div class="bar">
-    <span class="tag">grep</span>
-    <span id="query" class="val"></span>
-  </div>
+  <div class="bar"><span class="tag">grep</span><span name="term" class="val"></span></div>
   <div id="out" class="out hits"></div>
 </div>
-<div id="hitTpl" class="hit model"></div>
+<template id="hit"><div class="hit"></div></template>
+<template id="none"><div class="hit none">no matches</div></template>
+<template id="mark"><mark></mark></template>
+
 <style>
 body { display: block; min-height: 0; overflow: hidden; }
 .hits { display: flex; flex-direction: column; gap: 0.2em; }
 .hit { display: block; padding: 0.4em 0.6em; border-left: 2px solid var(--pop); font-family: 'Courier New', monospace; font-size: 0.85em; word-break: break-word; white-space: pre-wrap; cursor: pointer; opacity: 0.85; text-align: left; }
 .hit:active { opacity: 0.5; }
 .hit.none { opacity: 0.4; cursor: default; border-left-color: color-mix(in srgb, var(--pop) 30%, transparent); }
-mark { font-weight: bold; background: var(--pop); color: var(--mood, black); padding: 0 0.15em; font-style: normal; border-radius: 0.15em; }
+mark { padding: 0 0.15em; border-radius: 0.15em; background: var(--pop); color: var(--mood, black); font-weight: bold; font-style: normal; }
 </style>
 <script src="../util.js"></script>
 <script>
-kit.createServer(function(req){
-  var s = ((req.body || {}).$ || '').flat().trim().split('\n');
-  var m = s[0].match(/grep\s+(?:-[a-zA-Z]+\s+)?['"]?([^'"]+)['"]?/);
-  var term = m ? m[1] : '?';
-  var tpl = B.all('#hitTpl')[0];
-  var out = B.all('#out')[0];
-  out.replaceChildren();
-  B.all('#query')[0].textContent = term;
-  var lines = s.slice(1).filter(function(l){ return l.trim() });
-  if(!lines.length) {
-    var empty = tpl.cloneNode(true);
-    empty.id = ''; empty.classList.remove('model'); empty.classList.add('none');
-    empty.textContent = 'no matches';
-    out.append(empty);
-  } else {
-    lines.forEach(function(l) {
-      var item = tpl.cloneNode(true);
-      item.id = ''; item.classList.remove('model');
-      item.textContent = '';
-      l.split(new RegExp('('+term+')', 'gi')).forEach(function(p) {
-        if(p.toLowerCase() === term.toLowerCase()) {
-          var mk = B.new('mark'); mk.textContent = p; item.append(mk);
-        } else { item.append(document.createTextNode(p)); }
-      });
-      var fm = l.match(/^([^:]+):/);
-      if(fm) { item.onclick = function(){ kit.say('cat ' + fm[1], 'prompt.add.set') } }
-      out.append(item);
-    });
-  }
-  out.scrollTop = out.scrollHeight;
+;(function(GREP){
+kit.createServer(function(req, res){
+  var data = GREP.read(req.body);
+  GREP.draw(data);
+  res.send(kit.bind(document, {term:data.term}));
 });
+
+var B = document.body;
+GREP.view = B.all('#out')[0];
+GREP.hit = B.all('#hit')[0];
+GREP.none = B.all('#none')[0];
+GREP.mark = B.all('#mark')[0];
+GREP.read = function(raw, line, hit){
+  line = String(raw || '').flat().trim().split(/\r\n|\n|\r/);
+  hit = (line[0] || '').match(/grep\s+(?:-[a-zA-Z]+\s+)?['"]?([^'"]+)['"]?/);
+  return {term:hit ? hit[1] : '?', line:line.slice(1).filter(function(one){ return one.trim() })};
+};
+GREP.draw = function(data, view){
+  view = GREP.view; view.replaceChildren();
+  if(!data.line.length){ view.pin(GREP.none.content.firstElementChild.cloneNode(true)) }
+  else { data.line.forEach(function(line){ view.pin(GREP.row(line, data.term)) }) }
+  view.scrollTop = view.scrollHeight;
+};
+GREP.row = function(line, term, item, file){
+  item = GREP.hit.content.firstElementChild.cloneNode(true);
+  GREP.add(item, line, term);
+  file = line.match(/^([^:]+):/);
+  if(file){ item.ear('click', function(){ kit.say('cat ' + GREP.arg(file[1]), 'prompt.add.set') }) }
+  return item;
+};
+GREP.add = function(top, text, term, low, find, at, node){
+  low = text.toLowerCase(); find = term.toLowerCase(); at = 0;
+  while(find && 0 <= (node = low.indexOf(find, at))){
+    top.appendChild(document.createTextNode(text.slice(at, node)));
+    var tag = GREP.mark.content.firstElementChild.cloneNode(true);
+    tag.textContent = text.slice(node, node + term.length); top.pin(tag);
+    at = node + term.length;
+  }
+  top.appendChild(document.createTextNode(text.slice(at)));
+};
+GREP.arg = function(text){ return "'" + String(text).replace(/'/g, "'\\''") + "'" };
+}(window.GREP = {}));
 </script>

@@ -1,11 +1,10 @@
 <link rel="stylesheet" href="../gun/kit/web.css"><script src="../gun/kit/web.js"></script>
-<script src="../gun/kit/dom.js"></script>
 <div class="box">
   <div class="bar">
     <span class="tag">npm</span>
-    <span id="sub" class="val"></span>
+    <span name="sub" class="val"></span>
   </div>
-  <pre id="out" class="out"></pre>
+  <pre name="out" class="out"></pre>
   <div class="acts">
     <button onclick="kit.say('npm install','prompt')">install</button>
     <button onclick="kit.say('npm start','prompt')">start</button>
@@ -22,8 +21,11 @@ body { display: block; min-height: 0; overflow: hidden; }
 </style>
 <script src="../util.js"></script>
 <script>
-kit.createServer(function(req) {
-  var raw = ((req.body || {}).$ || '').flat().trim();
+kit.createServer(function(req, res) {
+  res.send(kit.bind(document, read(req.body)));
+});
+function read(raw){
+  raw = (raw || '').flat().trim();
   var s = raw.split('\n').map(function(l) {
     var parts = l.split('\r');
     for(var i = parts.length - 1; i >= 0; i--) {
@@ -32,9 +34,7 @@ kit.createServer(function(req) {
     }
     return '';
   }).filter(function(l){ return l; });
-  // first line is "~ $ npm install gun" — strip prompt then "npm "
   var head = (s[0] || '').replace(/^.*?[$#>%]\s*/, '').replace(/^npm\s+/, '');
-  B.all('#sub')[0].textContent = head.split(/\s+/)[0] || '?';
-  B.all('#out')[0].textContent = s.slice(1).join('\n');
-});
+  return {sub:head.split(/\s+/)[0] || '?', out:s.slice(1).join('\n')};
+}
 </script>

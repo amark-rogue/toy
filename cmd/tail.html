@@ -1,6 +1,6 @@
 <link rel="stylesheet" href="../gun/kit/web.css"><script src="../gun/kit/web.js"></script>
 
-<pre id="out"></pre>
+<pre name="out"></pre>
 
 <style>
 body { display: block; min-height: 0; overflow: hidden; }
@@ -9,11 +9,14 @@ pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; 
 
 <script src="../util.js"></script>
 <script>
-kit.createServer(function(req, raw, at, n){
-  raw = ((req.body || {}).$ || '').flat();
-  at = raw.search(/\r\n|\n|\r/);
-  if(at < 0){ out.textContent = raw; return }
-  n = '\r\n' === raw.slice(at, at + 2) ? 2 : 1;
-  out.textContent = raw.slice(at + n);
+kit.createServer(function(req, res){
+  res.send(kit.bind(document, {out:read(req.body)}));
 });
+function read(raw, at, n){
+  raw = (raw || '').flat();
+  at = raw.search(/\r\n|\n|\r/);
+  if(at < 0){ return raw }
+  n = '\r\n' === raw.slice(at, at + 2) ? 2 : 1;
+  return raw.slice(at + n);
+}
 </script>

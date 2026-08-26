@@ -94,10 +94,18 @@ TEST.run = async function(){
   body = await kit.fetch('./http/one.html', {word:'again'});
   TEST.ok(body.count, 2, 'programmatic component is preloaded and reused');
 
+  TEST.step = 'bound response lifetime';
+  body = await kit.fetch('./http/one.html', {word:'bound', bind:1});
+  TEST.ok(body.bound, 'bound', 'bound roots return their bound data');
+  body = await kit.fetch('./http/one.html', {word:'plain', plain:1});
+  TEST.ok(body.word, 'plain', 'a later plain root returns its own request body');
+
   TEST.step = 'target navigation';
-  body = await kit.fetch('./http/one.html?move', {word:'move'}, 'move');
+  body = await kit.fetch('./http/one.html?move=yes&kind=url', {word:'move'}, 'move');
   TEST.ok(body.count, 1, 'navigated target waits for its exact new server');
   TEST.ok(body.word, 'move', 'navigated target receives its pending request');
+  TEST.ok(body.query.move, 'yes', 'component request parses URL parameters');
+  TEST.ok(body.query.kind, 'url', 'component receives every URL parameter');
 
   TEST.step = 'concurrent target navigation';
   both = await Promise.all([

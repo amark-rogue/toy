@@ -3,16 +3,17 @@
 <script>
 ;(function(one){
 one.count = 0;
-one.serve = function(req, res){
+kit.createServer(one.serve = function(req, res){
   var body = req.body || {}, data;
   one.count += 1;
   word.textContent = body.word || '';
-  data = {count:one.count, word:word.textContent, tag:body.tag, url:req.url, last:one.last};
+  data = {count:one.count, word:word.textContent, tag:body.tag, url:req.url, query:req.query, last:one.last};
   one.last = {word:word.textContent, tag:body.tag};
-  if(body.status){ res.status = body.status; res.end(data); return }
-  if(body.wait){ return new Promise(function(ok){ setTimeout(function(){ ok(data) }, body.wait) }) }
-  res.end(data);
-};
-kit.createServer(one.serve);
+  if(body.bind){ res.send(kit.bind(document, {bound:body.word})); return }
+  if(body.plain){ res.send(document); return }
+  if(body.status){ res.status = body.status; res.send(data); return }
+  if(body.wait){ return new Promise(function(ok){ setTimeout(function(){ res.send(data); ok() }, body.wait) }) }
+  res.send(data);
+});
 }(window.one = {}));
 </script>

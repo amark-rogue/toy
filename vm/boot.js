@@ -75,6 +75,10 @@ VM.io.boot = 0;
 VM.io.nonce = "";
 VM.io.tip = null;
 VM.io.primed = false; // true after first prompt seen
+VM.io.id = "";
+VM.io.say = function(send, out){
+  send(VM.io.id ? JSON.stringify({"#": VM.io.id, "$": out}) : out);
+};
 
 VM.io.listen = function (emu, say) {
   VM.io.buf = "";
@@ -185,7 +189,19 @@ VM.io.done = function (emu, fresh) {
 
 VM.shim = function (emu) {
   return {
-    send: function (cmd) {
+    send: function (cmd, id, obj) {
+      if(null == cmd) return;
+      cmd = '' + cmd;
+      if('{' === cmd.charAt(0)){
+        try{
+          obj = JSON.parse(cmd);
+          if(obj && obj.size) return;
+          id = obj['#'] || '';
+          if(obj && null != obj.$) cmd = '' + obj.$;
+          else return;
+        }catch(e){}
+      }
+      VM.io.id = id || '';
       if (cmd && !cmd.endsWith("\n") && !cmd.endsWith("\r")) cmd += "\n";
       var trimmed = (cmd || "").replace(/[\r\n]+$/, "").trim();
       var job;
@@ -203,9 +219,11 @@ VM.shim = function (emu) {
 
 VM.boot = function (opt) {
   opt = opt || {};
+  VM.io.id = "";
   var cdn = opt.cdn || VM.cdn;
   var mem = opt.mem || VM.mem;
-  VM.say = opt.say || VM.say;
+  var send = opt.say || VM.say;
+  VM.say = function(out){ VM.io.say(send, out) };
   VM.onready = opt.onready;
   VM.io.tip = opt.tip || null;
 
@@ -268,7 +286,7 @@ VM.boot = function (opt) {
       });
     });
   };
-  document.head.appendChild(s);
+  document.head.pin(s);
 };
 
 VM.pkg = {};
@@ -297,7 +315,7 @@ VM.base = (document.currentScript && document.currentScript.src || '').replace(/
 // skip these entry files when scanning
 VM.skip = { boot: 1, demo: 1 };
 // fallback if dir listing is unavailable (file://, no autoindex, etc.)
-VM.plug = ['git', 'npm', 'pip', 'apk', 'srv'];
+VM.plug = ['git', 'npm', 'pip', 'apk', 'srv', 'aid'];
 VM.got = {};
 
 // inject one plug script once; missing file is ok
@@ -311,7 +329,7 @@ VM.load = function(name){
     s.setAttribute('data-vm', name);
     s.onload = function(){ yes(1) };
     s.onerror = function(){ yes(0) };
-    document.head.appendChild(s);
+    document.head.pin(s);
   }));
 };
 

@@ -15,7 +15,7 @@ pod.map = function(){
   var s = document.createElement('script');
   s.type = 'importmap';
   s.textContent = JSON.stringify({integrity: pod.hash});
-  document.head.appendChild(s);
+  document.head.pin(s);
   pod.made = 1;
 };
 
@@ -38,7 +38,7 @@ pod.cdn = function(){
       }, no);
     };
     s.onerror = function(){ no(Error('Nodepod could not load')) };
-    document.head.appendChild(s);
+    document.head.pin(s);
   }).catch(function(err){
     pod.net = 0;
     throw err;

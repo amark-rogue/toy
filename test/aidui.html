@@ -1,0 +1,32 @@
+<script src="../gun/kit/web.js"></script>
+
+<iframe id="view" src="../cmd/aid.html"></iframe>
+<pre id="result">WAIT</pre>
+
+<script>
+;(function(TEST){
+TEST.wait = async function(fn, note){
+  var i; for(i = 0; i < 100; i++){ if(fn()){ return } await new Promise(function(ok){ setTimeout(ok, 20) }) }
+  throw Error(note);
+};
+TEST.run = async function(){
+  var doc = view.contentDocument, rows;
+  kit.say({kind:'think', n:1, '#':'7', id:'work', say:'Searching **files**', live:1}, 'aid', view);
+  kit.say({kind:'tool', n:2, '#':'7', id:'call', name:'find', say:'gun.js'}, 'aid', view);
+  kit.say({kind:'think', n:3, '#':'7', id:'last', say:'Writing'}, 'aid', view);
+  kit.say({kind:'say', n:4, '#':'7', id:'last', say:'# Fixed\n\nSafe **result** with `<b>text</b>` and [bad](javascript:alert(1)).', done:1}, 'aid', view);
+  kit.say({kind:'say', n:5, '#':'7', id:'plain', say:'Status ready'}, 'aid', view);
+  await TEST.wait(function(){ return doc.querySelector('.feed .say strong') }, 'Markdown did not render');
+  rows = doc.querySelectorAll('.feed .card');
+  if(4 !== rows.length){ throw Error('a final stream did not replace its thinking card') }
+  if(doc.querySelector('.feed .think').open || doc.querySelector('.feed .tool').open){ throw Error('work was not collapsed') }
+  doc.querySelector('.feed .think').open = true;
+  await TEST.wait(function(){ return doc.querySelector('.feed .think strong') }, 'folded Markdown did not render when opened');
+  if(doc.querySelector('.feed img') || doc.querySelector('.feed .say a')){ throw Error('unsafe Markdown became active HTML') }
+  if('Fixed' !== doc.querySelector('.feed .say h1').textContent){ throw Error('final answer is not visible Markdown') }
+  if(!doc.querySelector('.feed [data-id="plain"].say')){ throw Error('a direct final reply was folded') }
+  result.textContent = 'PASS safe Markdown, folded work, and visible final answer';
+};
+view.addEventListener('load', function(){ TEST.run().catch(function(err){ result.textContent = 'FAIL\n' + (err.stack || err) }) });
+}(window.TEST = {}));
+</script>

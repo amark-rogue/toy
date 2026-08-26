@@ -1,0 +1,16 @@
+<pre id="result">WAIT</pre>
+<script>window.aid = {};</script>
+<script src="../cmd/aid/key.js"></script>
+<script src="../cmd/aid/sse.js"></script>
+<script src="../cmd/aid/open.js"></script>
+<script src="../cmd/aid/anth.js"></script>
+<script src="../cmd/aid/net.js"></script>
+<script>
+;(async function(){
+  try{
+    var part = 0, got = await aid.net.once('chat', [{role:'user', content:'Reply with only OK.'}], function(text){ if(text){ part += 1 } });
+    if(!/OK/i.test(got.text) || !part){ throw Error('unexpected stream: ' + got.text) }
+    result.textContent = 'PASS anonymous ch.at browser stream in ' + part + ' chunks';
+  }catch(e){ result.textContent = 'FAIL\n' + (e.stack || e) }
+}());
+</script>

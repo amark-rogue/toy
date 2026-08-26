@@ -84,6 +84,7 @@ task.open = task.idle = 1;
 (shell.$ = task.all('prompt')[0]).focus();
 
 kit.ear('chat',(eve, raw)=>{ raw = eve.detail || eve.data || eve;
+  eve.preventDefault();
   if('{'==raw[0]){ try{ if(shell.hook(JSON.parse(raw))){ return } }catch(e){}}
   shell.stream(raw);
 });
@@ -105,6 +106,12 @@ shell.ear('input', function(eve, t){
 });
 kit.ear('host', function(eve, msg, id, t){
   if(!eve.target || !eve.target.matches || !eve.target.matches('task iframe')){ return }
+  t = eve.target.closest('task');
+  if(t){
+    t.stay = 1;
+    t.bin = t.getAttribute('bin') || t.bin || '';
+    t.cmd = ((t.all('prompt')[0] || '').textContent || t.cmd || '').trim();
+  }
   id = shell.job.get(eve.target);
   if(!id){ return }
   eve.preventDefault();
@@ -123,12 +130,11 @@ kit.ear('host', function(eve, msg, id, t){
 });
 
 shell.raw = '';
-shell.give = function(t, i, raw, type, data, r, msg){
+shell.give = function(t, i, raw, type, data, r){
   data = undefined === data ? raw : data;
-  msg = {'#':t.job, '$':raw};
-  kit.fetch(i, msg).catch(function(err){
+  kit.fetch(i, raw).catch(function(err){
     if(501 === err.status){ kit.say(data, type, i); return }
-    if(r && !r.parentNode && i.parentNode){ i.parentNode.insertBefore(r, i) }
+    if(r && !r.parentNode && i.parentNode){ i.pin(r, -1) }
   });
 };
 shell.exit = function(raw, t, code, line, hit){
@@ -144,7 +150,7 @@ shell.shut = function(t, i){
   t.shut = 1;
   i = t.all('iframe:not(.shut)')[0] || t.all('iframe')[0];
   if(i){
-    i.classList.add('shut');
+    i.tag('shut', 1);
     i.removeAttribute('src');
   }
   if(shell.active === t){ shell.active = null }
@@ -172,8 +178,8 @@ shell.stream = function(raw, t){
   if(s.tty){
     kit.say(raw, 'term', s.tty);
     s.code = ((s.code || '') + (raw || '')).slice(-4096);
-    if(/\x1b\[\?(?:47|1047|1049)l/.test(s.code) ||
-      ('alt' !== s.tty.mode && /(?:^|\n)\S*[$#>%]\s*$/.test(s.code.flat()))){
+    if('shell' !== s.tty.mode &&
+      (/\x1b\[\?(?:47|1047|1049)l/.test(s.code) || 'alt' !== s.tty.mode && /(?:^|\n)\S*[$#>%]\s*$/.test(s.code.flat()))){
       s.tty = null;
       s.code = '';
       s.raw = '';
@@ -213,7 +219,7 @@ shell.term = function(raw, mode, t, all){
   shell.bash(raw, t);
   all = t.all('iframe:not(.shut)');
   t.tty = all[all.length - 1] || null;
-  if(t.tty){ t.tty.mode = mode; t.tty.classList.add('term') }
+  if(t.tty){ t.tty.mode = mode; t.tty.tag('term', 1) }
   next();
 };
 shell.last = function(cmd, cut){
@@ -271,7 +277,7 @@ shell.bash = function(raw, t, h, r, i, old, src){
   r = out(t);
   if('term' === h.bin){ if(r.parentNode){ r.remove() } }
   else { text(r, show(raw).flat().replace(/^\r/, '')) }
-  if(!t.parentNode){ root.append(t) }
+  if(!t.parentNode){ root.pin(t) }
   if(h.bin && t.stay){
     old = t.all('iframe:not(.shut)')[0] || t.all('iframe')[0];
     if(old){
@@ -289,8 +295,8 @@ shell.bash = function(raw, t, h, r, i, old, src){
     } else {
       if(old && old.getAttribute('src')){
         i = old.cloneNode(0);
-        old.parentNode.insertBefore(i, old.nextSibling);
-        old.classList.add('shut');
+        old.pin(i, 1);
+        old.tag('shut', 1);
         setTimeout(function(){
           if(old.parentNode){ old.remove() }
         }, 140);
@@ -298,7 +304,7 @@ shell.bash = function(raw, t, h, r, i, old, src){
       shell.job.set(i, t.job);
       i.onload = function(){
         if(!i.readyState){ return i.remove() }
-        i.classList.remove('shut');
+        i.tag('shut', -1);
         r.remove();
         shell.give(t, i, raw, h.bin, undefined, r);
       };
@@ -311,15 +317,21 @@ shell.bash = function(raw, t, h, r, i, old, src){
   if('term' !== h.bin){ next() }
 }
 
-shell.hook = function(obj, t, i){
+shell.hook = function(obj, t, i, type){
   if(!obj){ return 0 }
   if(!obj['#']){ return 0 }
-  t = root.querySelector('task[job="' + String(obj['#']).replace(/"/g, '') + '"]');
+  t = root.all('task[job="' + String(obj['#']).replace(/"/g, '') + '"]')[0];
   if(!t){ return obj.type? 1 : 0 } // typed reply for a dead task: drop, don't leak JSON into the stream
   if(obj.cwd){ t.path = obj.cwd }
   if('string' === typeof obj.env){ t.env = obj.env }
   shell.active = t;
   i = t.all('iframe:not(.shut)')[0] || t.all('iframe')[0];
+  if(obj.type && i && !i.getAttribute('src')){
+    type = ('' + obj.type).toLowerCase();
+    if(!/^[a-z][a-z0-9.+_-]*$/.test(type)){ return 1 }
+    shell.job.set(i, t.job); i.readyState = 0; i.tag('shut', -1);
+    t.setAttribute('bin', type); t.stay = 1; i.src = './cmd/' + type + '.html';
+  }
   if('string' == typeof obj.$ && 'term' !== t.getAttribute('bin')){
     shell.stream(obj.$, t);
     return 1;
@@ -331,7 +343,7 @@ shell.hook = function(obj, t, i){
 
 function text(v, s){
   v.textContent = s || '';
-  if(!s){ v.append(document.createElement('br')) }
+  if(!s){ v.pin(v.new('br')) }
   return v;
 }
 
@@ -348,8 +360,8 @@ function out(t, r, i){
   if(r){ return r }
   r = model.all('raw')[0].cloneNode(1);
   i = t.all('iframe:not(.shut)')[0] || t.all('iframe')[0];
-  if(i && i.parentNode){ i.parentNode.insertBefore(r, i) }
-  else { t.append(r) }
+  if(i && i.parentNode){ i.pin(r, -1) }
+  else { t.pin(r) }
   return r;
 }
 
@@ -379,7 +391,7 @@ function fresh(t){
 function next(t){
   if((root.lastElementChild || {}).open){ return }
   t = fresh();
-  root.append(t);
+  root.pin(t);
   shell.$ = t.all('prompt')[0];
   //shell.$.focus();
 }
@@ -390,7 +402,7 @@ kit.ear('belt',(eve,t)=>{ eve = eve.detail;
   eve.forEach((cmd,b)=>{
     if((shell.belt||'')[cmd[0]]){ return }
     b = t.new('button');
-    b.onclick = function(){ kit.say(cmd[1], 'prompt.add') };
+    b.ear('click', function(){ kit.say(cmd[1], 'prompt.add') });
     b.textContent = cmd[0];
     (shell.belt=shell.belt||{})[cmd[0]]=1;
     t.pin(b);
@@ -404,13 +416,25 @@ kit.ear('clear',(eve,v,p)=>{ // clear is the 1 special command exception.
   while(p = v.previousSibling){ v.remove(); v=p; }
   v.remove();
 });
+kit.ear('term.open', function(eve, t, i, mode){
+  i = eve.target;
+  if(!i || !i.matches || !i.matches('task iframe')){ return }
+  t = i.closest('task'); if(!t){ return }
+  mode = (eve.detail || {}).mode || eve.detail || 'shell';
+  t.tty = i; t.tty.mode = mode; shell.active = t;
+});
+kit.ear('term.close', function(eve, t, i){
+  i = eve.target;
+  if(!i || !i.matches || !i.matches('task iframe')){ return }
+  t = i.closest('task'); if(t){ shell.shut(t, i) }
+});
 shell.core = {root:root, make:fresh, send:send, next:next, text:text};
 
 }(window.shell = document.body));
 </script>
 <script src="task.js"></script>
 <script src="run.js"></script>
-<script>kit.say(localStorage.pwd||'ls .','prompt')</script>
+<script>if('0' !== new URLSearchParams(location.search).get('boot')){ kit.say(localStorage.pwd||'ls .','prompt') }</script>
 <script src="was.js"></script>
 <script src="tab.js"></script>
 <script src="aid.js"></script>

@@ -1,24 +1,23 @@
 <link rel="stylesheet" href="../gun/kit/web.css"><script src="../gun/kit/web.js"></script>
-<script src="../gun/kit/dom.js"></script>
 <div class="box">
   <div class="bar">
     <span class="tag">ping</span>
-    <span id="host" class="val"></span>
+    <span name="host" class="val"></span>
   </div>
-  <pre id="out" class="out"></pre>
+  <pre name="out" class="out"></pre>
 </div>
 <style>
 body { display: block; min-height: 0; overflow: hidden; }
 </style>
 <script src="../util.js"></script>
 <script>
-kit.createServer(function(req){
-  var s = ((req.body || {}).$ || '').flat().trim().split('\n');
-  var m = s[0].match(/ping\s+(?:-[a-zA-Z0-9]+\s+)*([^\s]+)/);
-  var el = B.all('#out')[0];
-  B.all('#host')[0].textContent = m ? m[1] : '?';
-  var atBot = el.scrollHeight - el.scrollTop - el.clientHeight < 50;
-  el.textContent = s.slice(1).join('\n');
-  if(atBot) el.scrollTop = el.scrollHeight;
+kit.createServer(function(req, res){
+  res.send(kit.bind(document, read(req.body)));
 });
+function read(raw, line, hit){
+  raw = (raw || '').flat().trim().split('\n');
+  line = raw[0] || '';
+  hit = line.match(/ping\s+(?:-[a-zA-Z0-9]+\s+)*([^\s]+)/);
+  return {host:hit ? hit[1] : '?', out:raw.slice(1).join('\n')};
+}
 </script>

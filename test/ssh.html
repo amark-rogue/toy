@@ -1,0 +1,71 @@
+<script src="../gun/kit/web.js"></script>
+<script>
+;(function(TEST){
+TEST.hex = function(text){
+  return Array.from(new TextEncoder().encode(text)).map(function(one){ return ('0' + one.toString(16)).slice(-2) }).join(' ');
+};
+TEST.send = function(msg, cmd, raw, hit, out, wait){
+  cmd = (msg.$ || '').trim();
+  (TEST.log = TEST.log || []).push({job:msg['#'], cmd:cmd.slice(0, 160)});
+  if(/^ssh\s/.test(cmd)){ raw = 'gateway$ ' + cmd + '\r\nWelcome\r\nremote$ ' }
+  else if('pwd' === cmd){ raw = 'remote$ pwd\r\n/srv/remote\r\nremote$ ' }
+  else if(/^aid(?:\s|$)/.test(cmd)){ raw = 'remote$ ' + cmd + '\r\nsh: aid: not found\r\nremote$ ' }
+  else if((hit = cmd.match(/AID([a-z0-9]+)B/i))){
+    TEST.wrap = (TEST.wrap || 0) + 1; out = 1 === TEST.wrap ? '/srv/remote\0/home/remote' : '';
+    raw = 'remote$ tool\r\n\x1eAID' + hit[1] + 'B\x1e\r\n ' + TEST.hex(out) + '\r\n\x1eAID' + hit[1] + 'E:0\x1e\r\nremote$ ';
+    wait = 1 === TEST.wrap ? 80 : 0;
+  }
+  else { raw = 'remote$ ' + cmd + '\r\nok\r\nremote$ ' }
+  setTimeout(function(){ kit.say(JSON.stringify({'#':msg['#'], '$':raw}), 'chat', toy) }, wait || 0);
+};
+kit.ear('host', function(eve, msg){ msg = eve.detail; if(msg && msg['#']){ TEST.send(msg) } });
+}(window.TEST = {}));
+</script>
+
+<iframe id="toy" src="../shell.html?boot=0"></iframe>
+<pre id="result">WAIT</pre>
+
+<script>
+;(function(TEST){
+TEST.wait = async function(fn, note, i){
+  for(i = 0; i < 150; i += 1){ if(fn()){ return } await new Promise(function(ok){ setTimeout(ok, 20) }) }
+  throw Error(note);
+};
+TEST.run = async function(){
+  var doc, task, ssh, nest, inner, view, aid;
+  kit.say('ssh remote', 'prompt', toy);
+  await TEST.wait(function(){
+    doc = toy.contentDocument; task = doc && doc.querySelector('task[bin="ssh"]');
+    ssh = task && task.querySelector('iframe:not(.shut)');
+    nest = ssh && ssh.contentDocument && ssh.contentDocument.getElementById('nest');
+    return nest && nest.contentWindow && nest.contentWindow.shell;
+  }, 'nested shell did not open');
+  nest.contentWindow.kit.say('pwd', 'prompt.add');
+  await TEST.wait(function(){
+    inner = nest.contentDocument; view = inner && inner.querySelector('task[bin="pwd"] iframe:not(.shut)');
+    var all = view && view.contentDocument && view.contentDocument.querySelectorAll('.crumb');
+    return all && 3 === all.length && 'srv' === all[1].textContent && 'remote' === all[2].textContent;
+  }, 'nested command did not retain the outer SSH PTY');
+  nest.contentWindow.kit.say('aid confirm remote fallback', 'prompt.add');
+  await TEST.wait(function(){
+    aid = nest.contentDocument.querySelector('task[bin="aid"] iframe:not(.shut)');
+    return aid && aid.contentWindow;
+  }, 'nested aid component did not open');
+  aid.contentWindow.fetch = async function(){ return {
+    ok:true, status:200, json:async function(){ return {choices:[{message:{content:'## Frontend fallback\n\nRemote filesystem selected.'}}]} }
+  } };
+  await TEST.wait(function(){
+    return /Frontend fallback/.test((aid.contentDocument.querySelector('.feed') || {}).textContent || '');
+  }, 'nested command-not-found did not start the frontend agent');
+  if(2 > TEST.wrap){ throw Error('frontend agent never queried the nested host filesystem') }
+  if(1 !== inner.querySelectorAll('task[bin="aid"]').length){ throw Error('one nested aid command made more than one task') }
+  ['ssh remote','pwd','aid confirm remote fallback'].forEach(function(cmd){
+    if(1 !== (TEST.log || []).filter(function(one){ return one.cmd === cmd }).length){ throw Error(cmd + ' crossed an iframe boundary more than once') }
+  });
+  result.textContent = 'PASS nested shell UX and frontend aid use the remote PTY filesystem';
+};
+toy.addEventListener('load', function(){ TEST.run().catch(function(err){
+  result.textContent = 'FAIL\n' + (err.stack || err) + '\n' + JSON.stringify(TEST.log || [], null, 2);
+}) });
+}(window.TEST));
+</script>

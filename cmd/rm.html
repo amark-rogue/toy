@@ -1,11 +1,13 @@
 <link rel="stylesheet" href="../gun/kit/web.css"><script src="../gun/kit/web.js"></script>
 
-<span id="err" style="color: var(--err);"></span>
-<div id="fix" style="display: none; padding: 10px;">
-    <div class="ls"><a id="btnFix"></a></div>
+<span name="err" class="err" hidden></span>
+<div name="fix" class="fix" hidden>
+  <div class="ls"><button type="button" onclick="kit.say(this.textContent, 'prompt')"><span name="cmd"></span></button></div>
 </div>
 
 <style>
+.err { color: var(--err); }
+.fix { padding: 10px; }
 .ls {
   width: 100%;
   display: flex;
@@ -13,7 +15,7 @@
   gap: 0.4em;
   align-content: flex-start;
 }
-.ls a {
+.ls button {
   display: block;
   flex: 0 0 auto;
   min-width: 4em;
@@ -27,56 +29,41 @@
   cursor: pointer;
   user-select: none;
   color: var(--pop);
-  text-decoration: none;
 }
-.ls a:active {
+.ls button:active {
   background: var(--pop);
   color: var(--mood);
   transform: scale(0.92);
 }
-#btnFix { border-color: var(--yes); color: var(--yes); }
+.ls button { border-color: var(--yes); color: var(--yes); }
 </style>
 
 <script src="../util.js"></script>
 <script>
-kit.createServer(function(req){
-  var raw = ((req.body || {}).$ || '').flat();
-  var lines = raw.trim().split('\n');
-  var cmdLine = lines[0] || '';
-  var out = lines.slice(1).join('\n').trim();
-  
-  // Extract file name from command
-  var name = cmdLine.split(' ').slice(-1)[0];
-  if(name.startsWith('"') || name.startsWith("'")){ name = name.slice(1, -1) }
-
-  if(!out) { return } // Success - usually rm is silent
-
-  if(out.toLowerCase().includes('is a directory')) {
-    err.textContent = 'Failed to delete. Try:';
-    showFix('rm -rf ' + quoteArg(name));
-  } else if(out.toLowerCase().includes('no such file')) {
-    err.textContent = 'no such file';
-  } else if(out.toLowerCase().includes('permission denied')) {
-    err.textContent = 'Permission denied. Try:';
-    showFix('sudo rm ' + quoteArg(name));
-  } else {
-    err.textContent = 'Error: ' + out;
-  }
+kit.createServer(function(req, res){
+  res.send(kit.bind(document, RM.read(req.body)));
 });
-
-function showFix(suggestion) {
-  fix.style.display = 'block';
-  btnFix.textContent = suggestion;
-  btnFix.onclick = function() {
-    kit.say(suggestion, 'prompt');
-  };
-  // Trigger parent resize
-  //setTimeout(() => { kit.up(null, 'style'); }, 50);
-}
-
-function quoteArg(val){
-  var safe = String(val).replace(/(["\\$`])/g, '\\$1');
-  if(val === safe){ return val }
+var RM = {};
+RM.read = function(raw, lines, cmd, out, name, low){
+  raw = (raw || '').flat();
+  lines = raw.trim().split('\n'); cmd = lines[0] || '';
+  out = lines.slice(1).join('\n').trim();
+  name = cmd.split(' ').slice(-1)[0] || '';
+  if(/^["']/.test(name)){ name = name.slice(1, -1) }
+  if(!out){ return {err:false, fix:false} }
+  low = out.toLowerCase();
+  if(low.includes('is a directory')){
+    return {err:'Failed to delete. Try:', fix:{cmd:'rm -rf ' + RM.arg(name)}};
+  }
+  if(low.includes('no such file')){ return {err:'no such file', fix:false} }
+  if(low.includes('permission denied')){
+    return {err:'Permission denied. Try:', fix:{cmd:'sudo rm ' + RM.arg(name)}};
+  }
+  return {err:'Error: ' + out, fix:false};
+};
+RM.arg = function(val, safe){
+  safe = String(val).replace(/(["\\$`])/g, '\\$1');
+  if(val === safe && !/\s/.test(val)){ return val }
   return '"' + String(val).replace(/(["\\$`])/g, '\\$1') + '"';
-}
+};
 </script>

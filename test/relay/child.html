@@ -1,0 +1,12 @@
+<script src="../../gun/kit/web.js"></script>
+<script>
+window.RELAY = {message:0, many:0, claim:0};
+addEventListener('message', function(eve){
+  var type = (eve.data || {}).type;
+  if(type in RELAY){ RELAY.message += 1 }
+});
+kit.ear('many', function(){ RELAY.many += 1 });
+kit.ear('many', function(){ RELAY.many += 1 });
+kit.ear('claim', function(){ RELAY.claim += 1 });
+RELAY.ready = 1;
+</script>

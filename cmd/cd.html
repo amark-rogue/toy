@@ -1,44 +1,41 @@
 <link rel="stylesheet" href="../gun/kit/web.css"><script src="../gun/kit/web.js"></script>
-<span id="err" style="color: var(--err);"></span>
+
+<span name="err" hidden style="color: var(--err);"></span>
+
 <script src="../util.js"></script>
 <script>
-kit.createServer(function(req){
-  var raw = ((req.body || {}).$ || '').flat();
-  var lines = raw.trim().split('\n');
-  var out = lines.slice(1).join('\n').trim();
-  
-  var bad = out.toLowerCase().includes('no such file') || out.toLowerCase().includes('not a directory') || out.toLowerCase().includes('permission denied');
-  
-  if (localStorage.isRestoring === "1") {
-    localStorage.removeItem("isRestoring");
-    if (bad) {
-      localStorage.removeItem("cwd");
-      err.textContent = out;
-    }
-    return;
-  }
-
-  if(!bad){
-    var cmdLine = lines[0] || '';
-    var match = cmdLine.match(/cd\s+['"]?(.*?)['"]?\s*$/);
-    if(match){
-      var dir = match[1].trim();
-      var cwd = localStorage.cwd || '';
-      if(dir === '~' || dir === '') cwd = '';
-      else if(dir.charAt(0) === '/') cwd = dir;
-      else {
-        var parts = cwd.split('/').filter(Boolean);
-        var dirs = dir.split('/').filter(Boolean);
-        dirs.forEach(function(d){
-          if(d === '..') parts.pop();
-          else if(d !== '.') parts.push(d);
-        });
-        cwd = (cwd.startsWith('/') || dir.startsWith('/') ? '/' : '') + parts.join('/');
-      }
-      localStorage.cwd = cwd;
-    }
-    return;
-  }
-  err.textContent = out;
+;(function(CD){
+kit.createServer(function(req, res){
+  res.send(kit.bind(document, CD.read(req.body)));
 });
+
+CD.read = function(raw, line, out, bad, hit, dir, cwd, part, dirs){
+  raw = String(raw || '').flat();
+  line = raw.split(/\r\n|\n|\r/);
+  out = line.slice(1).join('\n').trim();
+  bad = /no such file|not a directory|permission denied/i.test(out);
+  if('1' === localStorage.isRestoring){
+    localStorage.removeItem('isRestoring');
+    if(bad){ localStorage.removeItem('cwd') }
+    return {err:bad ? out : false};
+  }
+  if(bad){ return {err:out} }
+  hit = (line[0] || '').match(/cd\s+['"]?(.*?)['"]?\s*$/);
+  if(!hit){ return {err:false} }
+  dir = hit[1].trim(); cwd = localStorage.cwd || '';
+  if('~' === dir || !dir){ cwd = '' }
+  else if('/' === dir.charAt(0)){ cwd = dir }
+  else {
+    part = cwd.split('/').filter(Boolean);
+    dirs = dir.split('/').filter(Boolean);
+    dirs.forEach(function(one){
+      if('..' === one){ part.pop() }
+      else if('.' !== one){ part.push(one) }
+    });
+    cwd = ('/' === cwd.charAt(0) ? '/' : '') + part.join('/');
+  }
+  localStorage.cwd = cwd;
+  return {err:false};
+};
+}(window.CD = {}));
 </script>

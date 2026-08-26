@@ -1,30 +1,29 @@
 <link rel="stylesheet" href="../gun/kit/web.css"><script src="../gun/kit/web.js"></script>
-<script src="../gun/kit/dom.js"></script>
-<div id="box" class="box">
-  <div class="bar">
-    <span id="lbl" class="tag">mkdir</span>
-    <span id="fname" class="val"></span>
-  </div>
+
+<div name="ok" class="box" hidden>
+  <div class="bar"><span class="tag">mkdir</span><span name="file" class="val"></span></div>
 </div>
+<div name="bad" class="box err" hidden>
+  <div class="bar"><span class="tag">error</span><span name="text" class="val"></span></div>
+</div>
+
 <style>
 body { display: block; min-height: 0; overflow: hidden; }
-.err #lbl { color: var(--err); opacity: 1; }
-.err #fname { color: var(--err); }
+.err .tag, .err .val { color: var(--err); }
 </style>
 <script src="../util.js"></script>
 <script>
-kit.createServer(function(req){
-  var s = ((req.body || {}).$ || '').flat().trim().split('\n');
-  var out = s.slice(1).join('\n').trim();
-  var name = s[0].replace(/^mkdir\s+(?:-p\s+)?/,'').trim();
-  box.tag('err', 0);
-  B.all('#lbl')[0].textContent = 'mkdir';
-  if(out && (out.toLowerCase().includes('exist') || out.toLowerCase().includes('denied'))) {
-    box.tag('err', 1);
-    B.all('#lbl')[0].textContent = 'error';
-    B.all('#fname')[0].textContent = out.slice(0, 40);
-  } else {
-    B.all('#fname')[0].textContent = name;
-  }
+;(function(MK){
+kit.createServer(function(req, res){
+  res.send(kit.bind(document, MK.read(req.body)));
 });
+
+MK.read = function(raw, line, out, name){
+  line = String(raw || '').flat().trim().split(/\r\n|\n|\r/);
+  out = line.slice(1).join('\n').trim();
+  name = (line[0] || '').replace(/^.*?mkdir\s+(?:-p\s+)?/,'').trim();
+  if(out && /exist|denied/i.test(out)){ return {ok:false, bad:{text:out.slice(0, 40)}} }
+  return {ok:{file:name}, bad:false};
+};
+}(window.MK = {}));
 </script>

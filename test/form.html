@@ -1,0 +1,22 @@
+<script src="../gun/kit/web.js"></script>
+<link rel="stylesheet" href="../gun/kit/web.css">
+
+<h1>Dynamic component form</h1>
+<p>Submit this form. Its fields become URL parameters which the iframe server parses and binds.</p>
+
+<form action="./server.html" method="get" target="view">
+  <label>Source <input name="source" value="query"></label>
+  <label>Color <input name="color" value="violet"></label>
+  <label>Mode <input name="mode" value="iframe"></label>
+  <button type="submit">GET into iframe</button>
+</form>
+
+<iframe name="view" title="Server response"></iframe>
+
+<style>
+body { padding: 1em; font: 1.2em system-ui; }
+form { display: flex; flex-wrap: wrap; gap: 1em; align-items: end; }
+label { display: grid; gap: 0.3em; }
+input, button { font: inherit; padding: 0.7em; }
+iframe { width: 100%; margin-top: 1em; border: 1px solid; }
+</style>

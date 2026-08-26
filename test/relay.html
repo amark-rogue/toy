@@ -1,0 +1,25 @@
+<script src="../gun/kit/web.js"></script>
+<script>
+kit.ear('claim', function(eve){ eve.preventDefault() });
+</script>
+
+<iframe id="child" src="relay/child.html"></iframe>
+<pre id="result">WAIT</pre>
+
+<script>
+;(async function(){
+  var i, state;
+  for(i = 0; i < 100; i += 1){
+    try{ if(child.contentWindow.RELAY.ready){ break } }catch(e){}
+    await new Promise(function(ok){ setTimeout(ok, 20) });
+  }
+  await new Promise(function(ok){ setTimeout(ok, 30) });
+  kit.say('one', 'many');
+  kit.say('none', 'claim');
+  await new Promise(function(ok){ setTimeout(ok, 30) });
+  state = child.contentWindow.RELAY;
+  result.textContent = 1 === state.message && 2 === state.many && 0 === state.claim ?
+    'PASS one relay crosses each iframe boundary and claimed events stop' :
+    'FAIL ' + JSON.stringify(state);
+}()).catch(function(err){ result.textContent = 'FAIL ' + (err.stack || err) });
+</script>

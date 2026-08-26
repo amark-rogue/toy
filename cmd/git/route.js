@@ -1,4 +1,9 @@
 ;(function(G){
+kit.createServer(function(req, res){
+  G.route(req.body);
+  res.send(document);
+});
+
 G.cmd = function(line, cmd, all, i){
   cmd = line && line.cmd ? line.cmd() : '' + (line || '');
   all = cmd.split(/\s*(?:&&|;|\|)\s*/);
@@ -23,7 +28,4 @@ G.route = function(raw, flat, line, cmd){
   (G.wait = G.wait || []).push(raw);
 };
 
-kit.createServer(function(req){
-  G.route((req.body || {}).$);
-});
 }(window.GIT = window.GIT || {}));

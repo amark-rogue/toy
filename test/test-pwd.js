@@ -1,10 +1,13 @@
 var assert = require('assert'), fs = require('fs');
 var src = fs.readFileSync('cmd/pwd.html', 'utf8'), PWD = {}, made = [];
-var view = {textContent:'', all:[], replaceChildren:function(){ this.all = [] }, appendChild:function(v){ this.all.push(v) }};
-var B = {all:function(){ return [view] }, new:function(){ var v = {}; made.push(v); return v }};
+var make = function(){ var v = {textContent:'', ear:function(name, fn){ this.hear = fn; return this }}; made.push(v); return v };
+var row = {content:{firstElementChild:{cloneNode:make}}};
+var view = {textContent:'', all:[], replaceChildren:function(){ this.all = [] }, pin:function(v){ this.all.push(v); return this }};
+var B = {all:function(find){ return ['#crumb' === find ? row : view] }};
 var kit = {say:function(){}};
+PWD.row = row;
 
-['claude','echo','gemini','grep','mkdir','npm','ping','ps','pwd','whoami'].forEach(function(name, html){
+['claude','gemini','ps','pwd'].forEach(function(name, html){
   html = fs.readFileSync('cmd/' + name + '.html', 'utf8');
   assert(0 <= html.indexOf('kit/dom.js'), name + ' declares its B DOM helper dependency');
 });
@@ -28,5 +31,5 @@ assert.strictEqual(PWD.read('~ $ pwd\r\n/root/toy\r\n~ $ '), '/root/toy', 'closi
 assert.strictEqual(PWD.read('/one path/two'), '/one path/two', 'bare path is retained');
 PWD.draw('/Users/mars/toy');
 assert.deepStrictEqual(view.all.map(function(v){ return v.textContent }), ['/','Users','mars','toy'], 'path renders through an explicit element lookup');
-assert.strictEqual(view.all[3].onclick instanceof Function, true, 'path crumbs remain interactive');
+assert.strictEqual(view.all[3].hear instanceof Function, true, 'path crumbs remain interactive through dom.ear');
 console.log('PASS pwd frame output');

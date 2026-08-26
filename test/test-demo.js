@@ -10,13 +10,13 @@ var ctx = {
   navigator: {},
   screen: {},
   sign: {},
-  host: {value: '', addEventListener: function(){}},
+  host: {value: '', addEventListener: function(){}, ear: function(){}},
   cop: {sign: function(){}},
   kit: {say: function(){}, ear: function(){}},
   document: {
     currentScript: {src: 'http://toy/vm/demo.js'},
     createElement: function(){ return {setAttribute: function(){}} },
-    head: {appendChild: function(s){ setTimeout(function(){ if(s.onerror) s.onerror() }, 0) }}
+    head: {pin: function(s){ setTimeout(function(){ if(s.onerror) s.onerror() }, 0) }}
   },
   fetch: async function(url){
     if(url.indexOf('/git/trees/') >= 0){
@@ -53,6 +53,35 @@ run('vm/pod/run.js');
 ctx.demo.pod.ok = 1;
 run('vm/git.js');
 run('vm/js/help.js');
+
+assert(!/\baid\b/.test(fs.readFileSync('vm/demo.js', 'utf8')), 'demo core has no knowledge of optional commands');
+assert(!/\baid\b/.test(fs.readFileSync('vm/pod/core.js', 'utf8')), 'pod routing has no command-specific agent exception');
+
+var pick = [], oldvm = ctx.VM.boot, olddemo = ctx.demo.boot, oldadd = ctx.demo.pod.add, oldsign = ctx.cop.sign;
+ctx.VM.boot = function(){ pick.push('vm') };
+ctx.demo.boot = function(){ pick.push('demo') };
+ctx.demo.pod.add = async function(){};
+ctx.cop.sign = function(){ pick.push('ssh') };
+var hosttest = (async function(){
+  ctx.host.value = 'vm'; await ctx.sign.onsubmit({preventDefault:function(){}});
+  ctx.host.value = 'demo'; await ctx.sign.onsubmit({preventDefault:function(){}});
+  ctx.host.value = 'ssh://host'; await ctx.sign.onsubmit({preventDefault:function(){}});
+  assert.deepStrictEqual(pick, ['vm','demo','ssh'], 'vm, demo, and SSH selections retain their own submit paths');
+  ctx.VM.boot = oldvm; ctx.demo.boot = olddemo; ctx.demo.pod.add = oldadd; ctx.cop.sign = oldsign;
+}());
+
+var serial = [], frame = '', ready = ctx.VM.ready, routes = ctx.VM.cmd.routes;
+ctx.VM.ready = true; ctx.VM.cmd.routes = [];
+var vmws = ctx.VM.shim({serial0_send:function(raw){ serial.push(raw) }});
+vmws.send('{"#":"31","$":"pwd\\r"}');
+assert.deepStrictEqual(serial, ['pwd\r'], 'VM shim unwraps a task command instead of executing its JSON envelope');
+ctx.VM.io.say(function(raw){ frame = raw }, '/root\r\n$ ');
+assert.deepStrictEqual(JSON.parse(frame), {'#':'31','$':'/root\r\n$ '}, 'VM output retains the task id');
+vmws.send('{"size":{"cols":82,"rows":37}}');
+assert.strictEqual(serial.length, 1, 'VM resize metadata is not typed into the shell');
+vmws.send('echo bare');
+assert.strictEqual(ctx.VM.io.id, '', 'a plain host command clears stale task routing');
+ctx.VM.ready = ready; ctx.VM.cmd.routes = routes;
 
 var page = fs.readFileSync('app.html', 'utf8');
 assert(page.indexOf('type="importmap"') < 0, 'app does not eagerly declare the pod import map');
@@ -94,6 +123,7 @@ var wait = async function(){
 };
 
 wait().then(async function(){
+  await hosttest;
   var got = out.join('');
   var real = fs.readFileSync('test/samples/darwin-arm64_user-log.txt', 'utf8');
   var git = got.indexOf('~ $ git clone https://github.com/acme/toy\r\n');

@@ -7,8 +7,9 @@
 window.demo = {};
 
 ;(function(){
+  var was = sign.onsubmit;
   sign.onsubmit = async (eve)=>{ eve?.preventDefault?.();
-    if('demo' !== host.value.toLowerCase()){ return cop.sign(eve) }
+    if('demo' !== host.value.toLowerCase()){ return was ? was(eve) : cop.sign(eve) }
     cop.ws = 0;
     try{ await demo.pod.add();
       demo.pod.cdn().catch(function(){});
@@ -430,7 +431,7 @@ demo.cmd.load = function(bin){
       demo.cmd.got[bin] = 0;
       no(Error('not found'));
     };
-    document.head.appendChild(s);
+    document.head.pin(s);
   });
   return demo.cmd.got[bin];
 };
@@ -628,6 +629,7 @@ demo.shim = function(){
     close: function(){
       this.readyState = 3;
       demo.on = 0;
+      demo.ok = 0;
       VM.ready = false;
       VM.fs.hook = null;
       if(demo.pod.stop) demo.pod.stop();
@@ -731,7 +733,7 @@ demo.pod.one = function(name){
       demo.pod.got[name] = 0;
       no(Error('demo part could not load: ' + name));
     };
-    document.head.appendChild(s);
+    document.head.pin(s);
   });
   return demo.pod.got[name];
 };
@@ -760,5 +762,4 @@ demo.pod.hint = function(eve){
   return get;
 };
 
-host.addEventListener('input', demo.pod.hint);
-host.addEventListener('keydown', demo.pod.hint);
+host.ear('input keydown', demo.pod.hint);

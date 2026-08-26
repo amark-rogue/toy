@@ -1,10 +1,9 @@
 <script src="../../gun/kit/web.js"></script>
 <script>
 ;(function(call){
-call.serve = async function(req, res){
+kit.createServer(call.serve = async function(req, res){
   var body = req.body || {};
-  res.end(await kit.fetch(body.url, body.body, body.target));
-};
-kit.createServer(call.serve);
+  res.send(await kit.fetch(body.url, body.body, body.target));
+});
 }(window.call = {}));
 </script>

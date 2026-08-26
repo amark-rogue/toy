@@ -1,16 +1,7 @@
 <link rel="stylesheet" href="../gun/kit/web.css"><script src="../gun/kit/web.js"></script>
 
-<div class="wade">
-<list id="list">
-  <a id="up" class="as">../</a>
-  <a id="add" class="as">+</a>
-</list>
-</div>
-
-<fit>
-  <a></a>
-</fit>
-
+<div class="wade"><list id="list"><a id="up" class="as">../</a><a id="add" class="as">+</a></list></div>
+<template id="item"><a></a></template>
 <iframe id="pop" src="./ls-pop.html"></iframe>
 
 <style>
@@ -18,136 +9,114 @@ body { display: block; overflow: hidden; }
 #pop { display: block; visibility: hidden; pointer-events: none; width: 100%; position: fixed; top: 33%; }
 #pop.live { visibility: visible; pointer-events: auto; }
 list {
-  text-align: center;
   display: block;
-  scroll-padding-left: 50%;
-  scroll-padding-right: 50%;
   width: 100%;
   max-height: 26em;
-  column-width: 8em;
-  column-gap: 0.01em;
+  padding: 0 0.2em;
   overflow-x: auto;
   overflow-y: hidden;
-  padding: 0 0.2em; /* undo item bleed */
+  column-width: 8em;
+  column-gap: 0.01em;
+  scroll-padding-left: 50%;
+  scroll-padding-right: 50%;
+  text-align: center;
 }
 list a {
+  display: inline-block;
+  min-width: 3em;
+  max-width: 9em;
+  margin: 0 0.1em 0.2em;
+  padding: 0.7em 0.6em;
+  overflow-wrap: anywhere;
   border: 1px solid var(--pop);
   border-radius: 0.6em;
   background: transparent;
-  padding: 0.7em 0.6em;
-  min-width: 3em;
-  max-width: 9em;
-  text-align: center;
-  cursor: pointer;
-  margin: 0 0.1em 0.2em 0.1em;
-  
   font-weight: bold;
+  line-height: 0.9em;
+  text-align: center;
+  white-space: normal;
+  word-break: break-all;
+  cursor: pointer;
   -webkit-touch-callout: none;
   -webkit-user-select: none;
   user-select: none;
-  display: inline-block;
-  white-space: normal;
-  overflow-wrap: anywhere;
-  word-break: break-all;
-  line-height: 0.9em;
 }
-list a:hover, list a:active, .as {
-  background: var(--pop);
-  color: var(--mood);
-  transform: scale(0.9);
-}
-.as:hover, .as:active {
-  transform: scale(1);
-}
+list a:hover, list a:active, .as { background: var(--pop); color: var(--mood); transform: scale(0.9); }
+.as:hover, .as:active { transform: scale(1); }
 </style>
-<script src="../gun/kit/dom.js"></script>
-<script src="../util.js"></script>
+<script src="../gun/kit/dom.js"></script><script src="../util.js"></script>
 <script>
-// shell.html progressively enhances with ls.html
-// which then progressively enhances all the cmd/*.html
-kit.say([['ls','ls .'],['git','git status'],['npm','npm '],['kill','kill '],['clear','clear']], 'belt');
-kit.say([['claude','claude '],['codex','codex '],['gemini','gemini '],['grok','grok ']], 'belt');
+var CMD = {};
+kit.createServer(function(req, res){
+  CMD.draw(CMD.read(req.body), CMD.view);
+  res.send(document);
+});
 
-CMD = {};
-CMD.ls = function(s,v,f,cmd){
-  cmd = (s=s.flat()).cut('\n',ESC); s = cmd[2]; cmd = cmd[0];
-  CMD.base(cmd);
-
-  v.all('a:not(#up):not(#add)').forEach(function(a){ a.remove() });
-  
-  s = s.replaceAll('\r\n','\t').replaceAll('\r','\t').replaceAll('\n','\t').replaceAll(/\s{2,}/g,'\t');
-  f = (s.indexOf('\t')+1)? '\t' : /\s+/;
-  s = s.split(f).sort((a,b)=>a.toLowerCase().localeCompare(b.toLowerCase()));
-  
-  s.forEach((item,a)=>{
-    if(!(item = item.flat().trim())){ return }
-    (a = B.new('fit a')).where = item;
-    a.file = (item.includes('.') && item !== '.' && item !== '..');
-    a.textContent = item + (a.file? '' : '/');
-    add.pin(a,-1);
-  });
-
-  v.scrollLeft = (v.scrollWidth - v.clientWidth) / 2;
+CMD.view = B.all('#list')[0];
+CMD.item = B.all('#item')[0];
+CMD.add = B.all('#add')[0];
+CMD.menu = B.all('#pop')[0];
+CMD.read = function(raw, cut, text, by, all){
+  cut = String(raw || '').flat().cut('\n', ESC); CMD.base(cut[0]); text = cut[2];
+  text = text.replaceAll('\r\n','\t').replaceAll('\r','\t').replaceAll('\n','\t').replaceAll(/\s{2,}/g,'\t');
+  by = 0 <= text.indexOf('\t') ? '\t' : /\s+/;
+  all = text.split(by).map(function(one){ return one.flat().trim() }).filter(Boolean);
+  return all.sort(function(a, b){ return a.toLowerCase().localeCompare(b.toLowerCase()) });
 };
-
+CMD.draw = function(all, view, link){
+  view.all('a:not(#up):not(#add)').forEach(function(one){ one.remove() });
+  all.forEach(function(name){
+    link = CMD.item.content.firstElementChild.cloneNode(true);
+    link.where = name; link.file = name.includes('.') && '.' !== name && '..' !== name;
+    link.textContent = name + (link.file ? '' : '/');
+    CMD.add.pin(link, -1);
+  });
+  view.scrollLeft = (view.scrollWidth - view.clientWidth) / 2;
+};
 CMD.path = '~';
 CMD.base = function(cmd, hit){
   hit = cmd.match(/\bcd\s+(.+?)\s+&&\s+ls\b/);
   if(hit){ CMD.path = hit[1].replace(/\\(.)/g, '$1') }
 };
-CMD.go = function(item, part, out){
-  part = (CMD.path + '/' + item).split('/');
-  out = [];
-  part.forEach(function(v){
-    if(!v || '.' === v){ return }
-    if('..' === v){ if(out.length > 1){ out.pop() } return }
-    out.push(v);
+CMD.go = function(name, part, out, root){
+  root = '/' === CMD.path.charAt(0) ? '/' : '~';
+  part = CMD.path.replace(/^~\/?|^\//, '').concat('/', name).split('/'); out = [];
+  part.forEach(function(one){
+    if(!one || '.' === one){ return }
+    if('..' === one){ out.pop(); return }
+    out.push(one);
   });
-  return out.join('/') || '~';
+  return root + (out.length ? ('/' === root ? '' : '/') + out.join('/') : '');
 };
 CMD.arg = function(path){ return path.replace(/[^\w@%+=:,./~-]/g, '\\$&') };
-kit.createServer(function(req){
-  CMD.ls((req.body || {}).$, list);
-});
-CMD.pop = function(item){
-  pop.classList.add('live');
-  kit.say({name:item.where, file:item.file}, 'ls.pop', pop);
-  navigator?.vibrate?.(33);
+CMD.hide = function(){ CMD.menu.tag('live', -1) };
+CMD.pop = function(link, view){
+  view = CMD.menu; view.tag('live', 1);
+  kit.fetch(view, {name:link.where, file:link.file}).catch(CMD.hide);
+  if(navigator.vibrate){ navigator.vibrate(33) }
 };
-up.where = '..';
+B.all('#up')[0].where = '..';
+kit.ear('ls.hide', CMD.hide);
 
-kit.ear('ls.hide', function(){ pop.classList.remove('live') });
-
-B.ear('click',(eve, a, path, cmd)=>{ a = eve.target.closest('list a');
-  if(!a || !a.closest('list')){ return }
-  if(!a.where){ return }
-  if(a.file){
-    kit.say('cat '+CMD.arg(a.where), 'prompt.add');
-    return;
-  }
-  path = CMD.go(a.where);
-  cmd = 'cd '+CMD.arg(path)+' && ls .';
-  localStorage.pwd = cmd;
-  kit.say(cmd, 'prompt');
+B.ear('click', function(eve, link, path, cmd){
+  link = eve.target.closest('list a');
+  if(!link || !link.where){ return }
+  if(link.file){ kit.say('cat ' + CMD.arg(link.where), 'prompt.add'); return }
+  path = CMD.go(link.where); cmd = 'cd ' + CMD.arg(path) + ' && ls .';
+  localStorage.pwd = cmd; kit.say(cmd, 'prompt');
 });
-
-B.ear('contextmenu', (eve, a)=>{ a = eve.target.closest('list a');
-  if(!a || !a.where){ return }
-  eve.preventDefault();
-  CMD.pop(a);
+B.ear('contextmenu', function(eve, link){
+  link = eve.target.closest('list a');
+  if(!link || !link.where){ return }
+  eve.preventDefault(); CMD.pop(link);
 });
-B.ear('touchstart', (eve, a)=>{
-  a = eve.target.closest('list a');
-  if(!a || !a.where){ return }
-  clearTimeout(CMD.to);
-  CMD.to = setTimeout(()=>{
-    CMD.pop(a);
-  }, 999/2);
+B.ear('touchstart', function(eve, link){
+  link = eve.target.closest('list a');
+  if(!link || !link.where){ return }
+  clearTimeout(CMD.to); CMD.to = setTimeout(function(){ CMD.pop(link) }, 999/2);
 });
+B.ear('touchmove touchend touchcancel', function(){ clearTimeout(CMD.to) });
 
-B.ear('touchmove touchend touchcancel',(eve)=>{ clearTimeout(CMD.to) });
-
-(async function(){ return;
-  kit.say('ls .\nasdf\tqwertyuiop\thjkl\tzxcvbnmtyrueiwoqp1\tbnvm', 'ls');
-}());
+kit.say([['ls','ls .'],['git','git status'],['npm','npm '],['kill','kill '],['clear','clear']], 'belt');
+kit.say([['claude','claude '],['codex','codex '],['grok','grok '],['agy','agy '],['opencode','opencode '],['aid','aid ']], 'belt');
 </script>

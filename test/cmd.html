@@ -27,9 +27,9 @@ TEST.git = function(all, i, doc, view, text){
   for(i = 0; i < all.length; i += 1){
     if(!/\/cmd\/git\.html(?:[?#]|$)/.test(all[i].src)){ continue }
     doc = all[i].contentDocument;
-    view = doc && doc.querySelector('body > iframe');
+    view = doc && doc.querySelector('#app > iframe');
     doc = view && view.contentDocument;
-    view = doc && doc.getElementById('all');
+    view = doc && doc.querySelector('[name="body"]');
     text = view && view.textContent.replace(/\s+/g, ' ').trim();
     TEST.seen = text || TEST.seen;
     if(view && !view.hidden && 'Branch main is up to date with origin/main.' === text){ return true }
@@ -43,13 +43,16 @@ TEST.wait = async function(fn, i){
   throw Error('git status rendered ' + (TEST.seen || 'nothing'));
 };
 TEST.run = async function(){
-  var name, start = performance.now();
+  var name, count = 0, pick = new URLSearchParams(location.search).get('cmd'), start = performance.now();
   for(name in TEST.data){
-    await kit.fetch('../cmd/' + name + '.html', {'#':name, '$':TEST.data[name]});
+    if(pick && pick !== name){ continue }
+    TEST.now = name; count += 1;
+    await kit.fetch('../cmd/' + name + '.html', TEST.data[name]);
+    await new Promise(function(ok){ setTimeout(ok, 50) });
   }
-  await TEST.wait(TEST.git);
-  result.textContent = 'PASS ' + Object.keys(TEST.data).length + ' finite command components (' + Math.ceil(performance.now() - start) + 'ms)';
+  if(!pick || 'git' === pick){ TEST.now = 'git view'; await TEST.wait(TEST.git) }
+  result.textContent = 'PASS ' + count + ' finite command components (' + Math.ceil(performance.now() - start) + 'ms)';
 };
-window.addEventListener('load', function(){ TEST.run().catch(function(err){ result.textContent = 'FAIL ' + (err.stack || err) }) });
+window.addEventListener('load', function(){ TEST.run().catch(function(err){ result.textContent = 'FAIL ' + TEST.now + '\n' + (err.stack || err) }) });
 }(window.TEST = {}));
 </script>

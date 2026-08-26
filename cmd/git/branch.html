@@ -1,43 +1,55 @@
-<link rel="stylesheet" href="../../gun/kit/web.css"><script src="../../gun/kit/web.js"></script>
+<link rel="stylesheet" href="../../gun/kit/web.css"><script src="../../gun/kit/web.js"></script><script src="../../gun/kit/dom.js"></script>
+<link rel="stylesheet" href="../../app.css">
+
+<nav id="list"></nav>
+<template id="row"><a><span name="label"></span></a></template>
 
 <style>
-:root {
-  --fill: var(--mood);
-  --mo-od: white;
-  --m0-0d: 100%,100%,100%;
-}
+:root { --fill: var(--mood); --mo-od: white; --m0-0d: 100%,100%,100%; }
 </style>
 <script>
-kit.createServer(function(req){ var f = (req.body || {}).$ || "";
-  var lines = f.trim().split('\n').slice(1);
-  lines.forEach(function(l){
-    if(!l.trim()){ return }
-    if(l.match(/(?:\$|#|>|PS>)\s*git/)){ return }
-    
-    var on = '*' == l[0];
-    var name = l;//.substring(1).trim();
-    if(name.indexOf('->') > -1){ return } // skip remote HEAD pointer
-    
-    var print = name;
-    print = print.replace('remotes/','').replace('origin/','');
-    
-    var go = name;
-    if(name.startsWith('remotes/')){
-      var parts = name.split('/');
-      if(parts.length >= 3) go = parts.slice(2).join('/');
-    }
-    
-    var a = document.new('a');
-    a.textContent = print;
-    if(on){ a.tag('active',1) }
-    
-    a.onclick = function(){
-      kit.say('git checkout ' + go, 'prompt');
-    };
-    document.body.append(a);
-  });
+;(function(G){
+var B = document.body, list = B.all('#list')[0], row = B.all('#row')[0];
+
+kit.createServer(function(req, res){
+  G.draw(G.read(req.body));
+  res.send(document);
 });
+
+G.text = function(raw, out, i){
+  if(raw && 'object' === typeof raw && !Array.isArray(raw)){ raw = raw.$ || raw.raw || '' }
+  if(Array.isArray(raw)){
+    out = '';
+    for(i = 0; i < raw.length; i += 1){ out += G.text(raw[i]) }
+    raw = out;
+  }
+  return String(raw || '').replace(/\x1B(?:\[[0-?]*[ -\/]*[@-~]|\][^\x07]+\x07)/g, '');
+};
+
+G.read = function(raw, out, all, i, line, name, show, go){
+  out = []; all = G.text(raw).split(/\r\n|\n|\r/);
+  for(i = 0; i < all.length; i += 1){
+    line = all[i];
+    if(!/^[*+ ] /.test(line)){ continue }
+    name = line.slice(2).trim();
+    if(!name || 0 <= name.indexOf(' -> ')){ continue }
+    show = name.replace(/^remotes\//, '').replace(/^origin\//, '');
+    go = 0 === name.indexOf('remotes/') ? name.split('/').slice(2).join('/') : name;
+    out.push({label:show, go:go, on:'*' === line.charAt(0)});
+  }
+  return out;
+};
+
+G.draw = function(data, i, item, link){
+  list.replaceChildren();
+  for(i = 0; i < data.length; i += 1){
+    item = data[i]; link = row.content.firstElementChild.cloneNode(true);
+    kit.bind(link, {label:item.label});
+    if(item.on){ link.tag('active', 1) }
+    link.go = item.go;
+    link.ear('click', function(){ kit.say('git checkout ' + this.go, 'prompt') });
+    list.pin(link);
+  }
+};
+}(window.GIT = {}));
 </script>
-<script src="../../gun/kit/dom.js"></script>
-<script src="../../util.js"></script>
-<link rel="stylesheet" href="../../app.css">

@@ -7,9 +7,9 @@
   <div id="out" class="out procs"></div>
 </div>
 <div id="rowTpl" class="proc model">
-  <span class="pid"></span>
-  <span class="pname"></span>
-  <button class="kill">kill</button>
+  <span name="pid" class="pid"></span>
+  <span name="cmd" class="pname"></span>
+  <button class="kill" type="button" onclick="PS.kill(this)">kill</button>
 </div>
 <style>
 body { display: block; min-height: 0; overflow: hidden; }
@@ -22,25 +22,35 @@ body { display: block; min-height: 0; overflow: hidden; }
 </style>
 <script src="../util.js"></script>
 <script>
-kit.createServer(function(req){
-  var s = ((req.body || {}).$ || '').flat().trim().split('\n');
-  var tpl = B.all('#rowTpl')[0];
-  var out = B.all('#out')[0];
-  out.replaceChildren();
-  var lines = s.slice(1);
-  if(lines.length && lines[0].includes('PID')) lines = lines.slice(1);
-  lines.forEach(function(l) {
-    l = l.trim(); if(!l) return;
-    var p = l.split(/\s+/);
-    var pid = p[0]; if(isNaN(parseInt(pid))) pid = p[1];
-    var name = p.slice(3).join(' ') || p.join(' ');
-    var row = tpl.cloneNode(true);
-    row.id = ''; row.classList.remove('model');
-    row.all('.pid')[0].textContent = pid;
-    row.all('.pname')[0].textContent = name;
-    row.all('.kill')[0].onclick = function(){ kit.say('kill -9 '+pid,'prompt.add.set') };
-    out.append(row);
-  });
-  out.scrollTop = out.scrollHeight;
+kit.createServer(function(req, res){
+  PS.draw(PS.read(req.body));
+  res.send(document);
 });
+var PS = {};
+PS.read = function(raw, lines, list){
+  lines = (raw || '').flat().trim().split('\n').slice(1);
+  if(lines.length && lines[0].includes('PID')){ lines.shift() }
+  list = [];
+  lines.forEach(function(line, part, pid){
+    line = line.trim(); if(!line){ return }
+    part = line.split(/\s+/); pid = part[0];
+    if(isNaN(parseInt(pid))){ pid = part[1] }
+    list.push({pid:pid, cmd:part.slice(3).join(' ') || part.join(' ')});
+  });
+  return list;
+};
+PS.draw = function(list, out, tpl){
+  out = B.all('#out')[0];
+  tpl = B.all('#rowTpl')[0];
+  out.replaceChildren();
+  list.forEach(function(data, row){
+    row = tpl.cloneNode(true);
+    row.id = ''; row.tag('model', -1);
+    out.pin(kit.bind(row, data));
+  });
+};
+PS.kill = function(button, row){
+  row = button.closest('.proc');
+  kit.say('kill -9 '+row.all('[name="pid"]')[0].textContent, 'prompt.add.set');
+};
 </script>

@@ -76,9 +76,14 @@ W[ON]('message',function(eve,data,i){
       return;
     }
   }
+  if(i.hasAttribute('sandbox')&&!i.sandbox.contains('allow-same-origin'))return
   i.readyState = 1;
 
-  if('ear'==data.type){ kit.ear(data.detail||data.data,function hear(eve){ if(!(i||'').contentWindow){hear.off(); return } if(kit._echo && kit._echo.i === i && kit._echo.t === eve.type){ return } if(((eve.target||'').tagName) === 'IFRAME'){ return } i.contentWindow.postMessage({data:eve.detail||eve.data,type:eve.type,wrap:-1}, DEV?'*':location.origin) }); return; }
+  if('ear'==data.type){
+    var t=data.detail||data.data, set=i.ears||(i.ears=new Set);
+    if(set.has(t))return;set.add(t);
+    kit.ear(t,function hear(eve){ if(!(i||'').contentWindow){hear.off(); return } if(eve.defaultPrevented || kit._echo && kit._echo.i === i && kit._echo.t === eve.type){ return } if(((eve.target||'').tagName) === 'IFRAME'){ return } i.contentWindow.postMessage({data:eve.detail||eve.data,type:eve.type,wrap:-1}, DEV?'*':location.origin) }); return
+  }
   kit._echo = {i:i,t:data.type}; kit.say(data.data||data.detail,data.type,i,data.wrap||1); kit._echo = null;
 });
 kit.views = new Map;
@@ -343,7 +348,31 @@ kit.ear('style',function(eve,i){
 },document);
 
 ;(function(){
-var tag=Math.random().toString(36).slice(2),seq=0,job={},pool={},late=[],live=new WeakMap,nav=new WeakMap,busy=new WeakMap,server,skip;
+var tag=Math.random().toString(36).slice(2),seq=0,job={},pool={},late=[],live=new WeakMap,nav=new WeakMap,busy=new WeakMap,server,skip,seen;
+function root(node){ return node === W ? D : node || D }
+function read(node, top, body, key){
+  if(node !== top){
+    body = read(node.parentNode, top, body);
+    key = node.getAttribute && node.getAttribute('name');
+    if(key && null != body){ body = body[key] }
+  }
+  return body;
+}
+function head(node, top, key, name){
+  while(node !== top){ name = node.getAttribute && node.getAttribute('name'); if(name){ key = name } node = node.parentNode }
+  return key;
+}
+kit.bind = function(top, body, all, i, node, val){
+  top = root(top); top.bound=body; all = top.querySelectorAll('[name]');
+  for(i = 0; i < all.length; i += 1){
+    node = all[i]; if(null == body || !(head(node, top) in Object(body))){ continue } val = read(node, top, body);
+    node.hidden = U === val || null === val || false === val;
+    if(node.hidden || val && 'object' === typeof val){ continue }
+    if(/^(INPUT|TEXTAREA|SELECT)$/.test(node.tagName)){ node.value = val }
+    else { node.textContent = val }
+  }
+  return top;
+};
 function url(raw, out){
   out = new URL(raw || location.href, location.href);
   if(DEV ? 'file:' !== out.protocol : location.origin !== out.origin){ throw new TypeError('Kit URL must be local') }
@@ -387,7 +416,7 @@ function pump(view, list, req, src){
   req = list[0];
   if(live.get(view) !== req.url){
     try{ src = url(view.getAttribute('src')) }catch(err){ src = '' }
-    if(src !== req.url || view.readyState){ live.delete(view); view.readyState = 0; view.src = req.url }
+    if(src !== req.url || view.readyState){ live.delete(view); view.readyState = 0; view.src = req.url + '#kit' }
     return;
   }
   list.shift(); busy.set(view, req.ask); req.to = ''; say(view, req);
@@ -412,9 +441,11 @@ function seek(req, omit, hit){
   fail(req, 404);
 }
 function take(req, res){
+  req.query = kit.querystring.parse(new URL(req.url).search);
   if(!server){ if('loading' === D.readyState){ late.push(req) } else { fail(req, 501) } return }
-  res = {status:200, sent:0};
-  res.end = function(body){ if(res.sent){ return } res.sent = 1; done({reply:req.ask, code:res.status, body:body}) };
+  seen = 1; res = res || {status:200, sent:0};
+  res.end = res.end || function(body){ if(res.sent){ return } res.sent = 1; done({reply:req.ask, code:res.status, body:body}) };
+  res.send = function(node, body){ node = root(node); body=node.bound; node.bound=U; res.end(U === body ? (node.nodeType ? req.body : node) : body); return node };
   Promise.resolve().then(function(){ return server(req, res) }).then(function(data){ if(!res.sent){ res.end(data) } }, function(err){ if(!res.sent){ res.status = 500; res.end(err.message || ''+err) } });
 }
 function drain(no, list){ list = late; late = []; list.forEach(function(req){ no && !server ? fail(req, 501) : take(req) }) }
@@ -426,7 +457,7 @@ function ask(req, send){
 }
 function pod(src, view){
   view = pool[src]; if(view && view.isConnected){ return view }
-  view = D[HI]('iframe'); view.hidden = true; view.src = src; (D.body || D.documentElement).appendChild(view);
+  view = D[HI]('iframe'); view.hidden = true; view.src = src + '#kit'; (D.body || D.documentElement).appendChild(view);
   return pool[src] = view;
 }
 kit.fetch = function(to, body, target, view, src, req, aim){
@@ -444,7 +475,10 @@ kit.fetch = function(to, body, target, view, src, req, aim){
     return ask(req, function(msg){ push(pod(src), msg) });
   }catch(err){ return Promise.reject(err) }
 };
-kit.createServer = function(fn){ server = fn || function(){}; drain() };
+kit.createServer = function(fn){
+  server = fn || function(){}; Promise.resolve().then(drain);
+  if(location.search && '#kit' !== location.hash){ W[ON]('load', function(){ if(seen){ return } take({url:location.href, body:kit.querystring.parse(location.search)}, {status:200, end:function(){}}) }) }
+};
 kit.ears.http = 1;
 D[ON]('ready', wake);
 W[ON]('http', function(eve, msg, src, one){
@@ -482,14 +516,13 @@ Object.defineProperty(location, 'path', {
 });
 
 kit.querystring = {
-  parse: function(qs){ return Object.fromEntries((new URLSearchParams(qs)).entries()) }
+  parse: function(qs){ return Object.fromEntries(new URLSearchParams(qs)) }
 }
 kit.fs = {files:{},
   createReadStream(url){ url = (url||'').replace(location.__dirname+'/','').split('#')[0];
-    //console.log("fs.cRS:", url);
     var data = this.files[url], end = 0, tmp;
     return {_:{},
-      on(eve,cb){ this._[eve] = cb; 'open'==eve&&setTimeout(cb, 0); return this }, // fake immediate open
+      on(eve,cb){ this._[eve] = cb; 'open'==eve&&setTimeout(cb, 0); return this },
       pipe(dest){ var rs = this, i;
         if(end){ return dest } end = 1;
         function load(){ (data = i).onload = 0;;
