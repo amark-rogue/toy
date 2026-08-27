@@ -1,5 +1,6 @@
 <link rel="stylesheet" href="../gun/kit/web.css">
 <script src="../gun/kit/web.js"></script>
+<script src="../gun/kit/dom.js"></script>
 
 <div class="box">
   <div class="bar">
@@ -39,12 +40,16 @@ button { color: inherit; background: transparent; border: 1px solid var(--pop); 
 
 <script src="../util.js"></script>
 <script>;(function(){
+kit.createServer(function(req, res){
+  CLD.ask(req.body);
+  res.send(document);
+});
 
 var hd  = B.all('#hd')[0];
 var sid = B.all('#sid')[0];
 var bod = B.all('#bod')[0];
 var stop = B.all('#stop')[0];
-sid.onclick = function(){ if(CLD.sid) kit.up('claude --resume '+CLD.sid+' ', 'prompt.try') };
+sid.ear('click', function(){ if(CLD.sid) kit.up('claude --resume '+CLD.sid+' ', 'prompt.add.set') });
 
 var CLD = {};
 CLD.sid = null;
@@ -105,14 +110,14 @@ CLD.stream = function(ev){
     var blk = se.content_block || {};
     if(blk.type === 'text'){
       var v = B.all('.tpl.txt')[0].cloneNode(true);
-      v.classList.remove('tpl'); v.textContent = '';
-      bod.append(v);
+      v.tag('tpl', -1); v.textContent = '';
+      bod.pin(v);
       CLD.blocks[idx] = {el: v, type: 'text', text: ''};
     } else if(blk.type === 'thinking'){
       var v = B.all('.tpl.thk')[0].cloneNode(true);
-      v.classList.remove('tpl');
-      v.querySelector('.tog').onclick = function(){ v.classList.toggle('open') };
-      bod.append(v);
+      v.tag('tpl', -1);
+      v.all('.tog')[0].ear('click', function(){ v.tag('open') });
+      bod.pin(v);
       CLD.blocks[idx] = {el: v, type: 'thinking', text: ''};
     }
     kit.say({}, 'style');
@@ -128,7 +133,7 @@ CLD.stream = function(ev){
     }
     if(d.type === 'thinking_delta' && d.thinking){
       b.text += d.thinking;
-      b.el.querySelector('.inn').textContent = b.text;
+      b.el.all('.inn')[0].textContent = b.text;
     }
     kit.say({}, 'style');
   }
@@ -148,16 +153,16 @@ CLD.msg = function(msg){
 
 CLD.text = function(t){
   var v = B.all('.tpl.txt')[0].cloneNode(true);
-  v.classList.remove('tpl'); v.textContent = t;
-  bod.append(v); kit.say({}, 'style');
+  v.tag('tpl', -1); v.textContent = t;
+  bod.pin(v); kit.say({}, 'style');
 };
 
 CLD.think = function(t){
   var v = B.all('.tpl.thk')[0].cloneNode(true);
-  v.classList.remove('tpl');
-  v.querySelector('.inn').textContent = t;
-  v.querySelector('.tog').onclick = function(){ v.classList.toggle('open') };
-  bod.append(v); kit.say({}, 'style');
+  v.tag('tpl', -1);
+  v.all('.inn')[0].textContent = t;
+  v.all('.tog')[0].ear('click', function(){ v.tag('open') });
+  bod.pin(v); kit.say({}, 'style');
 };
 
 // host runs the real tool; we only log a short $ line (+ result later)
@@ -169,33 +174,29 @@ CLD.tool = function(name, inp){
     tip = (name || 'tool') + (a ? ' ' + a : '');
   }
   var v = B.all('.tpl.txt')[0].cloneNode(true);
-  v.classList.remove('tpl');
-  v.classList.add('run');
+  v.tag('tpl', -1);
+  v.tag('run', 1);
   v.textContent = '$ ' + tip;
-  bod.append(v);
+  bod.pin(v);
   CLD.lastTool = v;
   kit.say({}, 'style');
 };
 
 CLD.fail = function(t){
   var v = B.all('.tpl.fail')[0].cloneNode(true);
-  v.classList.remove('tpl'); v.textContent = t;
-  bod.append(v); kit.say({}, 'style');
+  v.tag('tpl', -1); v.textContent = t;
+  bod.pin(v); kit.say({}, 'style');
 };
 
 CLD.usr = function(txt){
   var u = B.new('pre');
   u.className = 'usr blk';
   u.textContent = '> ' + txt;
-  bod.append(u);
+  bod.pin(u);
   kit.say({}, 'style');
 };
 
-kit.ear('claude', function(eve){
-  var d = eve.detail || eve.data || {};
-
-  if(d.type === 'claude' || d['^']){ CLD.got(d); return }
-
+CLD.ask = function(d){
   var raw = typeof d === 'string' ? d : (d.raw || d.$ || d.prompt || '');
   raw = raw.cmd();
   CLD.job = (typeof d === 'object' && d['#']) ? d['#'] : (CLD.job || '1');
@@ -210,12 +211,17 @@ kit.ear('claude', function(eve){
 
   CLD.usr(say);
   CLD.send(say);
+};
+
+kit.ear('claude', function(eve){
+  var d = eve.detail || eve.data || {};
+  if(d.type === 'claude' || d['^']){ CLD.got(d) }
 });
 
-stop.onclick = function(){
+stop.ear('click', function(){
   if(!CLD.on){ return }
   CLD.send('', 'stop');
   CLD.done();
-};
+});
 
 }());</script>

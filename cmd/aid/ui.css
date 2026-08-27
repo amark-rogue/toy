@@ -1,0 +1,33 @@
+body { display: block; min-height: 0; }
+button, input { font: inherit; color: inherit; }
+.aid { margin: 0.35em 0.55em; text-align: left; }
+.bar { display: flex; align-items: center; gap: 0.5em; margin-bottom: 0.4em; }
+.title { flex: 1; opacity: 0.72; overflow-wrap: anywhere; }
+.stop, .send, .picks button { min-height: 2.6em; min-width: 3.6em; border: 1px solid currentColor; border-radius: 0.8em; background: transparent; padding: 0.35em 0.75em; }
+.feed { display: grid; gap: 0.42em; }
+.card { min-width: 0; margin: 0; padding: 0.45em 0.6em; border-left: 2px solid color-mix(in srgb, currentColor 45%, transparent); }
+.card pre { margin: 0.25em 0 0; white-space: pre-wrap; overflow-wrap: anywhere; font: 0.82em/1.35 'Courier New', monospace; }
+.stat, .done { opacity: 0.62; padding-block: 0.1em; border: 0; }
+.think, .tool { opacity: 0.78; }
+.think summary, .tool summary, .diff summary, .fold summary { min-height: 2.5em; cursor: pointer; align-items: center; }
+.think summary, .tool summary { display: flex; }
+.tool i { margin-left: 0.5em; font-size: 0.72em; opacity: 0.7; }
+.tool.live i::after { content: 'running'; }
+.tool.done i::after { content: 'done'; }
+.tool.bad, .fail { color: #ff5078; }
+.md { min-width: 0; overflow-wrap: anywhere; }
+.md > :first-child { margin-top: 0; }
+.md > :last-child { margin-bottom: 0; }
+.md p, .md blockquote, .md ul, .md ol { margin: 0.45em 0; }
+.md h1, .md h2, .md h3, .md h4, .md h5, .md h6 { margin: 0.7em 0 0.35em; line-height: 1.15; }
+.md ul, .md ol { padding-left: 1.5em; }
+.md blockquote { padding-left: 0.7em; border-left: 2px solid currentColor; opacity: 0.84; }
+.md code { font: 0.86em/1.35 'Courier New', monospace; }
+.md .code { overflow: auto; padding: 0.45em; border: 1px solid color-mix(in srgb, currentColor 28%, transparent); border-radius: 0.45em; white-space: pre; }
+.md .span { padding: 0.08em 0.25em; border: 1px solid color-mix(in srgb, currentColor 22%, transparent); border-radius: 0.25em; }
+.md a { color: inherit; text-decoration-thickness: 0.08em; }
+.plan ol { margin: 0.3em 0 0; padding-left: 1.5em; }
+.ask form { display: flex; flex-wrap: wrap; gap: 0.4em; margin-top: 0.5em; }
+.ask input { flex: 1 1 10em; min-height: 2.6em; min-width: 6em; box-sizing: border-box; border: 1px solid currentColor; border-radius: 0.8em; background: transparent; padding: 0.35em 0.65em; }
+.picks { display: flex; flex-wrap: wrap; gap: 0.4em; }
+.hide, .model { display: none; }

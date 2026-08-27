@@ -1,38 +1,42 @@
 <link rel="stylesheet" href="../gun/kit/web.css">
-<script src="../gun/kit/web.js"></script>
-<script src="../gun/kit/dom.js"></script>
+<link rel="stylesheet" href="./aid/ui.css">
+<script src="../gun/kit/web.js"></script><script src="../gun/kit/dom.js"></script>
 
-<div class="aid"></div>
+<section class="aid">
+  <header class="bar hide"><span class="title">aid</span><button class="stop" type="button">Stop</button></header>
+  <div class="feed" role="log" aria-live="polite"></div>
+</section>
 
-<!-- templates -->
 <div class="model">
-  <pre class="line"></pre>
-  <pre class="line step"></pre>
+  <article class="card say"><div class="md"></div></article>
+  <details class="card think"><summary>Thinking …</summary><div class="md"></div></details>
+  <article class="card stat"><small></small></article>
+  <details class="card tool"><summary><b></b><i></i></summary><pre></pre></details>
+  <article class="card plan"><b>Plan</b><ol><li></li></ol></article>
+  <article class="card ask"><b></b><pre></pre><form><input aria-label="Reply" autocomplete="off"><span class="picks"><button type="button"></button></span><button class="send" type="submit">Send</button></form></article>
+  <details class="card diff"><summary>Changes</summary><pre></pre></details>
+  <article class="card done"><small></small></article>
+  <article class="card fail"><b>Error</b><pre></pre></article>
+  <div class="mark">
+    <p class="para"></p><h1 class="head1"></h1><h2 class="head2"></h2><h3 class="head3"></h3>
+    <h4 class="head4"></h4><h5 class="head5"></h5><h6 class="head6"></h6>
+    <blockquote class="quote"><div class="md"></div></blockquote>
+    <ul class="list"><li></li></ul><ol class="count"><li></li></ol>
+    <pre class="code"><code></code></pre><hr class="rule">
+    <strong class="bold"></strong><em class="ital"></em><s class="del"></s><code class="span"></code>
+    <a class="link" target="_blank" rel="noopener noreferrer"></a>
+    <details class="fold"><summary></summary><div class="md"></div></details>
+  </div>
 </div>
 
-<style>
-body { display: block; min-height: 0; }
-.aid { margin: 0.3em 0.6em; }
-.line { white-space: pre-wrap; word-break: break-word; margin: 0 0 0.3em; font-family: 'Courier New', monospace; font-size: 0.85em; text-align: left; }
-.step { opacity: 0.6; border-left: 2px solid color-mix(in srgb, var(--pop) 40%, transparent); padding-left: 0.5em; }
-</style>
-
-<script src="../util.js"></script>
+<script src="./aid/card.js"></script>
+<script src="./aid/mark.js"></script>
+<script src="./aid/ui.js"></script>
+<script src="./aid/host.js"></script>
 <script>
-// aid — renders the browser agent stream; the agent lives beside the demo host in app.html
-var AID = {}, box = document.body.all('.aid')[0], mark = document.body.all('.model .line')[0];
-AID.seen = {};
-
-kit.ear('aid', function(eve){
-  var d = eve.detail || eve.data || {};
-  var key = (d['#'] || '') + ':' + (d.n || '');
-  if(!d.say || AID.seen[key]){ return } // relays may double deliver
-  AID.seen[key] = 1;
-  var v = mark.cloneNode(1);
-  v.classList.remove('step');
-  if('(' === d.say.charAt(0)){ v.classList.add('step') }
-  v.textContent = d.say;
-  box.pin(v);
-  kit.say({}, 'style');
+kit.createServer(function(req, res){
+  if(aid.host.take(req.body)){ res.send(document); return }
+  if(aid.host.miss(req.body)){ res.send(document); aid.host.open(req.body); return }
+  AID.host(req.body); res.send(document);
 });
 </script>
