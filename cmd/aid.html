@@ -1,3 +1,5 @@
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; script-src-attr 'none'; style-src 'self'; style-src-attr 'none'; connect-src http: https:; img-src 'none'; media-src 'none'; font-src 'none'; frame-src 'none'; child-src 'none'; worker-src 'none'; object-src 'none'; form-action 'none'; base-uri 'none'; manifest-src 'none'">
+<meta name="referrer" content="no-referrer">
 <link rel="stylesheet" href="../gun/kit/web.css">
 <link rel="stylesheet" href="./aid/ui.css">
 <script src="../gun/kit/web.js"></script><script src="../gun/kit/dom.js"></script>
@@ -24,7 +26,7 @@
     <ul class="list"><li></li></ul><ol class="count"><li></li></ol>
     <pre class="code"><code></code></pre><hr class="rule">
     <strong class="bold"></strong><em class="ital"></em><s class="del"></s><code class="span"></code>
-    <a class="link" target="_blank" rel="noopener noreferrer"></a>
+    <a class="link" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer"></a>
     <details class="fold"><summary></summary><div class="md"></div></details>
   </div>
 </div>
@@ -33,10 +35,4 @@
 <script src="./aid/mark.js"></script>
 <script src="./aid/ui.js"></script>
 <script src="./aid/host.js"></script>
-<script>
-kit.createServer(function(req, res){
-  if(aid.host.take(req.body)){ res.send(document); return }
-  if(aid.host.miss(req.body)){ res.send(document); aid.host.open(req.body); return }
-  AID.host(req.body); res.send(document);
-});
-</script>
+<script src="./aid/main.js"></script>

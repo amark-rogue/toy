@@ -22,7 +22,16 @@ The agent can read trees and line ranges, search text, write or exactly edit fil
 
 Project trees print complete paths relative to the working folder so a model never has to infer a child's parent from indentation. Exact paths always win. If a model nevertheless drops or stales a path, read and find may recover only one same-named item found within the bounded current project tree and report the exact substitution with their evidence. Multiple matches are returned as choices instead of being guessed, and mutating tools never repair a path. Every failed result is marked as failed and carries an explicit warning not to treat the attempted action as observed fact.
 
-Final replies render as safe Markdown. User-visible progress and tool cards stay folded by default so multi-step work does not bury the conclusion; opening a fold renders its contents on demand. The renderer never mounts model HTML and rejects unsafe link schemes. A component extension may add a line or inline rule through `AID.md.use('line', fn)` or `AID.md.use('span', fn)`.
+Final replies render as safe Markdown. User-visible progress and tool cards stay folded by default so multi-step work does not bury the conclusion; opening a fold renders its contents on demand. The renderer never mounts model HTML and permits only credential-free HTTP(S), mail, and phone links. The component policy independently allows only same-origin script and CSS plus the HTTP(S) connections aid explicitly needs; it denies inline script, inline CSS, images, media, fonts, frames, objects, workers, and form submission.
+
+A trusted same-origin component may add a line or inline rule through `AID.md.use('line', fn)` or `AID.md.use('span', fn)`. The function receives only a frozen text view: `{kind, at, text, all?}`. It returns `{at, name, text, url?, head?}`, where `name` selects a declared safe model under `.mark`; returned text is always assigned with `textContent`, links pass the same URL policy, and every CSS, HTML, event, source, or arbitrary attribute field is ignored. Extensions do not receive the live output DOM. Extension JavaScript itself is privileged application code—not an untrusted plugin sandbox—and must be reviewed like any other same-origin script.
+
+```js
+AID.md.use('span', function(ctx){
+  var hit = /^==([^=]+)==/.exec(ctx.text.slice(ctx.at));
+  return hit && {at:ctx.at + hit[0].length, name:'bold', text:hit[1]};
+});
+```
 
 ## Roles
 
@@ -55,7 +64,7 @@ aid past launch plan
 
 The model may read memory and open commitments at the start of a session. Their contents therefore become part of the prompt sent to the selected provider. It is instructed not to infer memories or store secrets. Model-requested memory or todo changes require permission; direct CLI commands are already explicit user actions. A todo may carry a due date through the tool API and is surfaced in future sessions, but a static page cannot wake itself after the browser closes or silently send mail, book meetings, or operate accounts. Those actions need an explicit future connector; aid never claims a draft was sent.
 
-`web(url, word)` performs a credential-free GET with cookies and referrer omitted, parses fetched HTML in an inert document, and returns plain text and links without mounting remote markup. Model-requested network access asks once or for the session, and browser CORS still applies. `past` searches only local aid transcripts and likewise asks before an old transcript is sent back to a provider. Neither tool exposes the agent state directory as a project path.
+`web(url, word)` performs a credential-free GET with cookies and referrer omitted, scans fetched markup as an ordinary string, and returns plain text plus credential-free HTTP(S) links. It does not invoke an HTML parser, create a fetched-page DOM, mount remote markup, interpret CSS, or initiate its subresource URLs. Model-requested network access asks once or for the session, and browser CORS still applies. `past` searches only local aid transcripts and likewise asks before an old transcript is sent back to a provider. Neither tool exposes the agent state directory as a project path.
 
 ## Providers
 
@@ -113,6 +122,7 @@ Model-visible context is bounded separately from the durable transcript. Compact
 
 ```sh
 node test/test-aid.js
+node test/test-aid-safe.js
 node test/test-aid-wire.js
 node test/test-aid-host.js
 ```
