@@ -336,6 +336,16 @@ assert(/```tool\n\{"tool":"read"/.test(ctx.aid.net.flat([{role:'assistant', call
   got = await ctx.aid.use.web({url:'https://example.test/info', word:'needle'}, run); ctx.fetch = oldfetch;
   assert(/example\.test\/info/.test(got) && /needle line/.test(got) && !/first line/.test(got), 'web retrieves and narrows a public page');
 
+  ctx.DOMParser = function(){ throw Error('fetched HTML must not enter a DOM parser') };
+  got = ctx.aid.web.html('<title>Safe &amp; title</title><style>@import url(https://leak.test/css)</style><script>fetch("https://leak.test/run")</script>' +
+    '<p onclick="location=\'/bad\'">Hello <b>world</b></p><img src="https://leak.test/pixel" onerror="alert(1)">' +
+    '<a href="java&#x73;cript:alert(1)">bad</a><a href="https://user:pass@example.test/private">cred</a>' +
+    '<a href="/safe?q=1&amp;x=2">Good <em>link</em></a><svg><a href="https://leak.test/svg">svg</a></svg>', 'https://example.test/page');
+  delete ctx.DOMParser;
+  assert(/^Safe & title\n/.test(got) && /Hello world/.test(got), 'web string scanner keeps visible page text and entities');
+  assert(/Good link · https:\/\/example\.test\/safe\?q=1&x=2/.test(got), 'web string scanner keeps only resolved credential-free HTTP links');
+  assert(!/leak\.test|javascript:|user:pass|onclick|onerror|@import|fetch\(/.test(got), 'web string scanner never exposes or activates executable and subresource markup');
+
   var boss = await ctx.aid.fresh('delegate research', 'work', chiefid), play2 = [
     '{"tool":"find","word":"map","path":"/root/gun/gun.js"}',
     'The map function is on line 2.'

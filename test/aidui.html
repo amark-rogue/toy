@@ -10,11 +10,19 @@ TEST.wait = async function(fn, note){
   throw Error(note);
 };
 TEST.run = async function(){
-  var doc = view.contentDocument, rows;
+  var doc = view.contentDocument, win = view.contentWindow, rows, ext;
+  win.AID.md.use('span', function(ctx){
+    var hit; ext = ctx; hit = /^==([^=]+)==/.exec(ctx.text.slice(ctx.at));
+    return hit && {at:ctx.at + hit[0].length, name:'bold', text:hit[1], html:'<img src=/aidleak>', style:'background:url(/aidleak)', onclick:'location=/aidleak'};
+  });
+  win.AID.md.use('line', function(ctx){
+    if(':::safe' !== ctx.text){ return null }
+    return {at:ctx.at + 1, name:'fold', head:'Safe extension', text:'<style>@import "/aidleak"</style>', src:'/aidleak'};
+  });
   kit.say({kind:'think', n:1, '#':'7', id:'work', say:'Searching **files**', live:1}, 'aid', view);
   kit.say({kind:'tool', n:2, '#':'7', id:'call', name:'find', say:'gun.js'}, 'aid', view);
   kit.say({kind:'think', n:3, '#':'7', id:'last', say:'Writing'}, 'aid', view);
-  kit.say({kind:'say', n:4, '#':'7', id:'last', say:'# Fixed\n\nSafe **result** with `<b>text</b>` and [bad](javascript:alert(1)).', done:1}, 'aid', view);
+  kit.say({kind:'say', n:4, '#':'7', id:'last', say:'# Fixed\n\n:::safe\n\nSafe **result** with `<b>text</b>`, ==extension==, [good](https://example.test/path), [bad](javascript:alert(1)), [data](data:text/html,bad), [file](file:///etc/passwd), and <img src="/aidleak" onerror="location=/aidleak"><style>@import "/aidleak"</style>.', done:1}, 'aid', view);
   kit.say({kind:'say', n:5, '#':'7', id:'plain', say:'Status ready'}, 'aid', view);
   await TEST.wait(function(){ return doc.querySelector('.feed .say strong') }, 'Markdown did not render');
   rows = doc.querySelectorAll('.feed .card');
@@ -22,10 +30,18 @@ TEST.run = async function(){
   if(doc.querySelector('.feed .think').open || doc.querySelector('.feed .tool').open){ throw Error('work was not collapsed') }
   doc.querySelector('.feed .think').open = true;
   await TEST.wait(function(){ return doc.querySelector('.feed .think strong') }, 'folded Markdown did not render when opened');
-  if(doc.querySelector('.feed img') || doc.querySelector('.feed .say a')){ throw Error('unsafe Markdown became active HTML') }
+  if(!Object.isFrozen(ext) || 'box' in ext || 'md' in ext){ throw Error('an extension received live renderer authority') }
+  if(doc.querySelector('.feed img,.feed style,.feed script,.feed svg,.feed iframe,.feed [style],.feed [onclick],.feed [src]')){ throw Error('unsafe Markdown or extension fields became active DOM') }
+  if(win.performance.getEntriesByType('resource').some(function(one){ return /\/aidleak(?:$|[?#])/.test(one.name) })){ throw Error('hostile Markdown initiated a subresource request') }
+  var links = doc.querySelectorAll('.feed .say a');
+  if(1 !== links.length || 'https://example.test/path' !== links[0].href || 'no-referrer' !== links[0].referrerPolicy || !/noopener/.test(links[0].rel)){ throw Error('the link policy accepted an unsafe URL or weakened navigation') }
+  if(!Array.prototype.some.call(doc.querySelectorAll('.feed .say strong'), function(one){ return 'extension' === one.textContent })){ throw Error('a declarative extension did not render') }
+  if(!/Safe extension/.test(doc.querySelector('.feed .say .fold summary').textContent) || !/<style>/.test(doc.querySelector('.feed .say .fold .md').textContent)){ throw Error('extension text was interpreted instead of displayed') }
+  var csp = doc.querySelector('meta[http-equiv="Content-Security-Policy"]').content;
+  if(/unsafe-inline/.test(csp) || !/style-src 'self'/.test(csp) || !/img-src 'none'/.test(csp) || !/frame-src 'none'/.test(csp)){ throw Error('the aid component policy permits injected code or assets') }
   if('Fixed' !== doc.querySelector('.feed .say h1').textContent){ throw Error('final answer is not visible Markdown') }
   if(!doc.querySelector('.feed [data-id="plain"].say')){ throw Error('a direct final reply was folded') }
-  result.textContent = 'PASS safe Markdown, folded work, and visible final answer';
+  result.textContent = 'PASS safe Markdown, declarative extensions, CSP, folded work, and visible final answer';
 };
 view.addEventListener('load', function(){ TEST.run().catch(function(err){ result.textContent = 'FAIL\n' + (err.stack || err) }) });
 }(window.TEST = {}));

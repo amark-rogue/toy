@@ -12,6 +12,7 @@ node test/test-git.js
 node test/test-pwd.js
 node test/test-http.js
 node test/test-aid.js
+node test/test-aid-safe.js
 node test/test-aid-wire.js
 node test/test-aid-host.js
 node test/test-book.js
