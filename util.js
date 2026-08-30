@@ -14,7 +14,10 @@ String.prototype.cr = function(){
   var s = ''+this, out = '', at = 0, i, c;
   for(i = 0; i < s.length; i++){
     c = s.charAt(i);
-    if('\r' === c){ at = 0; continue }
+    if('\r' === c){
+      if('\n' === s.charAt(i + 1)){ out += '\r\n'; at = out.length; i += 1; continue }
+      at = out.lastIndexOf('\n') + 1; continue
+    }
     if('\n' === c){ out += c; at = out.length; continue }
     if(at < out.length) out = out.slice(0, at) + c + out.slice(at + 1);
     else out += c;

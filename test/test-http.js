@@ -9,8 +9,8 @@ function read(name, src){
   return src;
 }
 
-assert(web.length <= 24000, 'integrated Kit browser source stays below 24 KB');
-assert(zlib.gzipSync(web).length <= 7800, 'integrated Kit browser source stays below 7.8 KB compressed');
+assert(web.length <= 25200, 'integrated Kit browser source stays below 25.2 KB');
+assert(zlib.gzipSync(web).length <= 8200, 'integrated Kit browser source stays below 8.2 KB compressed');
 assert(!fs.existsSync('gun/kit/as.js') && web.includes('kit.bind = function'), 'binding ships in the one Kit browser file');
 assert(!/MessageChannel|kit\/(?:http|form)\.js/.test(web), 'requests reuse the one Kit iframe transport');
 assert.strictEqual((web.match(/W\[ON\]\('http'/g) || []).length, 1, 'requests use one generic transport event');

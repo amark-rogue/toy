@@ -13,6 +13,16 @@ G.cmd = function(line, cmd, all, i){
   return cmd.trim();
 };
 
+G.plain = function(raw, at, n){
+  raw = raw && raw.flat ? raw.flat() : ('' + (raw || ''));
+  at = raw.search(/\r\n|\n|\r/);
+  if(0 <= at){
+    n = '\r\n' === raw.slice(at, at + 2) ? 2 : 1;
+    raw = raw.slice(at + n);
+  }
+  return (raw.cr ? raw.cr() : raw).replace(/^\r/, '');
+};
+
 G.bad = function(raw, cmd){
   if(!/^git\s+status(?:\s|$)/i.test(cmd || '')){ return }
   return /(?:^|\n)\s*(?:fatal|error):|not a git repository|command not found|(?:^|\s)(?:sh:\s*)?git:\s*not found|not recognized|no such file or directory|permission denied/i.test(raw || '');

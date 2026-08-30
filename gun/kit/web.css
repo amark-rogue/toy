@@ -48,6 +48,7 @@ main, iframe.page {
   position: absolute; inset: 0;
   width: 100%; min-height: 100vh; min-height: 100dvh;
 }
+pre, code, kbd, samp { font: inherit; }
 div, ul, ol, li, a, p, form, button, input, textarea, img, dialog[open], frame, iframe, kit, tin, belt, tray {
   border: 0;
   margin: 0;

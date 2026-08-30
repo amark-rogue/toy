@@ -32,25 +32,25 @@ shell {
   color: var(--pop);
 }
 task {
-  display: flow-root;
+  display: block;
 }
+
 symbol {
   display: inline;
   float: left;
   white-space: pre-wrap;
 }
 prompt {
-  display: block;
-  width: 100%;
+  display: inline;
   min-height: 1em;
   caret-shape: block;
   white-space: pre-wrap;
 }
 raw {
-  display: block;
-  clear: both;
+  display: inline;
   white-space: pre-wrap;
 }
+
 fit { display: none; }
 ::selection { background: var(--pop); color: var(--fill); }
 fit { display: none; }
@@ -208,8 +208,12 @@ shell.stream = function(raw, t){
     if(window.shellReply && shellReply.heal) s.raw = shellReply.heal(s.raw);
     for(i = 0; i < done.length; i += 1){ shell.bash(done[i], t) }
   }
-  if(part.length < 2 && !s.same && t && t.all){ text(out(t), ((window.shellReply || {}).clean ? window.shellReply.clean(s.raw) : s.raw).flat()) }
-  else if(part.length < 2 && !s.same && shell.live && shell.live.all){ text(out(shell.live), ((window.shellReply || {}).clean ? window.shellReply.clean(s.raw) : s.raw).flat()) }
+  i = s.same && s.all && (s.all('iframe:not(.shut)')[0] || s.all('iframe')[0]);
+  if(part.length < 2 && !(i && i.getAttribute && i.getAttribute('src'))){
+    clean = (window.shellReply || {}).clean ? (window.shellReply.clean(s.raw)) : s.raw;
+    if(t && t.all){ text(out(t), show(clean).flat().cr().replace(/^\r/, '')) }
+    else if(shell.live && shell.live.all){ text(out(shell.live), show(clean).flat().cr().replace(/^\r/, '')) }
+  }
 }
 shell.term = function(raw, mode, t, all){
   t = t || shell.live;
@@ -276,7 +280,7 @@ shell.bash = function(raw, t, h, r, i, old, src){
   t.all('prompt')[0].setAttribute('contenteditable', 'true');
   r = out(t);
   if('term' === h.bin){ if(r.parentNode){ r.remove() } }
-  else { text(r, show(raw).flat().replace(/^\r/, '')) }
+  else { text(r, show(raw).flat().cr().replace(/^\r/, '')) }
   if(!t.parentNode){ root.pin(t) }
   if(h.bin && t.stay){
     old = t.all('iframe:not(.shut)')[0] || t.all('iframe')[0];
@@ -434,7 +438,7 @@ shell.core = {root:root, make:fresh, send:send, next:next, text:text};
 </script>
 <script src="task.js"></script>
 <script src="run.js"></script>
-<script>if('0' !== new URLSearchParams(location.search).get('boot')){ kit.say(localStorage.pwd||'ls .','prompt') }</script>
+<script>if(!(frameElement && frameElement.hasAttribute('flow'))){ kit.say(localStorage.pwd||'ls .','prompt') }</script>
 <script src="was.js"></script>
 <script src="tab.js"></script>
 <script src="aid.js"></script>

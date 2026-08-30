@@ -68,12 +68,35 @@ The model may read memory and open commitments at the start of a session. Their 
 
 ## Providers
 
-Anonymous `ch.at` is the default and needs no account or key:
+Anonymous `ch.at` is the default and needs no account or key. `aid /model`
+starts one interactive flow that unifies the old `free`, `catalog`, `providers`,
+`model`, and `use` actions: it lists providers in the order you can actually
+reach them, lets you pick one, sets a key if that provider needs one, then lets
+you pick a model for it.
 
 ```sh
-aid free
-aid status
+aid /model
+aid /status
 ```
+
+The provider list is ordered by how easy each is to reach: the anonymous free
+`ch.at` first, then any other free and anonymous options (`ollama`), then free
+models that still need an API key (`router`, `groq`, `gemini`, `zen`), then paid
+providers that need a key (`openai`, `anth`, `custom`). Keep current with the
+`auto` choice, or pass a concrete value non-interactively:
+
+```sh
+aid /model openrouter/free
+aid /model ollama llama3
+aid /use router
+aid /key router
+aid /catalog
+```
+
+`aid /catalog` still prints a session-cached directory of free-access listings
+without changing the selected provider. It is informational only: it does not
+provide a credential, authorize an endpoint, or cause AID to send a prompt
+anywhere.
 
 Prompts, requested file excerpts, retrieved memory, and tool results are sent to the active model provider. The filesystem itself remains local unless a tool or prompt sends its contents.
 
@@ -92,13 +115,13 @@ The fallback parser still accepts older explicit and keyed forms as input compat
 Optional adapters are `ollama`, `router`, `zen`, `groq`, `openai`, `anth`, `gemini`, and `custom`:
 
 ```sh
-aid use router
-aid key router
-aid model openrouter/free
-aid url https://your-cors-proxy.example/v1/chat/completions model-name
+aid /use router
+aid /key router
+aid /model openrouter/free
+aid /url https://your-cors-proxy.example/v1/chat/completions model-name
 ```
 
-`aid key router` opens a password-style component, so the key is not typed into the shell prompt. A key stays in `sessionStorage` and vanishes with the tab. Use `aid key keep router` only when durable browser storage is intentional. The older inline form remains accepted for automation.
+`aid /key router` opens a password-style component, so the key is not typed into the shell prompt. A key stays in `sessionStorage` and vanishes with the tab. Use `aid /key keep router` only when durable browser storage is intentional. The older inline form remains accepted for automation.
 
 OpenCode Zen currently requires its own API credential and does not allow this static page to call its API directly through browser CORS. A zero-price Ox model is not an anonymous public endpoint. The `zen` adapter therefore reports that limitation instead of borrowing login state or fabricating credentials; a user-controlled CORS proxy can be selected with `aid url`.
 

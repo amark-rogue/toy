@@ -321,7 +321,13 @@ demo.opfs.rm = async function(path, deep){
   var hit = await demo.opfs.exists(abs);
   if(!hit) throw Error('rm: ' + abs + ': No such file or directory');
   if(hit.kind === 'directory' && !deep) throw Error('rm: ' + abs + ': is a directory');
-  await dir.removeEntry(name, { recursive: !!deep });
+  if(hit.kind === 'directory' && deep){
+    var list = await demo.opfs.list(abs), i;
+    for(i = 0; i < list.length; i++){
+      await demo.opfs.rm(abs + '/' + list[i].name, 1);
+    }
+  }
+  await dir.removeEntry(name);
   demo.rev += 1;
 };
 

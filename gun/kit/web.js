@@ -79,6 +79,8 @@ W[ON]('message',function(eve,data,i){
   if(i.hasAttribute('sandbox')&&!i.sandbox.contains('allow-same-origin'))return
   i.readyState = 1;
 
+  if(!kit.frame.pass(i, 'ear' === data.type ? (data.detail || data.data) : data.type)){ return }
+
   if('ear'==data.type){
     var t=data.detail||data.data, set=i.ears||(i.ears=new Set);
     if(set.has(t))return;set.add(t);
@@ -127,6 +129,7 @@ kit.watch.join = function(node, all, i){
 })).observe(D.documentElement||D,{childList:true,subtree:true,characterData:true,attributes:true});
 kit.watch.start();
 kit.vars = {};
+kit.vars.face = 'font-family font-size font-weight font-style line-height color'.split(' ');
 kit.vars.fix = function(val, all, seen){
   return String(val || '').replace(/var\(\s*(--[\w-]+)\s*(?:,\s*([^)]+))?\)/g, function(_, key, alt){
     if((seen = seen || {})[key]){ return alt || '' }
@@ -142,6 +145,8 @@ kit.vars.take = function(css, out, i, key, val){
     val = css.getPropertyValue(key);
     if(val){ out[key] = val }
   }
+  val = css.getPropertyValue && css.getPropertyValue('--font');
+  if(val){ out['--font'] = val }
   return out;
 };
 kit.vars.rule = function(el, out, rules, i, rule, css){
@@ -190,6 +195,15 @@ kit.vars.pull = function(src, dst, was, key, val, now){
     was[key] = val;
   }
 };
+kit.vars.ink = function(i, d, el, css, j, key, val){
+  d = d || (i && i.contentDocument); el = el || (d && d.documentElement);
+  if(!i || !el){ return }
+  try{ css = W.getComputedStyle(i) }catch(e){ return }
+  for(j = 0; j < kit.vars.face.length; j++){
+    key = kit.vars.face[j]; val = css && css.getPropertyValue(key);
+    if(val){ el.style.setProperty(key, val); d.body && d.body.style.setProperty(key, val) }
+  }
+};
 kit.vars.put = function(i, d, el, css, all, was, key, val, now){
   try{
     if(!i){ return }
@@ -207,6 +221,7 @@ kit.vars.put = function(i, d, el, css, all, was, key, val, now){
       el.style.setProperty(key, val);
       was[key] = val;
     }
+    kit.vars.ink(i, d, el);
   }catch(e){}
 };
 kit.vars.push = function(){
@@ -226,6 +241,11 @@ if(W.parent !== W){
   }catch(e){}
 }
 kit.frame = {};
+kit.frame.pass = function(i, type, all){
+  if(!i || !i.hasAttribute('flow')){ return 1 }
+  all = (' ' + (i.getAttribute('flow') || '').trim() + ' ').replace(/\s+/g, ' ');
+  return -1 < all.indexOf(' ' + type + ' ');
+};
 kit.frame.visible = function(i, r, s){
   if(!i || !i.isConnected){ return 0 }
   r = i.getBoundingClientRect();

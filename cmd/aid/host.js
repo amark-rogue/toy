@@ -88,7 +88,7 @@ H.one = function(line, cwd, secs, safe, id, cmd){
     H.wait[id] = {raw:'', win:win, lose:lose, tick:setTimeout(function(){
       if(!H.wait[id]){ return } delete H.wait[id]; H.stop(); lose(Error('host command timed out'));
     }, Math.max(1, Math.min(Number(secs) || 60, 120)) * 1000)};
-    kit.say(cmd, 'host');
+    kit.say({'#':'aid.host.' + id, '$':cmd}, 'host');
   });
 };
 H.run = function(line, cwd, secs, safe){

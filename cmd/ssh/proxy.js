@@ -17,16 +17,8 @@ SSH.text = function(raw){
   return '' + (raw || '');
 };
 
-// A shell inside this component owns its UI events. Keep them from also
-// reaching the outer shell; only its rewritten host bytes cross that border.
-SSH.local = function(eve){
-  if(eve.target !== nest){ return }
-  eve.preventDefault(); eve.stopImmediatePropagation();
-};
-('prompt prompt.add prompt.back prompt.next prompt.pre prompt.set prompt.add.set prompt.back.set prompt.next.set prompt.pre.set ' +
-  'belt clear chat term.open term.close aid aid.ok aid.stop ls.hide open fetch git claude gemini').split(' ').forEach(function(type){
-  nest.ear(type, SSH.local);
-});
+// ssh.html declares the generic Kit boundary: only transport/readiness/size
+// escape the nested shell; its commands and UI events remain inside it.
 
 SSH.open = function(raw, all){
   if(SSH.up){ return }

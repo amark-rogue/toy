@@ -13,6 +13,7 @@ node test/test-pwd.js
 node test/test-http.js
 node test/test-aid.js
 node test/test-aid-safe.js
+node test/test-aid-catalog.js
 node test/test-aid-wire.js
 node test/test-aid-host.js
 node test/test-book.js
@@ -25,6 +26,8 @@ node test/test-dom.js
 `test-task.js` checks task placement and navigation separately: string `same`/`add`/`back`/`next` actions, targeted `.set` drafts, ID-only `#` targeting, command-derived inherited paths, and prompt history versus the preserved draft.
 
 `test-aid.js` drives the browser agent through provider fallback, native-to-canonical capability negotiation, repair turns, tool execution, unique and ambiguous path drift, roles, memory, todos, retrieval, delegation, OPFS sessions, edit/diff/undo, Nodepod, and the real demo route. `test-aid-wire.js` derives data from every live tool declaration: it permutes properties and hostile values, checks canonical text plus OpenAI Chat, Responses, Anthropic, Gemini, Ollama, Bedrock, and generic envelopes, rejects missing/extra/wrong/malformed arguments, and splits native arguments, SSE, UTF-8, and JSON-lines streams without naming a particular tool or path. `test-aid-host.js` proves that an exact direct or nested host command-not-found result switches to frontend aid while all files, sessions, shell tools, and read-only path recovery remain on that host; it also proves demo still uses OPFS. Open `test/aid.html` in Chrome for concurrent lazy-part loading, the first stream event arriving during iframe navigation, in-place card updates, plain-host fallback, approval replies, and private credential input. Open `test/aidui.html` for safe Markdown, folded work, lazy fold rendering, and visible direct/final replies. Open `test/aidnet.html` separately for the live anonymous `ch.at` CORS/SSE boundary; unlike the deterministic tests, it requires that external service to be reachable.
+
+`test-aid-catalog.js` feeds synthetic FreeLLM TypeScript directory data through the non-evaluating parser. It verifies that only credential-free HTTPS records survive, known AID adapters remain optional display hints, and the explicit catalog refresh is session-cached.
 
 The mode dimensions must stay independent: demo owns OPFS and may wake Nodepod; direct VM/SSH and nested SSH try the host command first and, only when it is truly missing, run frontend aid against that same host PTY; provider choice changes only the model wire; `plan`/`work`/`all` changes only authority. Optional commands own dormant routes that activate from generic host state—demo and Nodepod cores must not name them. Test a changed boundary across the applicable cross-product instead of assuming one named mode represents the others.
 

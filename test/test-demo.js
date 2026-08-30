@@ -98,6 +98,13 @@ assert(boot.indexOf('s.integrity = pod.hash[pod.url]') >= 0,
   'the CDN entry also uses a script integrity attribute');
 assert(boot.indexOf('import(pod.url)') >= 0, 'the verified entry needs no local module bridge');
 
+var disk = {
+  init: ctx.demo.opfs.init.bind(ctx.demo.opfs),
+  mkdirp: ctx.demo.opfs.mkdirp.bind(ctx.demo.opfs),
+  write: ctx.demo.opfs.write.bind(ctx.demo.opfs),
+  rm: ctx.demo.opfs.rm.bind(ctx.demo.opfs),
+  exists: ctx.demo.opfs.exists.bind(ctx.demo.opfs)
+};
 ctx.demo.opfs.root = {};
 ctx.demo.opfs.chain = Promise.resolve();
 ctx.demo.opfs.mkdirp = async function(){};
@@ -124,6 +131,18 @@ var wait = async function(){
 
 wait().then(async function(){
   await hosttest;
+  var mkdirp = ctx.demo.opfs.mkdirp, write = ctx.demo.opfs.write;
+  ctx.demo.opfs.mkdirp = disk.mkdirp;
+  ctx.demo.opfs.write = disk.write;
+  ctx.demo.opfs.root = null;
+  ctx.demo.opfs.virtual = null;
+  await disk.init();
+  await disk.mkdirp('/root/gone');
+  await disk.write('/root/gone/a.txt', 'a');
+  await disk.rm('/root/gone', 1);
+  assert(!await disk.exists('/root/gone'), 'recursive rm deletes a folder and its files');
+  ctx.demo.opfs.mkdirp = mkdirp;
+  ctx.demo.opfs.write = write;
   var got = out.join('');
   var real = fs.readFileSync('test/samples/darwin-arm64_user-log.txt', 'utf8');
   var git = got.indexOf('~ $ git clone https://github.com/acme/toy\r\n');

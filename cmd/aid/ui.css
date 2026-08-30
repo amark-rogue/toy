@@ -1,6 +1,6 @@
 body { display: block; min-height: 0; }
 button, input { font: inherit; color: inherit; }
-.aid { margin: 0.35em 0.55em; text-align: left; }
+.aid { text-align: left; }
 .bar { display: flex; align-items: center; gap: 0.5em; margin-bottom: 0.4em; }
 .title { flex: 1; opacity: 0.72; overflow-wrap: anywhere; }
 .stop, .send, .picks button { min-height: 2.6em; min-width: 3.6em; border: 1px solid currentColor; border-radius: 0.8em; background: transparent; padding: 0.35em 0.75em; }

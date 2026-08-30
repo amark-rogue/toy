@@ -58,7 +58,7 @@ function take(key, at, end, i, c, out){
 function frame(id, bin, p, r, i, s){
   var box = {insertBefore:function(node){ node.parentNode = this }};
   p = dom({textContent:'', removeAttribute:function(){}, setAttribute:function(){}});
-  r = {textContent:'', parentNode:box, append:function(){}, remove:function(){ this.parentNode = 0 }};
+  r = dom({textContent:'', parentNode:box, append:function(){}, remove:function(){ this.parentNode = 0 }});
   s = dom({textContent:''});
   i = dom({
     src:'',
@@ -168,6 +168,46 @@ for(var at = 1, id, four; at < fix.pod.length; at += 1){
   assert.strictEqual(four.all('raw')[0].textContent, 'v22.12.0\r\n', 'demo split ' + at + ' keeps its result');
 }
 
+var clone = frame('clone');
+clone.all('prompt')[0].textContent = 'git clone https://github.com/amark-rogue/toy';
+clone.cmd = 'git clone https://github.com/amark-rogue/toy';
+clone.show = 'git clone https://github.com/amark-rogue/toy';
+[
+  '\x1b[?2004h~ $ ',
+  'git clone https://github.com/amark-rogue/toy\r\n\x1b[?2004l\r',
+  "Cloning into 'toy'...\r\n",
+  'remote: 189 objects\r\n',
+  '\rReceiving objects: 13% (25/189)',
+  '\rReceiving objects: 26% (50/189)',
+  '\rReceiving objects: 100% (189/189), done.\r\n',
+  '\x1b[?2004h~ $ '
+].forEach(function(msg){ shell.stream(msg, clone) });
+assert.strictEqual(clone.all('prompt')[0].textContent, 'git clone https://github.com/amark-rogue/toy', 'routed command survives streaming');
+assert(0 > clone.all('raw')[0].textContent.indexOf('git clone'), 'streaming drops the echoed command from result');
+assert.strictEqual(clone.all('raw')[0].textContent.indexOf('\x1b'), -1, 'streaming strips its escape sequences');
+assert.strictEqual(clone.all('raw')[0].textContent.indexOf('\u001b['), -1, 'the 2004 paste byte never reaches text');
+assert(0 > clone.all('raw')[0].textContent.indexOf('13%'), 'older progress is overtyped, not stacked');
+assert.strictEqual(clone.all('raw')[0].textContent,
+  "Cloning into 'toy'...\r\nremote: 189 objects\r\nReceiving objects: 100% (189/189), done.\r\n",
+  'carriage-return progress collapses to one live line');
+
+var liveClone = frame('liveclone');
+liveClone.same = 1;
+liveClone.all('prompt')[0].textContent = 'git clone https://github.com/amark-rogue/toy';
+liveClone.cmd = 'git clone https://github.com/amark-rogue/toy';
+liveClone.show = 'git clone https://github.com/amark-rogue/toy';
+shell.stream('\x1b[?2004h~ $ ', liveClone);
+shell.stream('git clone https://github.com/amark-rogue/toy\r\n\x1b[?2004l\r', liveClone);
+shell.stream("Cloning into 'toy'...\r\n", liveClone);
+shell.stream('remote: 189 objects\r\n', liveClone);
+shell.stream('\rReceiving objects: 13% (25/189)', liveClone);
+assert(0 <= liveClone.all('raw')[0].textContent.indexOf('13%'), 'a same-task clone still live-updates percent');
+assert(0 > liveClone.all('raw')[0].textContent.indexOf('git clone'), 'a same-task clone still drops the echoed command');
+assert(0 > liveClone.all('raw')[0].textContent.indexOf('bash-3.2$'), 'a same-task clone never prefixes a fake prompt');
+shell.stream('\rReceiving objects: 26% (50/189)', liveClone);
+assert(0 > liveClone.all('raw')[0].textContent.indexOf('13%'), 'live clone percent overtypes the last tick');
+assert(0 <= liveClone.all('raw')[0].textContent.indexOf('26%'), 'live clone percent shows the latest tick');
+
 sent = [];
 var same = frame('same', 'ls');
 var keep = same.all('iframe')[0];
@@ -247,7 +287,7 @@ fs.readdirSync(path.join(__dirname, 'samples')).filter(function(name){
   console.log('PASS sample', name);
 });
 
-assert(/task \{[\s\S]*?display: flow-root;/.test(src), 'task contains its prompt float');
-assert(/raw \{[\s\S]*?clear: both;/.test(src), 'output clears the prompt float');
+assert(/task \{[\s\S]*?display: block;/.test(src), 'task keeps terminal flow inline');
+assert(/raw \{[\s\S]*?display: inline;/.test(src), 'output stays inline with the prompt');
 assert(!/['"](?:nano|vim|codex|claude|gemini|grok)['"]\s*===\s*h\.bin/.test(src), 'terminal mode has no command list');
 console.log('PASS task frames, terminal scope, same-component refresh, demo frames, and prompt layout');

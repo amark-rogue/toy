@@ -37,9 +37,11 @@ assert.deepStrictEqual(run({name:'note.txt', file:1}, 'cp'),
 assert.deepStrictEqual(run({name:'notes', file:0}, 'cp'),
   "cp -R 'notes' 'notes.copy' && ls .");
 assert.deepStrictEqual(run({name:'note.txt', file:1}, 'rm'),
-  "rm 'note.txt' && ls .");
+  "rm -rf 'note.txt' && ls .");
 assert.deepStrictEqual(run({name:'notes', file:0}, 'rm'),
-  "rm -r 'notes' && ls .");
+  "rm -rf 'notes' && ls .");
+assert.deepStrictEqual(run({name:'.git', file:1}, 'rm'),
+  "rm -rf '.git' && ls .");
 assert.deepStrictEqual(run({name:'note.txt', file:1}, 'chmod'),
   "chmod 644 'note.txt' && ls .");
 assert.deepStrictEqual(run({name:'notes', file:0}, 'chmod'),

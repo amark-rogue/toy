@@ -32,30 +32,38 @@ aid.secret = async function(raw){
 aid.task = async function(raw){
   raw = (raw || '').trim(); var all = raw.split(/\s+/), cmd = (all.shift() || '').toLowerCase(), text, run, mode = 'work', one;
   if(!raw){
-    aid.say('usage: aid <task>\naid plan|all <task> · aid role [name or id]\naid memo|todo|past ... · aid list · aid resume [id] [task] · aid undo [id]\naid status · aid use <provider> · aid key [keep] [provider] <key>'); return;
+    aid.say('usage: aid <task>\naid plan|all <task> · aid /role [name or id]\naid /memo|/todo|/past ... · aid /list · aid /resume [id] [task] · aid /undo [id]\naid /status · aid /model (pick) or aid /model provider/model · aid /key [keep] [provider] <key>'); return;
   }
-  if('key' === cmd && (1 === all.length && aid.tab[(all[0] || '').toLowerCase()] || /^(?:ask|keep)$/.test((all[0] || '').toLowerCase()) && all.length < 3)){
+  if('/' === cmd.charAt(0) && 'key' === cmd.slice(1) && (1 === all.length && aid.tab[(all[0] || '').toLowerCase()] || /^(?:ask|keep)$/.test((all[0] || '').toLowerCase()) && all.length < 3)){
     return aid.secret(all.join(' '));
   }
-  if(/^(?:status|key|free|fall|model|url|use)$/.test(cmd)){
-    text = await aid.cfg(raw); if(null != text){ aid.say(text); return }
+  if('/' === cmd.charAt(0)){
+    cmd = cmd.slice(1);
+    raw = cmd + (all.length ? ' ' + all.join(' ') : '');
+    all = raw.split(/\s+/); cmd = (all.shift() || '').toLowerCase();
+    if('model' === cmd && !all.length){ aid.say(await aid.set()); return }
+    if(/^(?:status|key|free|fall|model|url|use|catalog|providers)$/.test(cmd)){
+      text = await aid.cfg(raw); if(null != text){ aid.say(text); return }
+    }
+    if('role' === cmd){ aid.say(await aid.role.cmd(all.join(' '))); return }
+    if('memo' === cmd || 'memory' === cmd){ aid.say(await aid.mem.cmd(all.join(' '))); return }
+    if('remember' === cmd){ aid.say(await aid.mem.act({op:'add', text:all.join(' ')})); return }
+    if('forget' === cmd){ aid.say(await aid.mem.act({op:'drop', id:all[0]})); return }
+    if('todo' === cmd){ aid.say(await aid.todo.cmd(all.join(' '))); return }
+    if('past' === cmd){ aid.say(await aid.use.past({word:all.join(' ')})); return }
+    if('list' === cmd || 'sessions' === cmd){ aid.say(await aid.list()); return }
+    if('resume' === cmd){ return aid.resume(all.join(' ')) }
+    if('undo' === cmd){
+      run = all[0] ? await aid.store.load(all[0]) : await aid.store.last(demo.cwd);
+      aid.say(run ? await aid.diff.back(aid.wake(run)) : 'no session to undo'); return;
+    }
+    if('stop' === cmd){
+      Object.keys(aid.live).forEach(function(key){ if(aid.live[key].ctl){ aid.live[key].ctl.abort() } });
+      aid.say('stop requested'); return;
+    }
+    aid.say('unknown aid action: /' + cmd); return;
   }
-  if('role' === cmd){ aid.say(await aid.role.cmd(all.join(' '))); return }
-  if('memo' === cmd || 'memory' === cmd){ aid.say(await aid.mem.cmd(all.join(' '))); return }
-  if('remember' === cmd){ aid.say(await aid.mem.act({op:'add', text:all.join(' ')})); return }
-  if('forget' === cmd){ aid.say(await aid.mem.act({op:'drop', id:all[0]})); return }
-  if('todo' === cmd){ aid.say(await aid.todo.cmd(all.join(' '))); return }
-  if('past' === cmd){ aid.say(await aid.use.past({word:all.join(' ')})); return }
-  if('list' === cmd || 'sessions' === cmd){ aid.say(await aid.list()); return }
-  if('resume' === cmd){ return aid.resume(all.join(' ')) }
-  if('undo' === cmd){
-    run = all[0] ? await aid.store.load(all[0]) : await aid.store.last(demo.cwd);
-    aid.say(run ? await aid.diff.back(aid.wake(run)) : 'no session to undo'); return;
-  }
-  if('stop' === cmd){
-    Object.keys(aid.live).forEach(function(key){ if(aid.live[key].ctl){ aid.live[key].ctl.abort() } });
-    aid.say('stop requested'); return;
-  }
+
   all = raw.split(/\s+/);
   while(all.length){
     one = all[0].toLowerCase();

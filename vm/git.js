@@ -90,6 +90,7 @@ VM.git.clone = async function (emu, host, owner, repo, branch, dest) {
     var total = files.length;
 
     VM.say("remote: " + tree.length + " objects\n");
+    if(total) VM.say("\rReceiving objects: 0% (0/" + total + ")");
 
     VM.fs.dir(emu, dest);
     dirs.forEach((d) => VM.fs.dir(emu, dest + "/" + d.path));
@@ -122,17 +123,16 @@ VM.git.clone = async function (emu, host, owner, repo, branch, dest) {
             new Uint8Array(await r.arrayBuffer()),
           );
           done++;
-          if (done % 25 === 0 || done === total)
-            VM.say(
-              "\rReceiving objects: " +
-                Math.round((done / total) * 100) +
-                "% (" +
-                done +
-                "/" +
-                total +
-                ")",
-            );
         }),
+      );
+      if(total) VM.say(
+        "\rReceiving objects: " +
+          Math.round((done / total) * 100) +
+          "% (" +
+          done +
+          "/" +
+          total +
+          ")",
       );
     }
     if(total) VM.say("\rReceiving objects: 100% (" + total + "/" + total + "), done.\n");

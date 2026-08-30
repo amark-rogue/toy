@@ -6,9 +6,10 @@
 </div>
 
 <style>
-#app, iframe { display: block; width: 100%; }
+body { display: block; min-height: 0; }
+#app, iframe, pre { display: block; width: 100%; text-align: left; }
 [hidden] { display: none !important; }
-pre { white-space: pre-wrap; word-break: break-word; }
+pre { margin: 0; white-space: pre-wrap; word-break: break-word; }
 </style>
 
 <script src="../util.js"></script>
@@ -25,9 +26,9 @@ G.draw = function(show, raw){
 G.show = function(raw, cmd, bin){
   raw = raw || ''; cmd = G.cmd(raw.flat().split(/\r\n|\n|\r/)[0] || '');
   bin = (cmd.split(/\s+/)[1] || '').toLowerCase();
-  if(!/^[a-z][a-z0-9]*$/.test(bin)){ G.draw(0, raw); return }
+  if(!/^[a-z][a-z0-9]*$/.test(bin)){ G.draw(0, G.plain(raw)); return }
   G.draw(0, false);
-  kit.fetch('./git/' + bin + '.html', raw, view).then(function(){ G.draw(1) }, function(){ G.draw(0, raw) });
+  kit.fetch('./git/' + bin + '.html', raw, view).then(function(){ G.draw(1) }, function(){ G.draw(0, G.plain(raw)) });
 };
 
 G.fail = G.try;

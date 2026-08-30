@@ -38,8 +38,8 @@ AID.ask = function(row, d){
   AID.text(row, 'b', 'gate' === d.gate ? 'Permission' : 'key' === d.gate ? 'Credential' : 'Question'); AID.text(row, 'pre', d.say);
   while(box.firstChild){ box.removeChild(box.firstChild) }
   for(i = 0; i < all.length; i++){ one = mark.cloneNode(true); one.textContent = all[i]; one.value = all[i]; box.pin(one) }
-  input.type = d.secret ? 'password' : 'text'; input.tag('hide', all.length ? 1 : -1);
-  row.all('.send')[0].tag('hide', all.length ? 1 : -1);
+  input.type = d.secret ? 'password' : 'text'; input.tag('hide', (all.length && !d.allow) ? 1 : -1);
+  row.all('.send')[0].tag('hide', (all.length && !d.allow) ? 1 : -1);
 };
 AID.draw = function(d){
   var id, row, kind = d.kind;

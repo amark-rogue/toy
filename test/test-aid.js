@@ -45,6 +45,11 @@ vm.createContext(ctx);
 var load = function(file){ vm.runInContext(fs.readFileSync(file, 'utf8'), ctx, {filename:file}) };
 load('vm/boot.js'); load('vm/demo.js'); load('vm/pod/core.js');
 ctx.demo.ok = 0; load('cmd/aid/aid.js');
+var pref = [];
+ctx.document.head.pin = function(link){ pref.push(link.href) };
+ctx.aid.pref();
+assert(!pref.some(function(url){ return /\/free\.js$/.test(url) }), 'the FreeLLM directory part is never prefetched before a user invokes aid');
+ctx.document.head.pin = function(s){ setTimeout(function(){ if(s.onload){ s.onload() } }, 0) };
 assert(ctx.aid.route && !ctx.aid.route.match.test('aid host command'), 'the feature installs one dormant route without intercepting a host');
 ctx.demo.ok = 1; assert(ctx.aid.route.match.test('aid host command'), 'the route activates from generic demo state without a demo callback');
 assert.strictEqual(ctx.aid.plug(), 0, 'repeated feature registration stays idempotent');
@@ -118,6 +123,15 @@ assert(/```tool\n\{"tool":"read"/.test(ctx.aid.net.flat([{role:'assistant', call
   var took, oldstart = ctx.aid.start;
   ctx.aid.start = async function(ask, opt){ took = {ask:ask, opt:opt} };
   await ctx.aid.task('plan I want a chief of staff'); ctx.aid.start = oldstart;
+  assert.strictEqual(took.ask, 'I want a chief of staff', 'plain text remains a prompt');
+  var act = '', realcfg = ctx.aid.cfg, realset = ctx.aid.set;
+  ctx.aid.cfg = async function(raw){ act = raw; return 'ok' };
+  ctx.aid.set = async function(){ act = '__set__'; return 'picked' };
+  await ctx.aid.task('/model router/free'); assert.strictEqual(act, 'model router/free', 'slash-prefixed provider action is handled');
+  await ctx.aid.task('/model'); assert.strictEqual(act, '__set__', 'bare /model opens the interactive provider+model picker');
+  await ctx.aid.task('/catalog');
+  act = ''; await ctx.aid.task('model router/free'); assert.strictEqual(act, '', 'bare provider action remains ordinary prompt text');
+  ctx.aid.cfg = realcfg; ctx.aid.set = realset;
   assert.strictEqual(took.ask, 'I want a chief of staff');
   assert.strictEqual(took.opt.mode, 'plan'); assert.strictEqual(took.opt.role, undefined, 'natural role requests are not consumed as CLI aliases');
 
@@ -137,15 +151,15 @@ assert(/```tool\n\{"tool":"read"/.test(ctx.aid.net.flat([{role:'assistant', call
   assert.strictEqual(await ctx.aid.ask.perm({mode:'plan'}, {name:'task', args:{mode:'plan'}}), 1, 'plan may delegate read-only work');
   assert.strictEqual(await ctx.aid.ask.perm({mode:'plan'}, {name:'task', args:{mode:'work'}}), 0, 'plan cannot delegate mutations');
 
-  var show = await ctx.aid.cfg('status');
+  var show = await ctx.aid.cfg('/status');
   assert(/provider: chat/.test(show));
-  show = await ctx.aid.cfg('key sk-ant-api03xyz');
+  show = await ctx.aid.cfg('/key sk-ant-api03xyz');
   assert(/anth/.test(show));
   assert.strictEqual(sS['aid.key.anth'], 'sk-ant-api03xyz', 'keys default to tab memory');
   assert.strictEqual(lS['aid.key.anth'], undefined, 'keys are not durable unless asked');
-  await ctx.aid.cfg('key keep groq gsk_keep');
+  await ctx.aid.cfg('/key keep groq gsk_keep');
   assert.strictEqual(lS['aid.key.groq'], 'gsk_keep', 'explicit keep persists');
-  await ctx.aid.cfg('free');
+  await ctx.aid.cfg('/free');
   assert.strictEqual(ctx.aid.now(), 'chat');
   var secret = ctx.aid.secret('openai');
   await new Promise(function(ok){ setTimeout(ok, 0) });

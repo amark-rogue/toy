@@ -9,7 +9,7 @@ aid.got = {};
 aid.no = 0;
 aid.base = (document.currentScript && document.currentScript.src || '').replace(/[^/]*$/, '');
 aid.part = [
-  'key', 'sse', 'open', 'anth', 'wire', 'live', 'net', 'store', 'role', 'mem', 'todo', 'past', 'diff', 'ctx', 'ask',
+  'key', 'free', 'sse', 'open', 'anth', 'wire', 'live', 'net', 'store', 'role', 'mem', 'todo', 'past', 'diff', 'ctx', 'ask',
   'use', 'disk', 'seek', 'snap', 'read', 'find', 'edit', 'sh',
   'web', 'task', 'scan', 'tool', 'view', 'loop', 'start', 'run'
 ];
@@ -28,7 +28,8 @@ aid.one = function(name){
 
 aid.pref = function(){
   aid.part.forEach(function(name){
-    if(aid.got[name]){ return }
+    // The FreeLLM directory stays completely cold until an AID user asks for it.
+    if('free' === name || aid.got[name]){ return }
     var link = document.createElement('link'); link.rel = 'prefetch'; link.as = 'script'; link.href = aid.base + name + '.js';
     document.head.pin(link);
   });

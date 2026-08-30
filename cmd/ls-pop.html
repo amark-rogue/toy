@@ -42,7 +42,7 @@ pop.run = function(eve, run, cmd, item, file){
   if(!run || !pop.item){ return }
   item = pop.quote(pop.item.name); file = pop.item.file;
   if('cp' === run){ cmd = 'cp ' + (file ? '' : '-R ') + item + ' ' + pop.quote(pop.item.name + '.copy') + ' && ls .' }
-  if('rm' === run){ cmd = 'rm ' + (file ? '' : '-r ') + item + ' && ls .' }
+  if('rm' === run){ cmd = 'rm -rf ' + item + ' && ls .' }
   if('chmod' === run){ cmd = 'chmod ' + (file ? '644 ' : '755 ') + item + ' && ls .' }
   if('tail' === run){ cmd = 'tail -n 20 ' + item }
   pop.hide(); kit.say(cmd, 'prompt');
