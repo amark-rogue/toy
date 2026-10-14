@@ -26,7 +26,7 @@ pod.rev = -1;
 pod.fast = {
   cat: 1, cd: 1, clear: 1, cp: 1, echo: 1, help: 1,
   ls: 1, mkdir: 1, open: 1, pwd: 1, rm: 1, touch: 1,
-  apk: 1, pip: 1
+  apk: 1, pip: 1, base64: 1, printf: 1
 };
 
 pod.use = function(cmd){
@@ -34,11 +34,23 @@ pod.use = function(cmd){
   if(!window.Worker) return 0;
   cmd = (cmd || '').trim();
   if(!cmd) return 0;
+  if(pod.flat(cmd)) return 0;
   if(/[|<>`$(){}*?\[\]]/.test(cmd) || /(^|;)\s*(?:if|for|while|case|until|function)\b/.test(cmd)) return 1;
   var bin = (cmd.match(/^\s*([^\s;]+)/) || [])[1] || '';
   bin = bin.toLowerCase();
   if(/^(?:node|npm|npx|pnpm|yarn|bun|bunx|git)$/.test(bin)) return 1;
   return !pod.fast[bin];
+};
+
+// simple demo pipelines: only | and > between fast bins
+pod.flat = function(cmd){
+  var bare = cmd.replace(/'[^']*'|"[^"]*"/g, "''");
+  if(!/[|>]/.test(bare) || /[<`$(){}*?\[\];]|\|\||(^|[^&])&([^&]|$)/.test(bare)) return 0;
+  return bare.split('&&').every(function(run){
+    return run.split(/>+/)[0].split('|').every(function(one){
+      return pod.fast[((one.match(/^\s*(\S+)/) || [])[1] || '').toLowerCase()];
+    });
+  });
 };
 
 pod.buf = function(data){

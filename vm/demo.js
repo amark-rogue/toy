@@ -453,14 +453,49 @@ demo.cmd.need = async function(bin){
   }
 };
 
+// split on unquoted chars, keeping quotes intact
+demo.cmd.cut = function(line, by){
+  var all = [], cur = '', q = '', i, c;
+  for(i = 0; i < line.length; i++){
+    c = line.charAt(i);
+    if(q){ cur += c; if(c === q) q = ''; continue }
+    if('"' === c || "'" === c){ q = c; cur += c; continue }
+    if(by === c){ all.push(cur); cur = ''; continue }
+    cur += c;
+  }
+  all.push(cur);
+  return all;
+};
+
+// a | b | c > file : each part gets the last part's output as input
 demo.cmd.one = async function(line){
+  var to = demo.cmd.cut(line || '', '>'), add = 0, part, r = { out: '', ok: 1 }, j;
+  if(to.length > 1 && !/^\s*echo\b/.test(to[0])){
+    add = to.length > 2 && !to[1].trim();
+    line = to[0]; to = demo.words(to[to.length - 1])[0];
+  } else to = '';
+  part = demo.cmd.cut(line || '', '|');
+  for(j = 0; j < part.length; j++){
+    r = await demo.cmd.bin(part[j], j ? r.out : undefined);
+    if(!r.ok) return r;
+  }
+  if(!to) return r;
+  try{
+    var was = '';
+    if(add){ try{ was = await demo.opfs.readText(to) }catch(e){} }
+    await demo.opfs.write(to, was + r.out);
+  }catch(e){ return { out: 'sh: ' + (e.message || e) + '\n', ok: 0 } }
+  return { out: '', ok: 1 };
+};
+
+demo.cmd.bin = async function(line, input){
   line = (line || '').trim();
   if(!line) return { out: '', ok: 1 };
   var words = demo.words(line);
   var bin = (words.shift() || '').toLowerCase();
   var fn = await demo.cmd.need(bin);
   if(!fn) return { out: 'sh: ' + bin + ': not found\n', ok: 0 };
-  var out = 'echo' === bin ? await fn(words, line) : await fn(words);
+  var out = await fn(words, line, input);
   var bad = out && /: (No such|Not a|Is a|missing|not found|File exists|cannot remove|Directory)/i.test(out);
   return { out: out || '', ok: !bad };
 };

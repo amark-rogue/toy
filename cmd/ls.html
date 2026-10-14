@@ -75,7 +75,7 @@ CMD.draw = function(all, view, link){
 };
 CMD.path = '~';
 CMD.base = function(cmd, hit){
-  hit = cmd.match(/\bcd\s+(.+?)\s+&&\s+ls\b/);
+  hit = cmd.match(/\bcd\s+(.+?)\s+&&\s+ls\b/); CMD.know = !!hit;
   if(hit){ CMD.path = hit[1].replace(/\\(.)/g, '$1') }
 };
 CMD.go = function(name, part, out, root){
@@ -101,7 +101,7 @@ kit.ear('ls.hide', CMD.hide);
 B.ear('click', function(eve, link, path, cmd){
   link = eve.target.closest('list a');
   if(!link || !link.where){ return }
-  if(link.file){ kit.say('cat ' + CMD.arg(link.where), 'prompt.add'); return }
+  if(link.file){ kit.say('cat ' + CMD.arg(CMD.know ? CMD.go(link.where) : link.where), 'prompt.add'); return }
   path = CMD.go(link.where); cmd = 'cd ' + CMD.arg(path) + ' && ls .';
   localStorage.pwd = cmd; kit.say(cmd, 'prompt');
 });

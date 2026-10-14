@@ -88,7 +88,6 @@ aid.plug = function(){
     };
     VM.cmd.routes.push(aid.route); made = 1;
   }
-  kit.say([['aid', 'aid ']], 'belt');
   if(window.demo && demo.ok && !aid.warm && window.requestIdleCallback){ aid.warm = 1; requestIdleCallback(aid.pref, {timeout:3000}) }
   return made;
 };
