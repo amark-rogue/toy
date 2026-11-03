@@ -39,9 +39,11 @@ symbol {
   display: inline;
   float: left;
   white-space: pre-wrap;
+  pointer-events: none;
 }
 prompt {
-  display: inline;
+  display: block;
+  width: 100%;
   min-height: 1em;
   caret-shape: block;
   white-space: pre-wrap;
@@ -347,7 +349,7 @@ shell.hook = function(obj, t, i, type){
 
 function text(v, s){
   v.textContent = s || '';
-  if(!s){ v.pin(v.new('br')) }
+  if(!s && v.getAttribute && v.getAttribute('contenteditable')){ v.pin(v.new('br')) }
   return v;
 }
 

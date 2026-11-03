@@ -287,7 +287,11 @@ fs.readdirSync(path.join(__dirname, 'samples')).filter(function(name){
   console.log('PASS sample', name);
 });
 
+var css = fs.readFileSync(path.join(__dirname, '..', 'gun', 'kit', 'web.css'), 'utf8');
 assert(/task \{[\s\S]*?display: block;/.test(src), 'task keeps terminal flow inline');
+assert(/symbol \{[\s\S]*?pointer-events: none;/.test(src), 'symbol lets taps through to the prompt');
+assert(/prompt \{[\s\S]*?display: block;[\s\S]*?width: 100%;/.test(src), 'prompt spans the full line for tap target');
 assert(/raw \{[\s\S]*?display: inline;/.test(src), 'output stays inline with the prompt');
+assert(/kit belt \{[\s\S]*?pointer-events: none;/.test(css), 'belt spacer does not block bottom prompt taps');
 assert(!/['"](?:nano|vim|codex|claude|gemini|grok)['"]\s*===\s*h\.bin/.test(src), 'terminal mode has no command list');
 console.log('PASS task frames, terminal scope, same-component refresh, demo frames, and prompt layout');

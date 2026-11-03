@@ -40,7 +40,7 @@ html, body /*, main, .page*/ {
   scrollbar-color: var(--pop) transparent;
   touch-action: manipulation;
 } body, main { display: grid; place-items: var(--drip); }
-:where(html.part), :where(html.part) body { min-height: 0; }
+html.part, html.part body { min-height: 0; }
 :where(html.part) body { height: max-content; }
 html.part { scrollbar-gutter: stable; }
 /*.page { dis-play:none } .page:target { display:grid; }*/
@@ -108,7 +108,7 @@ kit belt {
   scrollbar-width: none;
   width: 100vw;
   max-width: none;
-  pointer-events: auto; /* the belt row is the gesture surface — spacer taps must not fall through dead */
+  pointer-events: none;
   touch-action: auto;
   -webkit-overflow-scrolling: touch;
   animation: none !important;
