@@ -11,7 +11,7 @@ tmp = D.head.parentNode.style; if(W.parent === W) { tmp['overscroll-behavior-y']
 kit = function(){};
 kit.ears = kit.ears || {};
 kit.q = kit.q || {};
-kit.ios = /iP(ad|hone|od)/.test(navigator.userAgent) || navigator.platform == 'MacIntel' && navigator.maxTouchPoints > 1;
+if(kit.ios = /iP(ad|hone|od)/.test(navigator.userAgent) || navigator.platform == 'MacIntel' && navigator.maxTouchPoints > 1){ (tmp = D[HI]('script')).src = ((D.currentScript||'').src||'').replace('web.js','belt.js'); D.head.appendChild(tmp) }
 kit.ear = function(h,e,v){
   (v=v||W)[ON](e=(h.call?(h.where=e):(e.where=h,(h=e).where))||'',h);
   v.tagName === 'IFRAME' && v.contentWindow && kit.views.set(v.contentWindow, v);

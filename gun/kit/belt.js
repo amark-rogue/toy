@@ -1,4 +1,4 @@
-;(function(){
+;(function(){ if(!window.kit || !kit.ios){ return } // iOS only: WebKit won't scroll a pointer-events:none overflow belt
 var W = window, D = document, on = 'addEventListener', st, no, cut = 6, rail = 7;
 
 function css(){
