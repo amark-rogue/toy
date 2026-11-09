@@ -3,8 +3,8 @@
 ;(function(pod){
 
 // Pick exactly one. Comment the active line and uncomment the other to switch.
-pod.via = 'nodepod';
-// pod.via = 'lifo';
+pod.via = 'lifo';
+// pod.via = 'nodepod';
 
 pod.url = 'https://cdn.jsdelivr.net/npm/@scelar/nodepod@1.9.20/dist/index.mjs';
 pod.hash = {};
