@@ -1,6 +1,10 @@
-// Fetch and boot the integrity-pinned Nodepod runtime.
+// Fetch and boot the richer shell selected by pod.via.
 
 ;(function(pod){
+
+// Pick exactly one. Comment the active line and uncomment the other to switch.
+pod.via = 'nodepod';
+// pod.via = 'lifo';
 
 pod.url = 'https://cdn.jsdelivr.net/npm/@scelar/nodepod@1.9.20/dist/index.mjs';
 pod.hash = {};
@@ -20,6 +24,7 @@ pod.map = function(){
 };
 
 pod.cdn = function(){
+  if('lifo' === pod.via) return pod.lifo.cdn();
   if(window.Nod && window.Nod.Nodepod) return Promise.resolve(window.Nod.Nodepod);
   if(pod.net) return pod.net;
   pod.map();
@@ -47,6 +52,15 @@ pod.cdn = function(){
 };
 
 pod.prep = function(){
+  if('lifo' === pod.via){
+    if(pod.get) return pod.get;
+    pod.get = pod.lifo.prep().catch(function(err){
+      pod.bad = err;
+      pod.get = 0;
+      throw err;
+    });
+    return pod.get;
+  }
   if(pod.get) return pod.get;
   pod.get = pod.cdn().then(async function(Pod){
     var sab = !!window.crossOriginIsolated && 'function' === typeof window.SharedArrayBuffer;

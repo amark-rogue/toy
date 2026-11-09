@@ -48,6 +48,7 @@ run('vm/demo.js');
 run('vm/pod/core.js');
 run('vm/pod/fs.js');
 run('vm/pod/term.js');
+run('vm/pod/lifo.js');
 run('vm/pod/boot.js');
 run('vm/pod/run.js');
 ctx.demo.pod.ok = 1;
@@ -97,6 +98,9 @@ var boot = fs.readFileSync('vm/pod/boot.js', 'utf8');
 assert(boot.indexOf('s.integrity = pod.hash[pod.url]') >= 0,
   'the CDN entry also uses a script integrity attribute');
 assert(boot.indexOf('import(pod.url)') >= 0, 'the verified entry needs no local module bridge');
+assert(boot.indexOf("pod.via = 'nodepod'") >= 0, 'Nodepod remains the comment-line default');
+assert(boot.indexOf("// pod.via = 'lifo'") >= 0, 'Lifo stays one commented adjacent line away');
+assert('nodepod' === ctx.demo.pod.via, 'default richer shell stays Nodepod until Lifo is safe');
 
 var disk = {
   init: ctx.demo.opfs.init.bind(ctx.demo.opfs),
@@ -190,6 +194,21 @@ wait().then(async function(){
   assert(ctx.demo.pod.use('node hello.js'), 'node selects the richer browser shell');
   assert(ctx.demo.pod.use('echo one | wc -w'), 'pipes select the richer browser shell');
   assert(ctx.demo.pod.use('grep one file'), 'missing POSIX tools select the richer browser shell');
+
+  var wasVia = ctx.demo.pod.via, wasGet = ctx.demo.pod.get, wasBad = ctx.demo.pod.bad;
+  ctx.demo.pod.via = 'lifo';
+  ctx.demo.pod.get = 0;
+  ctx.demo.pod.bad = 0;
+  var lifoErr = null;
+  try{ await ctx.demo.pod.prep() }catch(e){ lifoErr = e }
+  assert(lifoErr, 'Lifo prep must refuse until Worker isolation exists');
+  assert(/Worker isolation/i.test(String(lifoErr.message || lifoErr)), 'Lifo refusal names the isolation blocker');
+  var cdnErr = null;
+  try{ await ctx.demo.pod.cdn() }catch(e){ cdnErr = e }
+  assert(cdnErr, 'Lifo cdn must refuse the same way');
+  ctx.demo.pod.via = wasVia;
+  ctx.demo.pod.get = wasGet;
+  ctx.demo.pod.bad = wasBad;
 
   var podin = [], clone = 0, was = ctx.VM.git.run;
   ctx.demo.pod.on = 1;
