@@ -1,9 +1,22 @@
 <!DOCTYPE html>
 <html lang="en">                            <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-content">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
+  <!-- full screen like toy/app.html + gun/kit/web.js: edge to edge (viewport-fit=cover, safe-area padding), the document scrolls so browser/OS bars slide away -->
+  <meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Git Mobile</title>
   <meta name="theme-color" content="#ffffff">
+  <style> /* fallback if mood.css fails to load: plain light mood. :where() = no specificity, so mood.css (after) overrides all of it */
+    :root { --hue: 210; --gap: .75rem; --sap: .75rem; --thumb: 4.125rem; --mood: #fff; --ink: #123; --pn: #678; /* the app's 9 pops: hue + n*40deg */
+      --p0: hsl(var(--hue) 90% 38%); --p1: hsl(calc(var(--hue) + 40) 90% 38%); --p2: hsl(calc(var(--hue) + 80) 90% 38%); --p3: hsl(calc(var(--hue) + 120) 90% 38%); --p4: hsl(calc(var(--hue) + 160) 90% 38%);
+      --p5: hsl(calc(var(--hue) + 200) 90% 38%); --p6: hsl(calc(var(--hue) + 240) 90% 38%); --p7: hsl(calc(var(--hue) + 280) 90% 38%); --p8: hsl(calc(var(--hue) + 320) 90% 38%); }
+    :where(html, body) { margin: 0; background: #fff; color: #123; font-family: system-ui, sans-serif; } :where(*) { box-sizing: border-box; }
+    :where(button, input, textarea, select) { font: inherit; min-height: 4.125rem; padding: 0 .75rem; }
+    :where(button, input, textarea, select, .pop) { border: 0; border-radius: .75rem; background: var(--pop, var(--p0)); color: #fff; } /* each control's own --pop (app classes) */
+    :where(input:is([type=checkbox], [type=radio], [type=range])) { min-height: 0; background: none; }
+  </style>
+  <link rel="stylesheet" href="mood.css"><script src="mood.js"></script>
   <!-- CodeMirror & Diff2Html -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">                         <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>                 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/htmlmixed/htmlmixed.min.js"></script>
@@ -30,98 +43,136 @@
   </script>
 
   <style>
-    /* Preserving UX */
-    :root { --bg: #fff; --text: #1a1a1a; --nav: #1a1a1a; --act: #007aff; --yes: #34c759; --hot: #ff3b30; --limbo: #007aff; --bord: #f2f2f7; }
-    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-    html { height: 100%; width: 100%; overflow: hidden; overscroll-behavior: none; }
-    body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg); color: var(--text); height: 100%; width: 100%; display: flex; flex-direction: column; margin:0; overflow:hidden; font-size: 18pt; }
-    main { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; overflow-x: hidden; }
-    input, textarea { width: 100%; padding: 1em; border: none; background: #f2f2f7; border-radius: 1em; font-size: 1em; margin-bottom: 1em; }
+    /* colours, base, controls, scrollbar, viewport: mood.css (+ mood.js). Here only app roles: which pop each control uses */
+    :root { --act: var(--p0); --yes: var(--p7); --hot: var(--p4); --limbo: var(--p1); --tint: color-mix(in srgb, var(--ink) 8%, transparent); }
+    .c-fetch { --pop: var(--p0); } .c-pull { --pop: var(--p1); } .c-clone { --pop: var(--p2); } .c-chunk { --pop: var(--p3); }
+    .c-device { --pop: var(--p5); } .c-open { --pop: var(--p2); } .c-new { --pop: var(--p7); } .c-remote { --pop: var(--p8); } .c-line { --pop: var(--p5); }
+    .CodeMirror { background: transparent; color: var(--ink); } .CodeMirror-cursor { border-left-color: var(--ink) !important; }
+    [data-mood=neon] .CodeMirror { --mood: #fff; --ink: var(--p0); color-scheme: light; background: var(--mood); color: var(--ink); } /* neon: syntax colours clash with the neon, so the editor is a light-mood island (white base, neon text) */
+    body { display: flex; flex-direction: column; font-size: 1.5rem; padding-top: 0; } /* top inset: the top bar's own padding */
+    main { flex: 1; overflow-x: clip; }
+    input, textarea { width: 100%; margin-bottom: var(--gap); }
     .view { display: none; } .view.active { display: block; }
 
-    .btn { width: 100%; border: none; padding: 0.75em; border-radius: 0.5em; font-size: 1em; font-weight: 700; cursor: pointer; display:flex; align-items:center; justify-content:center; }
-    .btn-neutral { background: #f2f2f7; color: #000; }
-    .btn-primary { background: var(--act); color: #fff; }
-    .btn-yes { background: var(--yes); color: #fff; }
-    .btn-act { background: var(--act); color: #fff; }
-    .btn-limbo { background: var(--limbo); color: #fff; }
-    .btn-hot { background: var(--hot); color: #fff; }
-    .btn-discard { background: var(--dang); color: #fff; border-radius: 0 0 8px 8px; font-size: 12px; height: 40px; }
+    .btn { width: 100%; font-weight: 900; display:flex; align-items:center; justify-content:center; }
+    .btn-neutral { --pop: var(--pn); }
+    .btn-primary { --pop: var(--act); }
+    .btn-yes { --pop: var(--yes); }
+    .btn-act { --pop: var(--act); }
+    .btn-limbo { --pop: var(--limbo); }
+    .btn-hot { --pop: var(--hot); }
+    .btn-discard { --pop: var(--hot); border-radius: 0 0 var(--sap) var(--sap); font-size: .75rem; }
 
     .btn-save-header { width: auto; }
     .btn-save-header[style*="display: none"] { display: none !important; } /* Force hide override for flex */
-    .btn-save-header.saved { background: var(--yes); cursor: default; }
+    .btn-save-header.saved { --pop: var(--yes); cursor: default; }
 
 
     .file-card {  }
-    .file-header { padding: 0.5em; display: flex; align-items: center; gap: 1em; font-weight: 700; cursor: pointer; position: -webkit-sticky; position: sticky; top: 0; z-index: 100; border-radius: 1em; backdrop-filter: blur(5px); }
-    .stage-toggle { width: 1.5em; height: 1.5em; border-radius: 50%; border: 1px solid var(--yes); display: grid; place-items: center; color: transparent; transition:0.2s; flex-shrink:0; }
-    .stage-toggle.checked { background: var(--yes); color: #fff; }
+    .file-header { padding: 0 var(--gap); display: flex; align-items: center; gap: .4em; font-weight: 700; cursor: pointer; top: calc(env(safe-area-inset-top) + .5rem); /* sticky only while open (below), stuck just off the edge: iOS 26 Safari tints its bars from any full-width sticky/fixed box at an edge (probe 4px in) */ z-index: 100; border-radius: var(--sap); -webkit-backdrop-filter: blur(var(--blur)); backdrop-filter: blur(var(--blur)); }
+    .file-card:not(.collapsed) > .file-header { position: -webkit-sticky; position: sticky; }
+    .stage-toggle { width: calc(var(--thumb) - 2 * var(--gap)); height: calc(var(--thumb) - 2 * var(--gap)); /* header = gap + circle + gap = one thumb */ border-radius: 50%; border: .0625rem solid var(--yes); display: grid; place-items: center; transition:0.2s; flex-shrink:0; }
+    [data-mood=neon] .stage-toggle { border-color: #fff; } /* unchecked ring = the pop colour (white in neon); its ✓ is transparent so not currentColor */
+    .stage-toggle:not(.checked) { color: transparent; } /* ✓ shows only when checked, in the pop's text colour */
+    .stage-toggle.checked { --pop: var(--yes); border-color: transparent; } /* .pop added with .checked */
     .file-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .chevron { transition: 0.2s; color: var(--act); font-size: 0.75em; }
+    .chevron { width: .6em; height: .6em; flex-shrink: 0; background: currentColor; clip-path: polygon(0 18%, 100% 18%, 50% 82%); transition: transform .2s ease; will-change: transform; } /* drawn triangle centred in its box: rotates/spins on the GPU without wobble */
     .collapsed .chevron { transform: rotate(-90deg); }
+    .file-header.saving { --pop: var(--act); } /* + .pop (cardState) */
+    .file-header.saved { --pop: var(--yes); }
+    .file-header .trash { display: none; width: auto; padding: .2em .6em; background: transparent; color: inherit; border: 0; box-shadow: none; text-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+    .file-header.saving .trash, .file-header.saved .trash { display: flex; }
+    #modal .btn-row { flex: 1 1 100% !important; }
+    .halves { display: grid; grid-template-columns: 1fr 1fr; gap: var(--gap); margin-bottom: var(--gap); }
+    .halves .btn { width: 100%; min-width: 0; white-space: nowrap; position: relative; }
+    #review-view > .halves > .btn, #repo-modal .btn, #modal .btn { min-height: var(--thumb); padding-top: 0; padding-bottom: 0; box-sizing: border-box; } /* fat-thumb: same height whatever the text size */
+    #review-view > .halves > .btn { padding: 0 var(--gap); }
+    #remote-select { align-self: stretch; }
+    #remote-wrap { padding: 0; }
+    #repo-modal { font-size: min(1em, 4.5vw); } /* Open popup: text scales with the screen so labels and the URL placeholder fit */
+    #repo-modal .halves { gap: var(--gap); margin-bottom: var(--gap); }
+    #repo-modal .btn, #repo-modal #remote-select { padding: 0 var(--gap); }
+    #repo-modal input { padding: var(--gap); margin-bottom: var(--gap); font-size: 1em; }
+    .dashed { border-bottom: .125rem dashed var(--mood) !important; /* dashes of whatever is beneath (the mood), gaps show the field */ border-radius: var(--sap); padding: var(--gap) var(--gap); } /* commit message + clone URL */
+    #repo-modal input.dashed { height: var(--thumb); box-sizing: border-box; padding: 0 var(--gap); }
+    dialog { transition: opacity .2s; } /* popups: just their buttons, floating */
+    dialog.fade, dialog:not([open]) { opacity: 0; pointer-events: none; } dialog[open] { pointer-events: none; } dialog[open]:not(.fade) > * { pointer-events: auto; } /* only a showing popup's own content catches taps; its see-through box and a fading popup never do */ /* fading out after close() (UI.init) */
+    dialog[open] { position: fixed; inset: 0; margin: auto; width: calc(100% - 2 * var(--gap)); max-width: none; box-sizing: border-box; /* edges flush with the page's buttons */ height: fit-content; max-height: 90vh; overflow: auto; z-index: 1000; } /* non-modal popups, centred above the page */
+    input[type=range] { padding: 0; margin: 0 0 var(--gap); height: var(--thumb); }
+    #repo-modal #remote-wrap { padding: 0; }
+    #remote-select { background: transparent; border: none; box-shadow: none; text-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; margin: 0; font: inherit; color: inherit; width: 100%; padding: var(--gap); text-align: center; text-align-last: center; cursor: pointer; }
+    #remote-wrap.busy::after { position: absolute; right: .5em; top: 50%; margin: -.3em 0 0; }
+    #repo-list .row { padding: 0 var(--gap); cursor: pointer; min-width: 0; }
+    #repo-list .row b, #repo-list .row small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #repo-list .row small { font-weight: 400; opacity: .6; font-size: .75em; }
+    #repo-list .row.on b { text-decoration: underline; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .busy::after { content: ''; display: inline-block; flex-shrink: 0; width: .6em; height: .6em; margin-left: .4em; border: .125rem solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin .7s linear infinite; will-change: transform; vertical-align: middle; opacity: .6; }
+    .chevron.spin { animation: spin .7s linear infinite; transition: none; }
+    #current-repo { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .collapsed .file-content { display: none; }
 
     .file-content { padding: 0; position: relative; } /* No padding for editor */
 
-    .diff-block { background: #fafafa; border: 1px solid #eee; border-radius: 8px; font-family: "SF Mono", monospace; font-size: 14px; overflow-x: auto; margin-top:10px; }
-    .diff-line { padding: 8px; border-bottom: 1px solid #f0f0f0; white-space: pre-wrap; display: flex; }
+    .diff-block { background: #fafafa; border: .0625rem solid #eee; border-radius: var(--sap); font-family: "SF Mono", monospace; font-size: .875rem; overflow-x: auto; margin-top:.625rem; }
+    .diff-line { padding: .5rem; border-bottom: .0625rem solid #f0f0f0; white-space: pre-wrap; display: flex; }
     .diff-line.add { background: #e8f5e9; color: #1b5e20; }
     .diff-line.del { background: #ffebee; color: #b71c1c; }
     .diff-line.ctx { color: #555; }
-    .change-header { background: var(--yes); color: #fff; padding: 10px; font-size: 11px; font-weight: 800; border-radius: 8px 8px 0 0; margin-top: 15px; display:flex; justify-content:space-between; }
+    .change-header { background: var(--yes); color: #fff; padding: .625rem; font-size: .6875rem; font-weight: 800; border-radius: var(--sap) var(--sap) 0 0; margin-top: .9375rem; display:flex; justify-content:space-between; }
 
-    #editor-overlay { position: fixed; inset: 0; top:0; left:0; right:0; bottom:0; background: #fff; z-index: 200; display: none; flex-direction: column; height: auto; }
+    #editor-overlay { position: fixed; inset: 0; padding-top: env(safe-area-inset-top); background: var(--mood); z-index: 200; display: none; flex-direction: column; height: auto; }
     #editor-overlay.active { display: flex; }
     .editor-toolbar {
       width: 100%; overflow: scroll;
       position: fixed; bottom: 0; right: 0;
-      padding: 1em; display: flex; gap: 1em;
+      padding: var(--gap); display: flex; gap: var(--gap);
       z-index: 202;
       transition: transform 0.3s;
     }
-    .editor-toolbar.hidden { transform: translateY(100%); }
+    .editor-toolbar.hidden { display: none; } /* not moved off-screen: iOS 26 Safari tints its bars from any full-width fixed/sticky box at an edge */
 
     .card-toolbar {
         position: sticky; bottom: 0; left: 0; right: 0;
-        background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(5px);
-        border-top: 1px solid #eee; z-index: 30;
-        padding: 0.5em; display: flex; gap: 0.5em; overflow-x: auto;
+        background: var(--mood); backdrop-filter: blur(.3125rem); z-index: 30;
+        padding: var(--gap); display: flex; gap: var(--gap); overflow-x: auto;
     }
-    .card-toolbar .btn { width: auto; flex-shrink: 0; padding: 0.5em 1em; font-size: 0.9em; }
-    .card-toolbar input { width: 5em; padding: 0 0.5em; margin: 0; border-radius: 0.5em; }
+    .card-toolbar .btn { width: auto; flex-shrink: 0; padding: var(--gap) var(--gap); font-size: 0.9em; }
+    .card-toolbar input { width: 5em; padding: 0 0.5em; margin: 0; border-radius: var(--sap); }
 
     #file-select {
       appearance: none; -webkit-appearance: none;
-      height: 3em; padding: 0 2.5em 0 1em;
-      background: #f2f2f7; border-radius: 1em;
-      font-weight: 700; color: #1a1a1a; font-size: 1em;
-      margin: 0; flex: 1; border: none; outline: none; min-width: 150px;
+      padding: 0 2.5em 0 1em;
+      
+      font-weight: 700;
+      margin: 0; flex: 1; border: none; outline: none; min-width: 9.375rem;
       background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
       background-repeat: no-repeat; background-position: right 1em center; background-size: 1.5em;
     }
 
-    .CodeMirror { height: 100% !important; margin: 0 -0.9em; font-family: "SF Mono", "Menlo", monospace; font-size: 0.75em; line-height: 2.2; }
-    .CodeMirror-gutters { background: #fff !important; border-right: none !important; }
-    .CodeMirror-linenumber { text-align: center !important; color: var(--act);  font-size: 0.5em; padding-top: 1.5em; }
+    .CodeMirror { height: 100% !important; margin: 0; font-family: "SF Mono", "Menlo", monospace; font-size: 0.75em; line-height: 2.2; }
+    .CodeMirror-gutters { display: none !important; } /* no uniform gutter column: each line is padded by its own number's width (App.lnPad) */
+    .CodeMirror-gutter-wrapper { left: 0 !important; }
+    .CodeMirror-linenumber { color: var(--ink); font-size: 0.5em; /* App.lnPad assumes .5em */ padding: 1.5em 0 0 0 !important; width: auto !important; min-width: 0 !important; left: 0 !important; text-align: left !important; }
     .CodeMirror-scroll { padding: 2em 0 10em 0; }
     #editor-overlay .CodeMirror { padding-bottom: 8em !important; }
 
     /* Diff Editor Styles */
-    .file-card .CodeMirror { height: auto !important; min-height: 100px; }
-    .file-card .CodeMirror-scroll { padding-bottom: 60px; }
+    .file-card .CodeMirror { height: auto !important; min-height: 6.25rem; }
+    .file-card .CodeMirror-scroll { padding-top: 0; padding-bottom: 3.75rem; }
     .line-add { background: rgba(52, 199, 89, 0.15); }
     .char-add { background: rgba(52, 199, 89, 0.4); } /* Darker green */
 
     .line-del-widget {
         background: rgba(255, 59, 48, 0.15);
-        color: #b71c1c; padding: 0 4px;
-        font-family: "SF Mono", "Menlo", monospace; font-size: 18px; line-height: 2.2;
+        color: #b71c1c; padding: 0 .25rem 0 0; position: relative; min-height: 2.2em; /* padding-left set like its line's (App.lnPad) */
+        font-family: "SF Mono", "Menlo", monospace; font-size: 1.125rem; line-height: 2.2;
         white-space: pre-wrap; user-select: none;
     }
+    .line-del-widget::before { content: '−'; position: absolute; left: 0; top: 0; font-size: .5em; line-height: 4.4; }
     .char-del { background: rgba(255, 59, 48, 0.4); text-decoration: line-through; } /* Darker red */
-    .file-actions { display: flex; align-items: center; gap: 1em; margin-left: auto; flex-shrink: 0; }
-    .btn-sm { height: 32px; font-size: 13px; padding: 0 15px; border-radius: 6px; }
+    .file-actions { display: flex; align-items: center; gap: var(--gap); margin-left: auto; flex-shrink: 0; }
+    .btn-sm { font-size: .8125rem; padding: 0 .9375rem; border-radius: var(--sap); }
 
     .fullscreen-only { display: none !important; }
     .mode-fullscreen .fullscreen-only { display: flex !important; }
@@ -134,16 +185,20 @@
       from { background-color: rgba(255, 255, 0, 0.8); }
       to { background-color: transparent; }
     }
+    /* fat-thumb: every control (and a container whose only height is its controls) is exactly one --thumb tall at least; nested controls fill it, never add to it */
+    #repo-list .row, .file-header, .ctl-row { min-height: var(--thumb); } /* fat-thumb rows too (controls: mood.css) */
+    #repo-list .row { display: flex; flex-direction: column; justify-content: center; }
+    #remote-select { min-height: 0; } /* fills its pop wrapper, which is the thumb-tall control */
   </style>
 </head>
 <body>
 <textarea id="log" style="display: none; position: fixed; z-index: 999; top: 0; left: 0; width: 100%; height: 2em;" ></textarea>
 
 <!-- DIALOGS -->
-<dialog id="modal" style="border:none; border-radius:20px; padding:25px; width:80%; max-width:350px; box-shadow:0 10px 40px rgba(0,0,0,0.3); text-align:center;">
-  <p id="modal-msg" style="font-size:17px; font-weight:500; margin-bottom:20px; white-space:pre-wrap; overflow-wrap:break-word; word-break:break-word;"></p>
+<dialog id="modal" style="border:none; border-radius:var(--sap); padding:var(--gap); text-align:center;">
+  <p id="modal-msg" style="font-size:1.0625rem; font-weight:500; margin:0 0 var(--gap); white-space:pre-wrap; overflow-wrap:break-word; word-break:break-word;"></p>
   <input type="text" id="modal-input" style="display:none;">
-  <div style="display:flex; gap:1em; flex-wrap:wrap; justify-content:center;">
+  <div style="display:flex; gap:var(--gap); flex-wrap:wrap; justify-content:center;">
     <button class="btn btn-neutral" id="modal-cancel">Cancel</button>
     <button class="btn btn-primary" id="modal-ok">OK</button>
   </div>
@@ -164,7 +219,7 @@
     </select>
     <button class="btn btn-limbo" onclick="App.tryAI()">AI</button>
     <button class="btn btn-limbo" onclick="App.activeSave()">Save</button>
-    <input id="find-box" placeholder="Find" oninput="App.find(this.value, true, null, false)" onkeydown="if(event.key==='Enter') App.find(this.value, true, null, true)" style="min-width:5em; width:5em; padding:0 1em; margin:0; border-radius:1em; border:none; background:#f2f2f7; font-weight:700;">
+    <input id="find-box" placeholder="Find" oninput="App.find(this.value, true, null, false)" onkeydown="if(event.key==='Enter') App.find(this.value, true, null, true)" style="min-width:5em; width:5em; padding:0 1em; margin:0; border-radius:var(--sap); border:none;  font-weight:700;">
     <button class="btn" onmousedown="event.preventDefault()" ontouchstart="event.preventDefault();App.copyActive()" onclick="App.copyActive()">Copy</button>
     <button class="btn" onmousedown="event.preventDefault()" ontouchstart="event.preventDefault();App.pasteActive()" onclick="App.pasteActive()">Paste</button>
     <button class="btn" onclick="App.insertActive('()')">()</button>
@@ -183,47 +238,41 @@
 <!-- MAIN UI -->
 <main id="main">
   <div id="review-view" class="view active">
-    <div style="display:flex; gap:1em; padding: 1em; align-items:center">
-      <button class="btn btn-neutral" style="width:auto" onclick="App.openRepoDialog()">Open <span id="current-repo" style="margin-left:0.5em; opacity:0.7">/</span></button>
-      <button class="btn btn-neutral" style="flex:1" onclick="App.runGit('fetch')">Fetch</button>
-      <button class="btn btn-neutral" style="flex:1" onclick="App.runGit('pull')">Pull</button>
+    <div class="halves" style="padding:calc(var(--gap) + env(safe-area-inset-top)) var(--gap) 0; gap:var(--gap); margin:0"> <!-- no bottom: the first diff header's own padding is the gap below -->
+      <button class="btn c-open" style="grid-column:1/-1; white-space:nowrap" onclick="App.openRepoDialog()">Open&nbsp;<span id="current-repo" style="opacity:0.7">/</span></button>
+      <button class="btn c-fetch" onclick="App.runGit('fetch')">Fetch</button>
+      <button class="btn c-pull" onclick="App.runGit('pull')">Pull</button>
+      <button class="btn c-new" style="grid-column:1/-1" onclick="App.openEditor()">+ NEW CHANGES</button>
     </div>
-    <button class="btn btn-yes" style="margin: 0 auto; width: 90%;" onclick="App.openEditor()">+ NEW CHANGES</button>
 
-    <div id="file-list" style="padding-top:1em;"></div>
+    <div id="file-list"></div>
 
 <!-- REPO DIALOG -->
-<dialog id="repo-modal" style="border:none; border-radius:20px; padding:25px; width:90%; max-width:400px; box-shadow:0 10px 40px rgba(0,0,0,0.3);">
-  <h3>Repositories</h3>
-  <div id="repo-list" style="display:flex; flex-direction:column; gap:0.5em; max-height:200px; overflow:auto; margin-bottom:1em;"></div>
-
-  <label class="btn btn-neutral" style="margin-bottom:1em; border:1px dashed #999; display:flex; align-items:center; justify-content:center; cursor:pointer" onclick="App.importDeviceFolder()">
-      📂 Import Device Folder
-  </label>
+<dialog id="repo-modal" style="border:none; border-radius:var(--sap); padding:var(--gap);">
+  <div class="halves">
+      <button class="btn c-device" onclick="App.importDeviceFolder()">📂 Device</button>
+      <span id="remote-wrap" class="btn c-remote pop"><select id="remote-select" onchange="App.openRemote(this)"><option value="">🖥️ Remote</option></select></span>
+  </div>
+  <input id="new-repo-url" class="dashed" placeholder="https://github.com/user/repo">
+  <button class="btn c-clone" style="margin-bottom:var(--gap);" onclick="App.cloneFromDialog()">📋 Clone</button>
+  <div id="repo-list" style="display:flex; flex-direction:column; gap:var(--gap); max-height:40vh; overflow:auto;"></div>
   <input id="import-input-main" type="file" webkitdirectory directory multiple style="display:none" onchange="App.handleImport(this, false)">
   <input id="import-input-git" type="file" webkitdirectory directory multiple style="display:none" onchange="App.handleImport(this, true)">
 
-  <div id="import-debug" style="font-family:monospace; font-size:10px; background:#eee; padding:5px; margin-top:10px; max-height:100px; overflow:auto; display:none;"></div>
+  <div id="import-debug" style="font-family:monospace; font-size:.625rem; background:#eee; padding:.3125rem; margin-top:.625rem; max-height:6.25rem; overflow:auto; display:none;"></div>
 
   <!-- Shared Progress UI -->
 
   <!-- Shared Progress UI -->
-  <div id="repo-progress-container" style="display:none; margin-top:1em; background:#f2f2f7; padding:1em; border-radius:0.5em;">
-      <div id="repo-progress-text" style="font-family:monospace; font-size:0.8em; margin-bottom:0.5em;">Initializing...</div>
+  <div id="repo-progress-container" style="display:none; margin-top:var(--gap); background:var(--tint); padding:var(--gap); border-radius:var(--sap);">
+      <div id="repo-progress-text" style="font-family:monospace; font-size:0.8em; margin-bottom:var(--gap);">Initializing...</div>
       <progress id="repo-progress-bar" value="0" max="100" style="width:100%"></progress>
   </div>
 
-  <hr>
-  <h4>Clone New</h4>
-  <input id="new-repo-url" placeholder="https://github.com/user/repo">
-  <div style="display:flex; gap:0.5em">
-      <button class="btn btn-act" onclick="App.cloneFromDialog()">Clone</button>
-      <button class="btn btn-neutral" onclick="document.getElementById('repo-modal').close()">Close</button>
-  </div>
 </dialog>
 
-    <div id="commit-box" style="padding:1em;">
-      <textarea id="commit-msg" rows="1" placeholder="Commit message..." style="background:transparent; border-bottom:2px dashed var(--act); border-radius: 10em; padding: 0.5em 2em;"></textarea>
+    <div id="commit-box" style="padding:var(--gap);">
+      <textarea id="commit-msg" class="dashed" rows="1" placeholder="Commit message..."></textarea>
       <button class="btn btn-yes" onclick="App.commit()">Commit</button>
       <textarea id="spellpredict" style="display: none; position: fixed; z-index: 999; bottom: 0; left: 0; width: 100%; height: 2em; opacity: 0.5;"></textarea>
       <script>
@@ -235,57 +284,62 @@
 
 
     </div>
-    <button class="btn btn-act" style="margin: 1em auto; width: 90%;" onclick="App.runGit('push')">Push</button>
+    <button class="btn btn-act" style="margin: var(--gap) auto; width: 90%;" onclick="App.runGit('push')">Push</button>
 
-    <div style="padding:1em;">
+    <div style="padding:var(--gap);">
       <button class="btn btn-neutral" onclick="App.tab('config')">Settings & Config</button>
     </div>
   </div>
 
-  <div id="config-view" class="view" style="padding:1em;">
+  <div id="config-view" class="view" style="padding:var(--gap);">
     <button class="btn btn-act" onclick="App.tab('review')">&larr; Back</button>
     <h3>Git Config</h3>
     <input id="cfg-key" placeholder="Key (e.g. user.name)">
     <input id="cfg-val" placeholder="Value">
-    <div style="display:flex; gap:1em;">
+    <div style="display:flex; gap:var(--gap);">
         <button class="btn btn-act" onclick="App.cfg('get')">Get</button>
         <button class="btn btn-act" onclick="App.cfg('set')">Set</button>
     </div>
-    <button class="btn btn-hot" style="margin-top:1em;" onclick="App.cfg('unset')">Unset</button>
-    <pre id="cfg-out" style="background:#f2f2f7; padding:1em; border-radius:1em; margin-top:1em; overflow:auto;"></pre>
+    <button class="btn btn-hot" style="margin-top:var(--gap);" onclick="App.cfg('unset')">Unset</button>
+    <pre id="cfg-out" style="background:var(--tint); padding:var(--gap); border-radius:var(--sap); margin-top:var(--gap); overflow:auto;"></pre>
+    <h3>Appearance</h3>
+    <label for="theme-hue">Color</label><input type="range" id="theme-hue" min="0" max="359" oninput="App.theme('hue', this.value)">
+    <label for="theme-lit">Brightness</label><input type="range" id="theme-lit" min="0" max="100" oninput="App.theme('lit', this.value)">
+    <label for="theme-radius">Radius</label><input type="range" id="theme-radius" min="0" max="2" step=".0625" oninput="App.theme('radius', this.value)">
+    <label for="theme-gap">Gap</label><input type="range" id="theme-gap" min="0" max="1.5" step=".0625" oninput="App.theme('gap', this.value)">
 
-    <div style="margin-top: 2em; display: flex; align-items: center; gap: 0.5em;">
+    <div class="ctl-row" style="margin-top: var(--gap); display: flex; align-items: center; gap: var(--gap);">
         <input type="checkbox" id="debug-toggle" onchange="App.toggleDebug(this.checked)" style="width: auto; margin: 0;">
         <label for="debug-toggle" style="font-weight: bold;">Show Debug Info</label>
     </div>
 
-    <hr style="margin: 2em 0; border: 0; border-top: 1px solid #eee;">
+    <hr style="margin: var(--gap) 0; border: 0; border-top: .0625rem solid #eee;">
     <h3>Browser Git</h3>
-    <div style="background: #e8f5e9; padding: 1em; border-radius: 1em;">
+    <div style="background: var(--tint); padding: var(--gap); border-radius: var(--sap);">
         <p style="font-size: 0.8em; margin-top: 0;">Runs entirely in your browser (IndexedDB). No server needed.</p>
-        <div style="display:flex; gap:1em; margin-bottom: 1em;">
+        <div style="display:flex; gap:var(--gap); margin-bottom: var(--gap);">
             
             <button class="btn btn-yes" onclick="App.setMode('browser')">Use Browser (IsoGit)</button>
         </div>
         <div id="browser-controls">
             <input id="cors-proxy" placeholder="CORS Proxy" value="https://cors.isomorphic-git.org">
             <input id="token" type="password" placeholder="Token (push/pull, saved in this browser only)">
-            <div id="browser-progress" style="margin-top:1em; padding:1em; background:#f2f2f7; border-radius:0.5em; font-family:monospace; font-size:0.8em; display:none; white-space:pre-wrap;"></div>
+            <div id="browser-progress" style="margin-top:var(--gap); padding:var(--gap); background:var(--tint); border-radius:var(--sap); font-family:monospace; font-size:0.8em; display:none; white-space:pre-wrap;"></div>
 
-            <button class="btn btn-neutral" style="margin-top:0.5em" onclick="App.runGit('ls-files')">List Files (Debug)</button>
-            <button class="btn btn-hot" style="margin-top:0.5em" onclick="App.runGit('diagnose')">Run Diagnostics</button>
+            <button class="btn btn-neutral" style="margin-top:var(--gap)" onclick="App.runGit('ls-files')">List Files (Debug)</button>
+            <button class="btn btn-hot" style="margin-top:var(--gap)" onclick="App.runGit('diagnose')">Run Diagnostics</button>
 
-            <h4 style="margin-top:1em">Debug Tools</h4>
+            <h4 style="margin-top:var(--gap)">Debug Tools</h4>
             <button class="btn btn-neutral" onclick="App.runGit('debug-status')">Check Status Matrix (Raw)</button>
-            <div style="display:flex; gap:0.5em; margin-top:0.5em">
+            <div style="display:flex; gap:var(--gap); margin-top:var(--gap)">
                 <input id="debug-file" placeholder="File path (e.g. README.md)" style="margin:0; flex:1">
                 <button class="btn btn-neutral" style="width:auto" onclick="App.runGit('debug-read')">Read Content</button>
             </div>
-            <button class="btn btn-neutral" style="margin-top:0.5em" onclick="App.runGit('debug-refs')">Check Refs (HEAD)</button>
-            <button class="btn btn-neutral" style="margin-top:0.5em" onclick="App.runGit('debug-diff')">Check Diff (Raw)</button>
-            <pre id="debug-out" class="debug-ui" onclick="navigator.clipboard.writeText(this.textContent).then(()=>alert('Logs copied!'))" style="background:#333; color:#0f0; padding:1em; border-radius:0.5em; font-size:10px; overflow:auto; max-height:200px; margin-top:0.5em; display:none; cursor:pointer;" title="Tap to copy logs"></pre>
+            <button class="btn btn-neutral" style="margin-top:var(--gap)" onclick="App.runGit('debug-refs')">Check Refs (HEAD)</button>
+            <button class="btn btn-neutral" style="margin-top:var(--gap)" onclick="App.runGit('debug-diff')">Check Diff (Raw)</button>
+            <pre id="debug-out" class="debug-ui" onclick="navigator.clipboard.writeText(this.textContent).then(()=>alert('Logs copied!'))" style="background:#333; color:#0f0; padding:var(--gap); border-radius:var(--sap); font-size:.625rem; overflow:auto; max-height:12.5rem; margin-top:var(--gap); display:none; cursor:pointer;" title="Tap to copy logs"></pre>
 
-            <h4 style="margin-top:1em; color:var(--hot)">Danger Zone</h4>
+            <h4 style="margin-top:var(--gap); color:var(--hot)">Danger Zone</h4>
             <button class="btn btn-hot" onclick="App.resetStorage()">Dangerously Reset All Storage</button>
         </div>
     </div>
@@ -378,6 +432,57 @@ class DeviceFSAdapter {
     async rmdir(path) { return this.unlink(path); }
 }
 
+// RemoteFS: the fs of a repo on the serve.js machine (git/serve.js /rf/), so the SAME isomorphic-git code works live on its real working tree + .git.
+// One `snap` request per refresh answers every stat/readdir; .git/objects are immutable so they are kept (in memory + Cache Storage) after the 1st download.
+class RemoteFS {
+    constructor(name) { this.name = name; this.promises = this; this.keep = {}; this.fresh(); }
+    fresh() { this.snap = null; this.got = {}; } // drop per-refresh caches
+    rel(p) { return ('' + p).split('/').filter(x => x && x !== '.').join('/'); }
+    err(code, p) { throw Object.assign(new Error(code + ': ' + p), { code }); }
+    async q(op, p, body, raw) {
+        const r = await fetch(location.origin + '/rf/' + encodeURIComponent(this.name) + '?op=' + op + '&path=' + encodeURIComponent(p || ''), { method: 'POST', body,
+            headers: { Authorization: 'Basic ' + btoa(unescape(encodeURIComponent((localStorage.tok || '') + ':'))) } });
+        if (!r.ok) this.err((await r.json().catch(() => ({}))).code || 'EIO', p);
+        return raw ? new Uint8Array(await r.arrayBuffer()) : r.json();
+    }
+    walk() { // one snapshot per refresh, or until 3s idle
+        if (Date.now() - this.t > 3000) this.fresh(); this.t = Date.now();
+        return this.snap || (this.snap = this.q('snap').catch(e => { this.snap = null; throw e; }));
+    }
+    async known(p) { // stat from the snapshot, ENOENT if its listed parent lacks it, null if the snapshot can't tell
+        const s = await this.walk(), a = p ? p.split('/') : [];
+        for (let i = 0; i < a.length; i++) { const d = s.dirs[a.slice(0, i).join('/')]; if (!d) return null; if (!d.includes(a[i])) this.err('ENOENT', p); }
+        return s.stats[p] || null;
+    }
+    st(o) { return Object.assign({}, o, { isFile: () => o.type === 'f', isDirectory: () => o.type === 'd', isSymbolicLink: () => o.type === 'l' }); }
+    async lstat(p) { p = this.rel(p); return this.st((await this.known(p)) || await this.q('lstat', p)); }
+    async stat(p) { p = this.rel(p); const k = await this.known(p); return this.st(k && k.type !== 'l' ? k : await this.q('stat', p)); }
+    async readdir(p) {
+        p = this.rel(p); const d = (await this.walk()).dirs[p]; if (d) return d.slice();
+        const k = await this.known(p); if (k && k.type !== 'd') this.err('ENOTDIR', p); return this.q('readdir', p);
+    }
+    async readlink(p) { return this.q('readlink', this.rel(p)); }
+    async readFile(p, o) {
+        p = this.rel(p); const c = /^\.git\/objects\//.test(p) ? this.keep : this.got;
+        try { var b = await (c[p] || (c[p] = this.known(p).then(async k => { const pre = (await this.walk()).pre[p]; return pre != null ? Uint8Array.from(atob(pre), x => x.charCodeAt(0)) // sent along with the snapshot
+            : k && k.type === 'l' ? this.readlink(p).then(t => new TextEncoder().encode(t)) // a symlink's content is its target, like git
+            : c === this.keep ? this.cached(p) : this.q('read', p, null, 1); }))); }
+        catch (e) { delete c[p]; throw e; }
+        return (typeof o === 'string' ? o : o && o.encoding) ? new TextDecoder().decode(b) : b;
+    }
+    async cached(p) { // immutable git objects/packs: Cache Storage, so a big pack downloads once
+        const k = location.origin + '/rf-cache/' + this.name + '/' + p, c = window.caches && await caches.open('toygit').catch(() => null), hit = c && await c.match(k);
+        if (hit) return new Uint8Array(await hit.arrayBuffer());
+        const b = await this.q('read', p, null, 1); if (c) c.put(k, new Response(b)).catch(() => {}); return b;
+    }
+    async w(op, p, body) { p = this.rel(p); this.fresh(); delete this.keep[p]; await this.q(op, p, body); }
+    writeFile(p, d) { return this.w('write', p, typeof d === 'string' ? new TextEncoder().encode(d) : d); }
+    mkdir(p) { return this.w('mkdir', p); }
+    rmdir(p) { return this.w('rmdir', p); }
+    unlink(p) { return this.w('unlink', p); }
+    symlink(t, p) { return this.w('symlink', p, t); }
+}
+
 // --- ISOMORPHIC GIT SETUP ---
 // Ensure libraries are loaded
 let fs, pf, git, http;
@@ -397,6 +502,26 @@ function initIsoGit() {
 }
 
 // --- CORE API ---
+// network + config cmds (was git.js): fetch, pull, push, reset <file>, config. No server.
+const More = (() => {
+  const $ = id => document.getElementById(id);
+  const opt = async o => ({ fs: o.fs, http: o.http, dir: o.dir, // local serve.js remotes need no CORS proxy
+    corsProxy: ((await o.git.getConfig({ fs: o.fs, dir: o.dir, path: 'remote.origin.url' }).catch(() => '')) || '').indexOf(location.origin) === 0 ? undefined : (($('cors-proxy') || {}).value || undefined),
+    onAuth: () => ({ username: localStorage.tok || '' }), onAuthFailure: () => ({ cancel: true }) });
+  const who = async o => { const g = k => o.git.getConfig({ fs: o.fs, dir: o.dir, path: k }).catch(() => ''); return { name: (await g('user.name')) || 'me', email: (await g('user.email')) || 'me@here' }; };
+  return {
+    init() { const t = $('token'); if (t) { t.value = localStorage.tok || ''; t.onchange = () => { localStorage.tok = t.value; }; } },
+    async fetch(o) { const r = await o.git.fetch(Object.assign(await opt(o), { singleBranch: true })); return { ok: true, text: 'Fetched ' + (r.fetchHead || '') }; },
+    async pull(o) { await o.git.pull(Object.assign(await opt(o), { singleBranch: true, author: await who(o) })); return { ok: true, text: 'Pulled' }; },
+    async push(o) { const r = await o.git.push(await opt(o)); return { ok: r.ok, text: r.ok ? 'Pushed' : JSON.stringify(r.refs) }; },
+    async reset(o) { for (const f of o.args) await o.git.resetIndex({ fs: o.fs, dir: o.dir, filepath: f }); return { ok: true, text: 'Reset ' + o.args.join(' ') }; }, // unstage
+    async config(o) { const a = o.args, d = { fs: o.fs, dir: o.dir };
+      if (a[0] === '--get') { const v = await o.git.getConfig(Object.assign(d, { path: a[1] })); return { ok: v != null, text: v == null ? '' : '' + v }; }
+      if (a[0] === '--unset') { await o.git.setConfig(Object.assign(d, { path: a[1], value: undefined })); return { ok: true, text: '' }; }
+      await o.git.setConfig(Object.assign(d, { path: a[0], value: a[1] })); return { ok: true, text: '' }; }
+  };
+})();
+
 const BrowserGit = {
     async run(cmd, ...args) {
       // DEBUG: Trace execution
@@ -414,7 +539,7 @@ const BrowserGit = {
         // await UI.alert('Cmd: ' + command);
 
         // If using DeviceFS, activeDir is root of that handle, so '.'
-        const dir = (activeFS instanceof DeviceFSAdapter) ? '.' : activeDir;
+        const dir = activeFS ? '.' : activeDir;
         // Use activeFS.promises or pf (which is lightning)
         const fsToUse = activeFS || fs;
 
@@ -424,8 +549,8 @@ const BrowserGit = {
                 // await UI.alert('Inside clone block');
                 // args[0] is URL (passed from App.cloneFromDialog)
                 const url = args[0] || (document.getElementById('clone-url') ? document.getElementById('clone-url').value : '');
-                const proxy = document.getElementById('cors-proxy').value;
-                const token = args[1] || ''; // Optional token
+                const proxy = (0 === (url||'').indexOf(location.origin))? undefined : document.getElementById('cors-proxy').value; // local serve.js needs no proxy
+                const token = args[1] || localStorage.tok || ''; // Optional token, else the saved Token box
 
                 if (!url) return { ok: false, text: 'No URL provided' };
 
@@ -483,6 +608,7 @@ const BrowserGit = {
                 // Update active dir and switch
                 activeDir = targetDir;
                 localStorage.setItem('git_active_dir', activeDir);
+                Recent.note(targetDir, '📋', url); App.useFS(null);
 
                 if (pText) pText.textContent = 'Clone Complete!';
                 setTimeout(() => {
@@ -505,8 +631,8 @@ const BrowserGit = {
                    // Add all modified files (simplified: just add everything)
                    const files = await git.listFiles({ fs: fsToUse, dir });
                    for(const f of files) await git.add({ fs: fsToUse, dir, filepath: f });
-               } else {
-                   await git.add({ fs: fsToUse, dir, filepath: path });
+               } else { // a deleted file is staged with remove
+                   await git.add({ fs: fsToUse, dir, filepath: path }).catch(e => { if (e.code !== 'NotFoundError') throw e; return git.remove({ fs: fsToUse, dir, filepath: path }); });
                }
                return { ok: true, text: '' };
             }
@@ -517,7 +643,7 @@ const BrowserGit = {
                await git.commit({
                    fs: fsToUse, dir,
                    message: msg,
-                   author: { name: 'Browser User', email: 'browser@local' }
+                   author: { name: (await git.getConfig({ fs: fsToUse, dir, path: 'user.name' })) || 'Browser User', email: (await git.getConfig({ fs: fsToUse, dir, path: 'user.email' })) || 'browser@local' }
                });
                return { ok: true, text: 'Committed' };
             }
@@ -554,6 +680,7 @@ const BrowserGit = {
                    else if (head === 1 && workdir === 0 && stage === 0) { x = 'D'; y = ' '; }
                    else if (head === 1 && workdir === 2 && stage === 1) { x = ' '; y = 'M'; }
                    else if (head === 1 && workdir === 2 && stage === 2) { x = 'M'; y = ' '; }
+                   else if (stage === 3) { x = head ? 'M' : 'A'; y = 'M'; } // staged, then changed again
 
                    // Filter out unmodified
                    if (x === ' ' && y === ' ') continue;
@@ -561,6 +688,12 @@ const BrowserGit = {
                    output.push(`${x}${y} ${filepath}`);
                }
                return { ok: true, text: output.join('\0') };
+            }
+
+            if (command === 'show') { // show HEAD:path
+               const [ref, ...p] = (fullCmd[1] || '').split(':');
+               const { blob } = await git.readBlob({ fs: fsToUse, dir, oid: await git.resolveRef({ fs: fsToUse, dir, ref: ref || 'HEAD' }), filepath: p.join(':') });
+               return { ok: true, text: new TextDecoder().decode(blob) };
             }
 
             if (command === 'diff') {
@@ -571,6 +704,9 @@ const BrowserGit = {
                // Resolve HEAD OID once to avoid repetitive resolution errors
                let headOid = null;
                try { headOid = await git.resolveRef({ fs: fsToUse, dir, ref: 'HEAD' }); } catch(e){}
+               let staged; // index content, only needed for files staged then changed again (stage 3)
+               const indexStr = async (f) => { staged = staged || new Map(await git.walk({ fs: fsToUse, dir, trees: [git.STAGE()], map: async (p, [e]) => e && p !== '.' && (await e.type()) === 'blob' ? [p, await e.oid()] : undefined }));
+                   return staged.get(f) ? new TextDecoder().decode((await git.readBlob({ fs: fsToUse, dir, oid: staged.get(f) })).blob) : ''; };
 
                for (const [filepath, head, workdir, stage] of matrix) {
                    try {
@@ -581,7 +717,7 @@ const BrowserGit = {
                        // Construct correct path for reading current content
                        // If DeviceFS, dir is '.', path is 'filepath'.
                        // If LightningFS, dir is '/repo', path is '/repo/filepath'.
-                       const targetPath = (activeFS instanceof DeviceFSAdapter ? '' : dir) + '/' + filepath;
+                       const targetPath = (activeFS ? '' : dir) + '/' + filepath;
 
                        if (localStorage.getItem('git_debug')) {
                            const out = document.getElementById('debug-out');
@@ -606,7 +742,7 @@ const BrowserGit = {
                                }
                                let currStr = '';
                                try {
-                                   currStr = await fsToUse.promises.readFile(targetPath, 'utf8');
+                                   currStr = stage === 3 ? await indexStr(filepath) : await fsToUse.promises.readFile(targetPath, 'utf8');
                                } catch(e) { console.warn('Diff Read Error:', e); }
 
                                // For staged diff, we compare HEAD vs INDEX.
@@ -620,7 +756,7 @@ const BrowserGit = {
                        } else {
                            // Unstaged Diff
                            // If workdir != stage
-                           if (workdir === 2 && stage !== 2) {
+                           if (workdir === 2 && stage !== 2 && (head || stage)) { // untracked files get their diff in refresh()
                                let srcStr = '';
                                try {
                                   // Compare against Index (Stage)
@@ -632,7 +768,8 @@ const BrowserGit = {
                                   // No, that ignores staging area.
 
                                   // If we assume stage matches HEAD (unstaged changes), we read HEAD.
-                                  if (head === 1) {
+                                  if (stage === 3) srcStr = await indexStr(filepath);
+                                  else if (head === 1) {
                                       const oid = headOid || 'HEAD';
                                       const obj = await git.readBlob({ fs: fsToUse, dir, filepath, oid });
                                       srcStr = new TextDecoder().decode(obj.blob);
@@ -792,7 +929,7 @@ const BrowserGit = {
                 return { ok: true, text: 'Diff Calculated' };
             }
 
-            if (window.more && more[command]) return await more[command]({ git, http, fs: fsToUse, dir, args: fullCmd.slice(1) });
+            if (command !== 'init' && More[command]) return await More[command]({ git, http, fs: fsToUse, dir, args: fullCmd.slice(1) });
             return { ok: false, text: 'Command not implemented in Browser Mode: ' + command };
         } catch (e) {
             console.error(e);
@@ -802,7 +939,7 @@ const BrowserGit = {
 
     async listFiles() {
         const fsToUse = activeFS || fs;
-        const dir = (activeFS instanceof DeviceFSAdapter) ? '.' : activeDir;
+        const dir = activeFS ? '.' : activeDir;
         return await git.listFiles({ fs: fsToUse, dir });
     }
 };
@@ -837,7 +974,7 @@ const BrowserFS = {
         try {
             // LightningFS expects absolute paths
             const absPath = path.startsWith('/') ? path : '/' + path;
-            return await pf.readFile(activeDir + absPath, 'utf8');
+            return await (activeFS || fs).promises.readFile((activeFS ? '' : activeDir) + absPath, 'utf8');
         } catch(e) {
             console.error('FS Read Error:', e);
             await UI.alert('Read Error: ' + e.message);
@@ -847,19 +984,45 @@ const BrowserFS = {
     async write(path, content) {
         try {
             const absPath = path.startsWith('/') ? path : '/' + path;
-            return await pf.writeFile(activeDir + absPath, content, 'utf8');
+            return await (activeFS || fs).promises.writeFile((activeFS ? '' : activeDir) + absPath, content, 'utf8');
         } catch(e) {
             console.error('FS Write Error:', e);
             await UI.alert('Write Error: ' + e.message);
             throw e;
         }
+    },
+    async remove(path) {
+        const absPath = path.startsWith('/') ? path : '/' + path;
+        return await (activeFS || fs).promises.unlink((activeFS ? '' : activeDir) + absPath);
     }
 };
 
 let CurrentFS = BrowserFS;
-const FS = {
+const FS = { // every browser change goes through here, so Orig can keep what the file was first
     read: (...args) => CurrentFS.read(...args),
-    write: (...args) => CurrentFS.write(...args)
+    peek: (p) => (activeFS || fs).promises.readFile((activeFS ? '' : activeDir) + '/' + p.replace(/^\/+/, ''), 'utf8').catch(() => null), // null if missing, no alert
+    write: async (p, t) => { await Orig.keep(p); return CurrentFS.write(p, t); },
+    remove: async (p) => { await Orig.keep(p); return CurrentFS.remove(p); }
+};
+
+// Recent: repos by last opened {key: {t, e: source emoji, ctx}}; key = browser dir or 'rf:' + remote name.
+const Recent = {
+    all: () => { try { return JSON.parse(localStorage.getItem('git_recent')) || {}; } catch(e) { return {}; } },
+    note(k, e, ctx) { const a = Recent.all(); a[k] = Object.assign(a[k] || {}, { t: Date.now() }, e ? { e, ctx } : {}); localStorage.setItem('git_recent', JSON.stringify(a)); }
+};
+
+// Orig: a file as it was before the browser first changed it (this browser only, per repo + path), so Revert brings back the original diff.
+const Orig = {
+    key: (p) => 'orig:' + (activeFS ? 'rf:' + activeFS.name : activeDir) + ':' + p.replace(/^\/+/, ''),
+    get: (p) => { try { return JSON.parse(localStorage.getItem(Orig.key(p))); } catch(e) { return null; } },
+    async keep(p) {
+        if (localStorage.getItem(Orig.key(p)) !== null) return;
+        const t = await FS.peek(p); // null: file did not exist
+        const f = (App.state.files || {})[p];
+        try { localStorage.setItem(Orig.key(p), JSON.stringify({ t, staged: !!(f && f.staged) })); } catch(e) { console.warn('Orig not kept (storage full?)', p, e); }
+    },
+    drop: (p) => localStorage.removeItem(Orig.key(p)),
+    clear: () => Object.keys(localStorage).filter(k => k.startsWith(Orig.key(''))).forEach(k => localStorage.removeItem(k))
 };
 
 ;(function(){ var key;
@@ -922,7 +1085,10 @@ const Utils = {
 };
 
 // --- UI LOGIC ---
+// Every editor: the tiny line number sits at the screen edge and its code starts right after it (each line padded by its own number, no fixed gutter)
+CodeMirror.defineInitHook(cm => cm.on('renderLine', (cm, line, el) => { el.style.paddingLeft = App.lnPad(cm.getLineNumber(line) + 1); }));
 const App = {
+  lnPad: (n) => `calc(${String(n).length * .5}ch + .0625rem)`, // digits at .5em (see .CodeMirror-linenumber) = .5ch each
   state: { collapsed: new Set(), expanded: new Set(), diffCache: {}, editors: {} },
   editor: null,
   activeCm: null,
@@ -936,8 +1102,8 @@ const App = {
           CurrentGit = BrowserGit;
           CurrentFS = BrowserFS;
           document.getElementById('browser-controls').style.display = 'block';
-          // Update repo label
-          document.getElementById('current-repo').textContent = activeDir;
+          // Update repo label (and reopen a Remote Folder if one was open)
+          this.useFS(localStorage.getItem('git_remote') ? new RemoteFS(localStorage.getItem('git_remote')) : null);
           // UI.alert('Switched to Browser Mode (IndexedDB)');
       } else {
 
@@ -948,15 +1114,38 @@ const App = {
       this.refresh();
   },
 
+  useFS(f) { // the only backend switch: null = LightningFS at activeDir, else an fs rooted at the repo (RemoteFS)
+      activeFS = f;
+      if (f) Recent.note('rf:' + f.name, '🖥️', location.host); else Recent.note(activeDir);
+      if (f) localStorage.setItem('git_remote', f.name); else localStorage.removeItem('git_remote');
+      document.getElementById('current-repo').textContent = f ? '🖥 ' + f.name : activeDir;
+  },
+
+  async openRemote(sel) { // native <select> of the server's repos
+      const n = sel.value; sel.value = ''; if (!n) return;
+      document.getElementById('repo-modal').close(); this.useFS(new RemoteFS(n)); this.refresh();
+  },
+
+  async loadRemotes() {
+      const sel = document.getElementById('remote-select'), opt = (v, t) => { const o = document.createElement('option'); o.value = v; o.textContent = t; return o; }, w = document.getElementById('remote-wrap');
+      w.classList.add('busy');
+      try { var r = await (await fetch(location.origin + '/rf/', { headers: { Authorization: 'Basic ' + btoa(unescape(encodeURIComponent((localStorage.tok || '') + ':'))) } })).json(); }
+      catch (e) { r = { code: 'no server' }; }
+      sel.replaceChildren(opt('', '🖥️ Remote'), ...(r.list || []).map(n => opt(n, n)));
+      if (!r.list) sel.appendChild(opt('', r.code === 'EAUTH' ? 'Token needed: Settings & Config' : 'Unavailable: ' + r.code)).disabled = true;
+      w.classList.remove('busy');
+  },
+
   async openRepoDialog() {
       const modal = document.getElementById('repo-modal');
       const list = document.getElementById('repo-list');
-      list.innerHTML = 'Loading...';
-      modal.showModal();
+      const early = list.childNodes.length; if (early) modal.show(); // shown at once with the last list (same size, no jump); refreshed in place below
+      if (this.opening) return; this.opening = true; // already loading: that build refreshes the list (and shows it if it wasn't shown); a 2nd tap must not land on the popup as it appears ("tap twice")
+      this.loadRemotes(); // fills the Remote select in place (fixed size)
 
       try {
           let dirs = [];
-          if (CurrentGit === BrowserGit) {
+          if (pf) { // browser repos, also listed while a Remote Folder is open
               const files = await pf.readdir('/');
               for (const f of files) {
                   if (f === '.git') continue;
@@ -966,28 +1155,31 @@ const App = {
               try { await pf.stat('/.git'); dirs.unshift('/'); } catch(e) {}
           }
 
-          list.innerHTML = '';
-          dirs.forEach(d => {
-              const btn = document.createElement('button');
-              btn.className = 'btn btn-neutral';
-              btn.textContent = d;
-              btn.style.textAlign = 'left';
-              btn.onclick = () => { App.switchRepo(d); modal.close(); };
-              if (d === activeDir || (activeDir === '' && d === '/')) {
-                  btn.style.background = 'var(--act)';
-                  btn.style.color = '#fff';
-              }
-              list.appendChild(btn);
-          });
-
-          if (dirs.length === 0) list.innerHTML = 'No repositories found.';
+          const rec = Recent.all(), items = [];
+          for (const d of dirs) { const r = rec[d] || {}; // browsers repos opened before Recent existed: 📋 if they have an origin
+              const url = r.e ? r.ctx : await git.getConfig({ fs, dir: d, path: 'remote.origin.url' }).catch(() => '');
+              items.push({ k: d, name: d.replace(/^\//, '') || '/', e: r.e || (url ? '📋' : '📂'), ctx: (r.e === '📂' ? 'device ' : '') + ((url || '').replace(/^\w+:\/\//, '') || d), t: r.t || 0, go: () => App.switchRepo(d), on: !activeFS && d === activeDir }); }
+          Object.keys(rec).filter(k => k.startsWith('rf:')).forEach(k => items.push({ k, name: k.slice(3), e: '🖥️', ctx: 'live on ' + rec[k].ctx, t: rec[k].t, go: () => App.useFS(new RemoteFS(k.slice(3))) || App.refresh(), on: activeFS && 'rf:' + activeFS.name === k }));
+          items.sort((a, b) => b.t - a.t || a.name.localeCompare(b.name));
+          list.replaceChildren(...items.map(it => {
+              const row = document.createElement('div'), b = document.createElement('b');
+              row.className = 'row' + (it.on ? ' on' : ''); row.setAttribute('role', 'button'); row.tabIndex = 0;
+              b.textContent = it.e + ' ' + it.name; row.appendChild(b);
+              if (items.filter(x => x.name === it.name).length > 1) { const c = document.createElement('small'); c.textContent = it.ctx; row.appendChild(c); } // same name: say which
+              row.onclick = () => { modal.close(); it.go(); };
+              return row;
+          }));
+          dirs = items;
+          if (dirs.length === 0) list.textContent = 'No repositories found.';
       } catch(e) {
           list.textContent = 'Error: ' + e.message;
       }
+      this.opening = false;
+      if (!early) modal.show(); // never re-show at the end: if it was shown early and closed meanwhile, re-showing it made the next tap an 'outside' tap (eaten) // only once its list is built: the popup is centred on its height, so filling it after showing made it jump
   },
 
   switchRepo(path) {
-      activeDir = path;
+      activeDir = path; this.useFS(null);
       localStorage.setItem('git_active_dir', path);
       document.getElementById('current-repo').textContent = path;
       this.refresh();
@@ -1154,7 +1346,7 @@ const App = {
           } else {
               activeDir = targetDir;
               localStorage.setItem('git_active_dir', activeDir);
-              document.getElementById('current-repo').textContent = activeDir;
+              Recent.note(targetDir, '📂', targetDir); this.useFS(null);
 
               if (hasGitObj) {
                   pText.textContent = 'Import Complete (.git found)!';
@@ -1255,7 +1447,7 @@ const App = {
           // Set Active
           activeDir = targetDir;
           localStorage.setItem('git_active_dir', activeDir);
-          activeFS = null; // Ensure we use LightningFS
+          Recent.note(targetDir, '📂', targetDir); this.useFS(null); // Ensure we use LightningFS
 
           progressEl.textContent = 'Import Complete!';
           setTimeout(() => progressEl.style.display = 'none', 5000);
@@ -1368,8 +1560,7 @@ const App = {
           // Inline: Scroll Main
           const winCoords = cm.charCoords(pos, 'window');
           const diff = winCoords.top - OFFSET;
-          const main = document.getElementById('main');
-          if (Math.abs(diff) > 5) main.scrollBy(0, diff); // Threshold to prevent jitter
+          if (Math.abs(diff) > 5) window.scrollBy(0, diff); // Threshold to prevent jitter
       } else {
           // Fullscreen: Scroll Editor
           const coords = cm.charCoords(pos, 'local');
@@ -1532,7 +1723,7 @@ const App = {
 
       const box = document.getElementById('find-box');
       if (!query || !editor) {
-          if(box) box.style.background = '#f2f2f7';
+          if(box) box.style.background = '';
           return;
       }
       if (!editor.getSearchCursor) return UI.alert('Search addon missing');
@@ -1554,7 +1745,7 @@ const App = {
           if(box) box.style.background = '#ffcccc';
           return;
       }
-      if(box) box.style.background = '#f2f2f7';
+      if(box) box.style.background = '';
 
       const from = cursor.from();
       const to = cursor.to();
@@ -1576,8 +1767,7 @@ const App = {
           // Inline Editor: Scroll Page
           const coords = editor.charCoords(pos, "window");
           const diff = coords.top - OFFSET;
-          const main = document.getElementById('main');
-          main.scrollBy(0, diff);
+          window.scrollBy(0, diff);
       } else {
           // Fullscreen Editor: Scroll Editor
           const coords = editor.charCoords(pos, "local");
@@ -1661,7 +1851,14 @@ const App = {
     });
   },
 
+  theme(k, v) { // Settings > Appearance sliders set --hue / --lit / --sap / --gap on <html>; mood.css/mood.js do the rest (mood from --lit thirds, bar colour)
+    const t = Object.assign({ hue: 210, lit: 20, radius: .75, gap: .75 }, JSON.parse(localStorage.theme || '{}')), css = { hue: ['hue', ''], lit: ['lit', ''], radius: ['sap', 'rem'], gap: ['gap', 'rem'] };
+    if (k) { t[k] = +v; localStorage.theme = JSON.stringify(t); }
+    if (!(t.lit >= 0 && t.lit <= 100) || typeof t.lit !== 'number') t.lit = 20;
+    for (const n in css) { document.documentElement.style.setProperty('--' + css[n][0], t[n] + css[n][1]); const i = document.getElementById('theme-' + n); if (i) i.value = t[n]; }
+  },
   init() {
+    this.theme();
     this.editor = CodeMirror.fromTextArea(document.getElementById('cm-source'), {
       lineNumbers: true, mode: 'javascript', lineWrapping: true,
       dragDrop: false, // Prevent touch drag scrambling
@@ -1722,7 +1919,7 @@ const App = {
 
   async runGit(cmd) {
       if (!await UI.confirm(`Confirm ${cmd}?`)) return;
-      const r = await Git.run(cmd);
+      this.load(1); const r = await Git.run(cmd).finally(() => this.load(-1));
       await UI.alert((r.ok ? 'Success: ' : 'Error: ') + (r.text || cmd));
       if (r.ok) this.refresh();
   },
@@ -1736,8 +1933,9 @@ const App = {
       // Stage all changes first to ensure single commit
       // await Git.run('add', '.');
 
-      const r = await Git.run('commit', '-m', msg);
+      this.load(1); const r = await Git.run('commit', '-m', msg).finally(() => this.load(-1));
       if (r.ok) {
+          Orig.clear();
           await UI.alert('Commit Successful');
           document.getElementById('commit-msg').value = '';
           this.refresh();
@@ -1810,7 +2008,7 @@ const App = {
       const editor = this.activeCm || this.editor;
       const box = document.getElementById('find-box');
       if (!query || !editor) {
-          if(box) box.style.background = '#f2f2f7';
+          if(box) box.style.background = '';
           return;
       }
       if (!editor.getSearchCursor) return UI.alert('Search addon missing');
@@ -1832,7 +2030,7 @@ const App = {
           if(box) box.style.background = '#ffcccc';
           return;
       }
-      if(box) box.style.background = '#f2f2f7';
+      if(box) box.style.background = '';
 
       const from = cursor.from();
       const to = cursor.to();
@@ -1865,8 +2063,7 @@ const App = {
 
           const coords = editor.charCoords(pos, "window");
           const diff = coords.top - OFFSET;
-          const main = document.getElementById('main');
-          main.scrollBy(0, diff);
+          window.scrollBy(0, diff);
       } else {
           // Fullscreen Editor: Scroll Editor
           // charCoords(pos, "local") gives pos relative to editor top (scroller).
@@ -1882,12 +2079,20 @@ const App = {
       editor.focus();
   },
 
-  async refresh(isManual = false) {
+  load(d) { this.loading = (this.loading || 0) + d; document.getElementById('current-repo').classList.toggle('busy', this.loading > 0); },
+  async refresh(...a) { // one draw at a time: refreshes asked for meanwhile collapse into one more after it (piled-up statusMatrix runs starved the FS, so Open's list took seconds)
+    if (this.drawing) { this.again = this.again ? [this.again[0] || a[0]] : a; return this.drawing; }
+    this.load(1); let r;
+    try { do { const args = this.again || a; this.again = null; this.drawing = this.draw(...args); r = await this.drawing; } while (this.again); return r; }
+    finally { this.drawing = null; this.load(-1); }
+  },
+  async draw(isManual = false) {
     if (this.isImporting) return;
+    if (activeFS && activeFS.fresh) activeFS.fresh(); // re-read live state
+    const gen = this.gen = (this.gen || 0) + 1; // only the newest refresh may draw
 
     // 1. Capture State
-    const mainEl = document.getElementById('main');
-    const scrollTop = mainEl.scrollTop;
+    const scrollTop = document.scrollingElement.scrollTop;
     const activePath = this.activeEditorId;
     let activeCursor = null;
     if (this.activeCm && activePath && activePath !== '__MAIN__') {
@@ -1911,6 +2116,9 @@ const App = {
         if (files[path].staged) stagedList.push(path);
     });
 
+    const ok = Orig.key(''); // files the browser changed back to no diff keep a card, for Revert
+    Object.keys(localStorage).filter(k => k.startsWith(ok)).forEach(k => { const p = k.slice(ok.length); files[p] = files[p] || { path: p, staged: false, unstaged: false }; });
+    this.state.files = files;
     const [dStaged, dUnstaged] = await Promise.all([
         Git.run(['diff', '--cached']),
         Git.run(['diff'])
@@ -1928,8 +2136,8 @@ const App = {
        }
     });
 
+    if (gen !== this.gen) return;
     const listEl = document.getElementById('file-list');
-    listEl.innerHTML = '';
 
     if (localStorage.getItem('git_debug')) {
         this.log('--- DEBUG: Raw Diff Output ---');
@@ -1959,13 +2167,16 @@ const App = {
         fileDiffs[name].push(d);
     });
     this.state.diffCache = fileDiffs;
-    this.state.editors = {}; // Reset editors on full refresh
 
-    const sortedFiles = Object.keys(files).sort();
+    // Cards stay across refreshes (open/closed, editor, scroll): drop gone ones, add new ones, redraw an open diff only if it changed
+    const sortedFiles = Object.keys(files).sort(), cards = {}, repo = Orig.key('');
+    if (listEl.repo !== repo) { listEl.repo = repo; listEl.replaceChildren(); this.state.editors = {}; } // another repo: start over
+    [...listEl.children].forEach(c => c.filepath && files[c.filepath] ? cards[c.filepath] = c : (c.remove(), delete this.state.editors[c.filepath]));
 
     if (sortedFiles.length === 0) {
-        const source = (CurrentGit === BrowserGit) ? activeDir : 'server';
-        listEl.innerHTML = `<div style="text-align:center;color:#999;margin-top:50px">No changes for ${source}</div>`;
+        const m = document.createElement('div');
+        m.style = 'text-align:center;opacity:.5;margin-top:3.125rem'; m.textContent = `No changes for ${document.getElementById('current-repo').textContent}`;
+        listEl.append(m);
         document.getElementById('commit-box').style.display = 'none';
         return;
     }
@@ -1974,78 +2185,15 @@ const App = {
     const cmBox = document.getElementById('commit-msg');
     if(!cmBox.value) cmBox.value = stagedList.length ? `Update ${stagedList.join(', ')}` : '';
 
-    // Async loop for rendering cards
-    await Utils.process(sortedFiles, async (name) => {
-        const f = files[name];
-        const card = document.createElement('div');
-        card.filepath = name;
-
-        // Ensure new files start collapsed
-        if (!this.state.collapsed.has(name) && !this.state.expanded?.has(name)) {
-             this.state.collapsed.add(name);
-        }
-
-        const collapsedClass = this.state.collapsed.has(name) ? 'collapsed' : '';
-
-        card.className = `file-card ${collapsedClass}`;
-        card.id = `card-${name.replace(/\W/g, '-')}`;
-
-        const header = document.createElement('div');
-        header.className = 'file-header';
-
-        const headerTitle = document.createElement('div');
-        headerTitle.style = 'flex:1; display:flex; align-items:center; overflow:hidden; gap:1em; min-width:0;';
-        headerTitle.onclick = (e) => {
-             if (e.target.closest('.stage-toggle') || e.target.closest('.btn-save-header')) return;
-             App.toggleCard(name, card);
-        };
-
-        const check = document.createElement('div');
-        check.className = `stage-toggle ${f.staged ? 'checked' : ''}`;
-        check.innerHTML = '&#10003;';
-        check.onclick = async () => {
-             if (f.staged) await Git.run(['reset', name]);
-             else await Git.run(['add', name]);
-             this.refresh(true); // Manual trigger
-        };
-
-        const nameDiv = document.createElement('div');
-        nameDiv.className = 'file-name';
-        nameDiv.style = 'direction:rtl; text-align:left; flex:1;';
-        nameDiv.textContent = name; // Already decoded
-
-        const saveBtn = document.createElement('button');
-        saveBtn.className = 'btn btn-save-header btn-neutral';
-        saveBtn.textContent = 'Save';
-        saveBtn.onclick = (e) => { e.stopPropagation(); App.saveCard(name); };
-
-        const chevron = document.createElement('div');
-        chevron.className = 'chevron';
-        chevron.innerHTML = '&#9660;';
-
-        headerTitle.appendChild(check);
-        headerTitle.appendChild(nameDiv);
-        headerTitle.appendChild(saveBtn);
-        headerTitle.appendChild(chevron);
-
-        header.appendChild(headerTitle);
-        header.appendChild(document.createElement('div')); // Placeholder for flex alignment if needed
-        card.appendChild(header);
-
-        const content = document.createElement('div');
-        content.className = 'file-content';
-        card.appendChild(content);
-
-        listEl.appendChild(card);
-
-        // Lazy load: Only mount if NOT collapsed
-        if (!collapsedClass) {
-            await this.mountDiffEditor(name, card);
-        }
+    sortedFiles.forEach((name, i) => { // in order, synchronously
+        const card = cards[name] = cards[name] || this.makeCard(name);
+        { const c = card.querySelector('.stage-toggle'); c.classList.toggle('checked', files[name].staged); c.classList.toggle('pop', files[name].staged); }
+        if (listEl.children[i] !== card) listEl.insertBefore(card, listEl.children[i] || null);
     });
+    await Utils.process(sortedFiles, async (name) => { if (gen === this.gen && !cards[name].classList.contains('collapsed')) await this.syncDiff(name, cards[name]); });
 
     // 2. Restore State
-    mainEl.scrollTop = scrollTop;
+    document.scrollingElement.scrollTop = scrollTop;
 
     // 3. Re-link Active Editor
     if (activePath && activePath !== '__MAIN__' && this.state.editors[activePath]) {
@@ -2056,6 +2204,74 @@ const App = {
     }
   },
 
+  makeCard(name) {
+      const card = document.createElement('div');
+      card.filepath = name;
+
+      // Ensure new files start collapsed
+      if (!this.state.collapsed.has(name) && !this.state.expanded?.has(name)) {
+           this.state.collapsed.add(name);
+      }
+
+      const collapsedClass = this.state.collapsed.has(name) ? 'collapsed' : '';
+
+      card.className = `file-card ${collapsedClass}`;
+      card.id = `card-${name.replace(/\W/g, '-')}`;
+
+      const header = document.createElement('div');
+      header.className = 'file-header';
+
+      const headerTitle = document.createElement('div');
+      headerTitle.style = 'flex:1; display:flex; align-items:center; overflow:hidden; gap:.3em; min-width:0;';
+      headerTitle.onclick = (e) => {
+           if (e.target.closest('.stage-toggle') || e.target.closest('.trash')) return;
+           App.toggleCard(name, card);
+      };
+
+      const check = document.createElement('div');
+      check.className = 'stage-toggle';
+      check.textContent = '✓';
+      check.onclick = async () => {
+           if (this.state.files[name].staged) await Git.run(['reset', name]);
+           else await Git.run(['add', name]);
+           this.refresh(true); // Manual trigger
+      };
+
+      const nameDiv = document.createElement('div');
+      nameDiv.className = 'file-name';
+      nameDiv.style = 'direction:rtl; text-align:left; flex:1;';
+      nameDiv.textContent = name; // Already decoded
+
+      const chevron = document.createElement('div');
+      chevron.className = 'chevron';
+
+      const trash = document.createElement('button');
+      trash.className = 'btn trash'; trash.textContent = '🗑'; trash.title = 'Discard / restore menu';
+      trash.onclick = (e) => { e.stopPropagation(); App.fileMenu(name); };
+
+      headerTitle.append(check, nameDiv, chevron, trash);
+      App.detectSwipe(header, () => App.fileMenu(name));
+
+      header.appendChild(headerTitle);
+      card.appendChild(header);
+
+      const content = document.createElement('div');
+      content.className = 'file-content';
+      card.appendChild(content);
+
+      return card;
+  },
+
+  async syncDiff(name, card) { // open card: mount it, or redraw only if HEAD or the file changed under it; never while typing
+      const cm = this.state.editors[name];
+      if (!cm) return this.mountDiffEditor(name, card);
+      const busy = () => cm.hasFocus() || cm.unsaved || cm.saving || this.state.editors[name] !== cm; // typing or saving: leave it alone
+      if (busy()) return;
+      const head = await Git.run(['show', 'HEAD:' + name]), base = head.ok ? head.text : '', text = (await FS.peek(name)) || '';
+      if ((base === cm.base && text === cm.getValue()) || busy()) return;
+      cm.base = base; cm.setValue(text); cm.clearHistory(); this.renderDiff(cm, name);
+  },
+
   async toggleCard(name, card) {
       const isCollapsed = card.classList.contains('collapsed');
       if (isCollapsed) {
@@ -2064,12 +2280,8 @@ const App = {
           this.state.collapsed.delete(name);
           this.state.expanded.add(name); // Track expansion
 
-          // Lazy Mount: Only mount if not already there
-          if (!this.state.editors[name]) {
-              await this.mountDiffEditor(name, card);
-          } else {
-              this.state.editors[name].refresh();
-          }
+          await this.syncDiff(name, card); // mount, or catch up on changes made while it was closed
+          if (this.state.editors[name]) this.state.editors[name].refresh();
       } else {
           // COLLAPSE
           card.classList.add('collapsed');
@@ -2085,254 +2297,152 @@ const App = {
           y0 = e.touches[0].clientY;
       }, {passive: true});
       el.addEventListener('touchend', e => {
+          if (UI.eat) return; // this gesture closed a popup: nothing else
           const dx = e.changedTouches[0].clientX - x0;
           const dy = e.changedTouches[0].clientY - y0;
-          if (Math.abs(dx) > 50 && Math.abs(dy) < 30) { // Horizontal swipe
+          const min = Math.max(3 * parseFloat(getComputedStyle(document.documentElement).fontSize), innerWidth / 5); // at least 3rem and a fifth of the screen
+          if (Math.abs(dx) > min && Math.abs(dx) > 2 * Math.abs(dy)) { // mostly horizontal
               action(e.changedTouches[0]);
           }
       });
   },
 
-  async mountDiffEditor(name, card) {
+  async mountDiffEditor(name, card) { // the twirl spins while it loads
+      const c = card.querySelector('.chevron'); if (c) c.classList.add('spin');
+      try { await this.mountDiff(name, card); } finally { if (c) c.classList.remove('spin'); }
+  },
+  async mountDiff(name, card) { // the working file, with its diff vs HEAD drawn on it
       const contentDiv = card.querySelector('.file-content');
-      // If already mounted, don't clear
       if (this.state.editors[name]) return;
-
-      // 1. Get Diff Data & File Content
-      const diffs = this.state.diffCache[name];
-      if (!diffs) { contentDiv.textContent = 'No diff data'; return; }
-
-      let text = '';
-      try { text = await FS.read(name); }
-      catch(e) { text = ''; } // Deleted file?
-
-      // 2. Setup CodeMirror
+      const head = await Git.run(['show', 'HEAD:' + name]), text = await FS.peek(name);
       const ta = document.createElement('textarea');
       contentDiv.appendChild(ta);
-
-      const cm = CodeMirror.fromTextArea(ta, {
-          lineNumbers: true, mode: 'javascript', lineWrapping: true,
-          viewportMargin: Infinity, // Ensure height grows
-          dragDrop: false,
-          autoCloseBrackets: true
-      });
-      cm.setValue(text);
-      cm.clearHistory(); // Prevent undoing to empty
+      const cm = CodeMirror.fromTextArea(ta, { lineNumbers: true, mode: 'javascript', lineWrapping: true, viewportMargin: Infinity, dragDrop: false, autoCloseBrackets: true });
+      cm.setValue(text || ''); cm.clearHistory();
+      cm.base = head.ok ? head.text : ''; // HEAD content ('' if new)
       this.state.editors[name] = cm;
-
-      // 3. Mode Detection
       let mode = 'javascript';
       if (name.match(/\.html?$/)) mode = 'htmlmixed';
       else if (name.match(/\.css$/)) mode = 'css';
       else if (name.match(/\.py$/)) mode = 'python';
       cm.setOption('mode', mode);
-
       App.setupEditor(cm);
-
       cm.on('focus', () => App.setActive(cm, 'review', () => App.saveCard(name), name));
       cm.on('blur', () => App.checkHideToolbar());
+      this.renderDiff(cm, name);
 
-      // 4. Calculate Visible Ranges & Widgets
-      const visibleLines = new Set();
-      const widgets = [];
-      const adds = [];
-      const charHighlights = [];
-
-      const escapeHtml = (str) => str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-
-      const getCommon = (s1, s2) => {
-          let pre = 0;
-          while(pre < s1.length && pre < s2.length && s1[pre] === s2[pre]) pre++;
-          let suf = 0;
-          while(suf < s1.length - pre && suf < s2.length - pre && s1[s1.length - 1 - suf] === s2[s2.length - 1 - suf]) suf++;
-          return [pre, suf];
-      };
-
-      // Async diff rendering
-      await Utils.process(diffs, (block) => {
-         block.blocks.forEach(hunk => {
-             let currentLine = (hunk.newStartLine || 1) - 1;
-             let pendingDel = null;
-
-             hunk.lines.forEach(l => {
-                 const char = l.content.charAt(0);
-                 if (char === ' ') {
-                     visibleLines.add(currentLine);
-                     pendingDel = null;
-                     currentLine++;
-                 } else if (char === '+') {
-                     visibleLines.add(currentLine);
-                     adds.push(currentLine);
-
-                     // Diff against pending delete
-                     if (pendingDel) {
-                         const delText = pendingDel.content.substring(1);
-                         const addText = l.content.substring(1);
-                         const [pre, suf] = getCommon(delText, addText);
-
-                         if (delText.length - suf > pre || addText.length - suf > pre) {
-                             // Highlight Del
-                             const w = widgets[widgets.length - 1];
-                             w.html = '-' + escapeHtml(delText.substring(0, pre)) +
-                                      `<span class="char-del">${escapeHtml(delText.substring(pre, delText.length - suf))}</span>` +
-                                      escapeHtml(delText.substring(delText.length - suf));
-
-                             // Highlight Add
-                             if (addText.length - suf > pre) {
-                                 charHighlights.push({
-                                     line: currentLine,
-                                     from: {line: currentLine, ch: pre},
-                                     to: {line: currentLine, ch: addText.length - suf}
-                                 });
-                             }
-                         }
-                         pendingDel = null;
-                     }
-
-                     currentLine++;
-                 } else if (char === '-') {
-                     pendingDel = { content: l.content };
-                     widgets.push({ line: currentLine, content: l.content });
-                     visibleLines.add(currentLine);
-                 }
-             });
-         });
+      // swipe a green line: menu with discard line/chunk (red lines swipe on their own widget, see renderDiff)
+      this.detectSwipe(cm.getWrapperElement(), (touch) => {
+          if (touch.target.closest && touch.target.closest('.line-del-widget')) return; // red lines have their own swipe
+          const line = cm.coordsChar({ left: touch.clientX, top: touch.clientY }, 'window').line, seg = cm.segs.find(g => g.dels && line >= g.at && line < g.at + g.adds.length);
+          this.fileMenu(name, seg && { seg, add: line - seg.at, text: '+ ' + cm.getLine(line) });
       });
-
-      // 5. Hide Lines (Fold)
-      const lastLine = cm.lineCount();
-      let hideStart = null;
-
-      const doHide = (from, to) => {
-         if (from >= to) return;
-         cm.markText({line: from, ch:0}, {line: to, ch:0}, {
-             collapsed: true,
-             inclusiveLeft: true, inclusiveRight: true
-         });
-      };
-
-      for (let i = 0; i < lastLine; i++) {
-          if (!visibleLines.has(i)) {
-              if (hideStart === null) hideStart = i;
-          } else {
-              if (hideStart !== null) {
-                  doHide(hideStart, i);
-                  hideStart = null;
-              }
-          }
-      }
-      if (hideStart !== null) doHide(hideStart, lastLine);
-
-      // 6. Apply Widgets & Styles
-      widgets.forEach(w => {
-          const el = document.createElement('div');
-          el.className = 'line-del-widget';
-          if (w.html) el.innerHTML = w.html;
-          else el.textContent = w.content;
-
-          cm.addLineWidget(w.line, el, { above: true, coverGutter: true });
-
-          // Swipe to Restore
-          this.detectSwipe(el, async () => {
-              const choice = await UI.choose('Restore deletion?', [
-                  {label: 'Line', value: 'line', class: 'btn-yes'},
-                  {label: 'Chunk', value: 'chunk', class: 'btn-yes'}
-              ]);
-              if (!choice) return;
-
-              const toRestore = (choice === 'chunk')
-                  ? widgets.filter(x => x.line === w.line)
-                  : [w];
-
-              let textToInsert = '';
-              toRestore.forEach(tr => {
-                  if(tr.restored) return;
-                  tr.restored = true;
-                  textToInsert += tr.content.substring(1) + '\n';
-              });
-
-              if(textToInsert) {
-                  cm.replaceRange(textToInsert, {line: w.line, ch: 0});
-                  CodeMirror.signal(cm, 'change', cm, {origin: '+input'});
-              }
-          });
-      });
-
-      adds.forEach(l => {
-          cm.addLineClass(l, 'background', 'line-add');
-          cm.addLineClass(l, 'gutter', 'line-add');
-      });
-
-      charHighlights.forEach(h => {
-          cm.markText(h.from, h.to, {className: 'char-add'});
-      });
-
-      // 7. Header Button Logic
-      this.detectSwipe(cm.getWrapperElement(), async (touch) => {
-          const pos = cm.coordsChar({left: touch.clientX, top: touch.clientY}, 'window');
-          const lineInfo = cm.lineInfo(pos.line);
-          if (lineInfo && lineInfo.bgClass && lineInfo.bgClass.includes('line-add')) {
-              const choice = await UI.choose('Discard addition?', [
-                  {label: 'Line', value: 'line', class: 'btn-hot'},
-                  {label: 'Chunk', value: 'chunk', class: 'btn-hot'}
-              ]);
-              if (!choice) return;
-
-              if (choice === 'line') {
-                  cm.replaceRange('', {line: pos.line, ch:0}, {line: pos.line + 1, ch:0});
-              } else {
-                  // Find chunk bounds
-                  let start = pos.line;
-                  let end = pos.line;
-                  while(start > 0 && cm.lineInfo(start-1)?.bgClass?.includes('line-add')) start--;
-                  while(end < cm.lineCount()-1 && cm.lineInfo(end+1)?.bgClass?.includes('line-add')) end++;
-
-                  cm.replaceRange('', {line: start, ch:0}, {line: end + 1, ch:0});
-              }
-              CodeMirror.signal(cm, 'change', cm, {origin: '+input'});
-          }
-      });
-
-      // 7. Header Button Logic
-      const saveBtn = card.querySelector('.btn-save-header');
-
       cm.on('change', (doc, change) => {
           if (change.origin === 'setValue') return;
-
-          saveBtn.classList.remove('btn-neutral', 'saved', 'btn-yes');
-          saveBtn.classList.add('btn-primary');
-          saveBtn.textContent = 'Save';
-          saveBtn.style.display = 'flex';
-
+          cm.unsaved = true;
           if (cm.saveTimeout) clearTimeout(cm.saveTimeout);
           cm.saveTimeout = setTimeout(() => App.saveCard(name), 1000);
       });
-
-      // Refresh to ensure layout.
       setTimeout(() => cm.refresh(), 100);
   },
 
-  async saveCard(name) {
+  // Diff model: segs = [{same: [lines]} | {at, dels: [lines], adds: [lines]}], lines keep their '\n'. Discard = make (part of) a seg like HEAD:
+  //   green line -> removed; red line -> put back (above the seg's green lines); chunk -> the whole seg back to HEAD (reds and greens together).
+  diffSegs(base, text) {
+      const lines = (v) => v.match(/[^\n]*\n|[^\n]+$/g) || [], segs = []; let at = 0;
+      for (const p of Diff.diffLines(base, text)) {
+          const l = lines(p.value), g = segs[segs.length - 1];
+          if (!p.added && !p.removed) { segs.push({ same: l }); at += l.length; continue; }
+          const seg = g && g.dels ? g : (segs.push({ at, dels: [], adds: [] }), segs[segs.length - 1]);
+          if (p.removed) seg.dels.push(...l); else { seg.adds.push(...l); at += l.length; }
+      }
+      return segs;
+  },
+  joinSegs: (segs) => segs.flatMap(g => g.same || g.adds).map((l, i, a) => i < a.length - 1 && !l.endsWith('\n') ? l + '\n' : l).join(''), // a line that is no longer last gets its '\n'
+
+  renderDiff(cm, name) { // (re)draw green lines, red widgets, folds from HEAD vs the editor text
+      cm.marks && cm.marks.forEach(m => m.clear());
+      cm.eachLine(h => { cm.removeLineClass(h, 'background', 'line-add'); cm.removeLineClass(h, 'gutter', 'line-add'); });
+      cm.marks = []; cm.segs = this.diffSegs(cm.base, cm.getValue());
+      const show = new Set(), last = cm.lineCount() - 1, txt = (s) => s.replace(/\n$/, '');
+      cm.segs.filter(g => g.dels).forEach(seg => {
+          for (let i = seg.at - 3; i < seg.at + seg.adds.length + 3; i++) show.add(i);
+          seg.adds.forEach((l, j) => { cm.addLineClass(seg.at + j, 'background', 'line-add'); cm.addLineClass(seg.at + j, 'gutter', 'line-add'); });
+          seg.dels.forEach((l, i) => {
+              const el = document.createElement('div'), a = txt(l), b = txt(seg.adds[i] || ''), [pre, suf] = this.common(a, b);
+              el.className = 'line-del-widget';
+              if (seg.adds[i] !== undefined && pre + suf < Math.max(a.length, b.length)) { // char level: what changed in the red, and in its green
+                  const mid = document.createElement('span'); mid.className = 'char-del'; mid.textContent = a.slice(pre, a.length - suf);
+                  el.append(a.slice(0, pre), mid, a.slice(a.length - suf));
+                  if (b.length - suf > pre) cm.marks.push(cm.markText({ line: seg.at + i, ch: pre }, { line: seg.at + i, ch: b.length - suf }, { className: 'char-add' }));
+              } else el.textContent = a;
+              const end = seg.at > last; // removed at the very end: show below the last line
+              el.style.paddingLeft = App.lnPad((end ? last : seg.at) + 1);
+              cm.marks.push(cm.addLineWidget(end ? last : seg.at, el, { above: !end, coverGutter: true }));
+              this.detectSwipe(el, () => this.fileMenu(name, { seg, del: i, text: '- ' + a }));
+          });
+      });
+      let from = null; // fold the unchanged lines far from any change
+      for (let i = 0; i <= last + 1; i++) {
+          if (i <= last && !show.has(i)) { if (from === null) from = i; continue; }
+          if (from !== null && i - from > 0) cm.marks.push(cm.markText({ line: from, ch: 0 }, { line: Math.min(i, last), ch: i > last ? cm.getLine(last).length : 0 }, { collapsed: true, inclusiveLeft: true, inclusiveRight: true }));
+          from = null;
+      }
+  },
+  common(a, b) { let pre = 0, suf = 0; while (pre < a.length && pre < b.length && a[pre] === b[pre]) pre++; while (suf < a.length - pre && suf < b.length - pre && a[a.length - 1 - suf] === b[b.length - 1 - suf]) suf++; return [pre, suf]; },
+
+  async fileMenu(name, ctx) { // one menu for the trash button and every swipe
+      const cm = this.state.editors[name], o = Orig.get(name), opts = [];
+      if (ctx && cm && this.joinSegs(cm.segs) !== cm.getValue()) { clearTimeout(cm.saveTimeout); await this.saveCard(name); return UI.alert('The diff just changed, swipe again.'); } // typed since the last draw
+      if (ctx && cm) opts.push({ label: 'Discard line', value: 'line', class: 'c-line' }, { label: 'Discard chunk', value: 'chunk', class: 'c-chunk' });
+      opts.push({ label: '🗑 Discard whole diff', value: 'all' });
+      if (o && o.t !== await FS.peek(name)) opts.push({ label: '↶ Restore original diff', value: 'orig', class: 'btn-yes' });
+      const v = await UI.choose(name + (ctx ? '\n' + ctx.text : ''), opts.map(x => Object.assign({ class: 'btn-hot' }, x, { class: (x.class || 'btn-hot') + ' btn-row' })));
+      if (v === 'all') return this.discardFile(name);
+      if (v === 'orig') return this.revertFile(name);
+      if (!v) return;
+      const seg = ctx.seg; // line: just the swiped red/green line; chunk: the whole seg back to HEAD
+      if (v === 'chunk') seg.adds = seg.dels.slice(); else if (ctx.add !== undefined) seg.adds.splice(ctx.add, 1); else seg.adds.unshift(seg.dels[ctx.del]);
+      const t = this.joinSegs(cm.segs);
+      cm.replaceRange(t, { line: 0, ch: 0 }, { line: cm.lineCount(), ch: 0 }, '+discard');
+      clearTimeout(cm.saveTimeout); await this.saveCard(name);
+  },
+
+  cardState(name, st) { // header: '' | 'saving' (blue) | 'saved' (green), back to normal after a moment; trash shows meanwhile
+      const card = document.getElementById(`card-${name.replace(/\W/g, '-')}`), h = card && card.querySelector('.file-header'), n = card && card.querySelector('.file-name');
+      if (!h) return;
+      h.classList.remove('saving', 'saved', 'pop'); if (st) h.classList.add(st, 'pop');
+      n.textContent = st === 'saving' ? 'Saving…' : st === 'saved' ? 'Saved' : name; n.style.direction = st ? 'ltr' : 'rtl'; n.classList.toggle('busy', st === 'saving');
+      clearTimeout(h.back); if (st === 'saved') h.back = setTimeout(() => this.cardState(name, ''), 2500);
+  },
+
+  async discardFile(name) { // whole file back to HEAD (deleted if HEAD lacks it, after asking), through FS so Restore can undo it
+      const head = await Git.run(['show', 'HEAD:' + name]);
+      if (!head.ok && !await UI.confirm(`${name} is not in HEAD. Delete it?`)) return;
+      if (head.ok) await FS.write(name, head.text); else await FS.remove(name).catch(() => {});
+      await Git.run([head.ok ? 'add' : 'reset', name]);
+      delete this.state.editors[name];
+      this.refresh(true);
+  },
+
+  async revertFile(name) { // write back the pre-browser-edit content and its staged/unstaged state
+      const o = Orig.get(name); if (!o) return;
+      if (o.t === null) await CurrentFS.remove(name).catch(() => {}); else await CurrentFS.write(name, o.t);
+      await Git.run([o.staged ? 'add' : 'reset', name]);
+      Orig.drop(name); delete this.state.editors[name];
+      this.refresh(true);
+  },
+
+  async saveCard(name) { // auto-save: write, stage, redraw the diff; header shows saving/saved
       const cm = this.state.editors[name];
       if (!cm) return;
-
-      await FS.write(name, cm.getValue());
-      await Git.run(['add', name]); // Auto-stage to ensure single commit
-
-      const card = document.getElementById(`card-${name.replace(/\W/g, '-')}`);
-      const btn = card.querySelector('.btn-save-header');
-      if(btn) {
-          btn.classList.remove('btn-primary', 'btn-neutral');
-          btn.classList.add('saved', 'btn-yes');
-          btn.textContent = 'Saved';
-
-          if (btn.resetTimeout) clearTimeout(btn.resetTimeout);
-          btn.resetTimeout = setTimeout(() => {
-              btn.classList.remove('saved', 'btn-yes');
-              btn.classList.add('btn-neutral');
-              btn.textContent = 'Save';
-          }, 2000);
-      }
+      this.cardState(name, 'saving');
+      const t = cm.getValue(); cm.unsaved = false; cm.saving = true;
+      try { await FS.write(name, t); await Git.run(['add', name]); } finally { cm.saving = false; } // Auto-stage to ensure single commit
+      { const f = this.state.files[name], c = cm.getWrapperElement().closest('.file-card')?.querySelector('.stage-toggle'); if (f) f.staged = true; if (c) c.classList.add('checked', 'pop'); } // its circle shows the auto-stage now, not at the next refresh
+      const o = Orig.get(name); if (o && o.t === t) Orig.drop(name); // edited back to the original
+      if (cm.getValue() === t) this.renderDiff(cm, name);
+      this.cardState(name, 'saved');
   },
 
   // --- Config Logic --
@@ -2382,13 +2492,20 @@ const UI = {
    inputEl: document.getElementById('modal-input'),
    btnsEl: document.querySelector('#modal div'),
 
-   init() {
-       this.modal.onclick = (e) => {
-           if (e.target === this.modal) {
-               this.modal.close();
-               if(this.resolve) this.resolve(null); // Cancel current promise
-           }
-       };
+   init() { // popups are non-modal (show, not showModal) so a touch outside closes them on pointerdown AND still scrolls the page in the same gesture; closing = cancel
+       // close() fades out first; show() during the fade just keeps it; onclosing runs at once (so a menu's answer is settled before any reopen)
+       const close = HTMLDialogElement.prototype.close, show = HTMLDialogElement.prototype.show;
+       HTMLDialogElement.prototype.close = function () { if (!this.open || this.fading) return; if (this.onclosing) this.onclosing(); this.classList.add('fade'); this.fading = setTimeout(() => { this.fading = 0; this.classList.remove('fade'); close.call(this); }, 200); };
+       HTMLDialogElement.prototype.show = function () { if (this.fading) { clearTimeout(this.fading); this.fading = 0; this.classList.remove('fade'); } if (!this.open) { this.classList.add('fade'); show.call(this); this.offsetWidth; this.classList.remove('fade'); } }; // fades in from where it already is
+       const closeAll = () => document.querySelectorAll('dialog[open]').forEach(d => d.close());
+       // Outside = anywhere but a popup's own controls (popups have no box now, so their gaps/text look like page too).
+       // That gesture only closes: its click (UI.eat) and any swipe (detectSwipe checks UI.eat) never reach what's underneath; a scroll still scrolls.
+       document.addEventListener('pointerdown', e => { this.eat = false; if (document.querySelector('dialog[open]:not(.fade)') && !e.target.closest('dialog[open] :is(button, input, select, textarea, label, .row, .btn)')) { closeAll(); this.eat = true; this.up = 0; } }, true);
+       document.addEventListener('click', e => { if (this.eat && (!this.up || performance.now() - this.up < 400)) { e.preventDefault(); e.stopPropagation(); } this.eat = false; }, true); // only that gesture's own click
+       const done = () => { if (this.eat) this.up = performance.now(); }; // its click comes right after its pointerup; any later click (or the next pointerdown) is never eaten
+       document.addEventListener('pointerup', done, true); document.addEventListener('pointercancel', done, true);
+       document.addEventListener('keydown', e => { if (e.key === 'Escape') closeAll(); });
+       this.modal.onclosing = () => this.resolve && this.resolve(null); // no-op if a button already answered
    },
 
    reset() {
@@ -2408,20 +2525,11 @@ const UI = {
                btn.className = `btn ${c.class || 'btn-neutral'}`;
                btn.textContent = c.label;
                btn.style.flex = '1';
-               btn.onclick = () => { this.modal.close(); r(c.value); };
+               btn.onclick = () => { r(c.value); this.modal.close(); };
                this.btnsEl.appendChild(btn);
            });
 
-           if (!choices.some(c => c.cancel)) {
-               const cancel = document.createElement('button');
-               cancel.className = 'btn btn-hot'; // Red for cancel/no
-               cancel.textContent = 'Cancel';
-               cancel.style.flex = '1';
-               cancel.onclick = () => { this.modal.close(); r(null); };
-               this.btnsEl.appendChild(cancel);
-           }
-
-           this.modal.showModal();
+           this.modal.show();
        });
    },
 
@@ -2434,14 +2542,14 @@ const UI = {
 
            const ok = document.createElement('button');
            ok.className = 'btn btn-primary'; ok.textContent = 'OK';
-           ok.onclick = () => { this.modal.close(); r(this.inputEl.value); };
+           ok.onclick = () => { r(this.inputEl.value); this.modal.close(); };
 
            const cancel = document.createElement('button');
            cancel.className = 'btn btn-hot'; cancel.textContent = 'Cancel';
-           cancel.onclick = () => { this.modal.close(); r(null); };
+           cancel.onclick = () => { r(null); this.modal.close(); };
 
            this.btnsEl.append(cancel, ok);
-           this.modal.showModal();
+           this.modal.show();
            this.inputEl.focus();
        });
    },
@@ -2461,12 +2569,12 @@ const UI = {
 window.onload = () => {
   try {
       initIsoGit();
+      More.init();
       UI.init();
       App.init();
   }
   catch(e) { console.error(e); alert('Startup Error: ' + e.message); }
 };
 </script>
-<script src="git.js"></script>
 </body>
 </html>
