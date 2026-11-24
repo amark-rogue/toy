@@ -782,7 +782,7 @@ demo.pod.one = function(name){
 demo.pod.add = function(){
   if(demo.pod.mod) return demo.pod.mod;
   demo.pod.mod = demo.pod.one('core').then(function(){
-    return Promise.all(['fs', 'term', 'boot', 'run'].map(demo.pod.one));
+    return Promise.all(['fs', 'term', 'lifo', 'boot', 'run'].map(demo.pod.one));
   }).then(function(){
     demo.pod.ok = 1;
     return demo.pod;

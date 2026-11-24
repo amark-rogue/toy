@@ -48,6 +48,7 @@ run('vm/demo.js');
 run('vm/pod/core.js');
 run('vm/pod/fs.js');
 run('vm/pod/term.js');
+run('vm/pod/lifo.js');
 run('vm/pod/boot.js');
 run('vm/pod/run.js');
 ctx.demo.pod.ok = 1;
@@ -97,6 +98,9 @@ var boot = fs.readFileSync('vm/pod/boot.js', 'utf8');
 assert(boot.indexOf('s.integrity = pod.hash[pod.url]') >= 0,
   'the CDN entry also uses a script integrity attribute');
 assert(boot.indexOf('import(pod.url)') >= 0, 'the verified entry needs no local module bridge');
+assert(boot.indexOf("pod.via = 'lifo'") >= 0, 'Lifo is the comment-line default');
+assert(boot.indexOf("// pod.via = 'nodepod'") >= 0, 'Nodepod stays one commented adjacent line away');
+assert('lifo' === ctx.demo.pod.via, 'default richer shell is Lifo Worker adapter');
 
 var disk = {
   init: ctx.demo.opfs.init.bind(ctx.demo.opfs),
@@ -190,6 +194,27 @@ wait().then(async function(){
   assert(ctx.demo.pod.use('node hello.js'), 'node selects the richer browser shell');
   assert(ctx.demo.pod.use('echo one | wc -w'), 'pipes select the richer browser shell');
   assert(ctx.demo.pod.use('grep one file'), 'missing POSIX tools select the richer browser shell');
+
+  assert(ctx.demo.pod.lifo.url.indexOf('https://esm.sh/@lifo-sh/core@0.10.29/') === 0, 'Lifo pins esm.sh core.bundle');
+  assert(/^sha384-/.test(ctx.demo.pod.lifo.sri), 'Lifo SRI hash present');
+  assert(require('fs').existsSync('vm/pod/wrun.js'), 'readable Lifo Worker guest realm exists');
+  assert(require('fs').readFileSync('vm/pod/wrun.js','utf8').indexOf('Sandbox') >= 0, 'Worker hosts Sandbox');
+  assert(require('fs').readFileSync('vm/pod/wrun.js','utf8').indexOf('document.') < 0, 'Worker guest path avoids document');
+  var wasVia = ctx.demo.pod.via, wasGet = ctx.demo.pod.get, wasBad = ctx.demo.pod.bad;
+  var wasWorker = ctx.Worker;
+  ctx.demo.pod.via = 'lifo';
+  ctx.demo.pod.get = 0;
+  ctx.demo.pod.bad = 0;
+  // Drop the stub Worker so prep fails closed instead of hanging on a mute bus.
+  ctx.Worker = undefined;
+  var lifoErr = null;
+  try{ await ctx.demo.pod.prep() }catch(e){ lifoErr = e }
+  assert(lifoErr, 'Lifo prep cannot finish without a real Web Worker');
+  assert(/Worker/i.test(String(lifoErr.message || lifoErr)), 'Lifo prep names Worker requirement');
+  ctx.Worker = wasWorker;
+  ctx.demo.pod.via = wasVia;
+  ctx.demo.pod.get = wasGet;
+  ctx.demo.pod.bad = wasBad;
 
   var podin = [], clone = 0, was = ctx.VM.git.run;
   ctx.demo.pod.on = 1;
