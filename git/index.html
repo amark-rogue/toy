@@ -11,10 +11,11 @@
     :root { --hue: 210; --gap: .75rem; --sap: .75rem; --thumb: 4.125rem; --mood: #fff; --ink: #123; --pn: #678; /* the app's 9 pops: hue + n*40deg */
       --p0: hsl(var(--hue) 90% 38%); --p1: hsl(calc(var(--hue) + 40) 90% 38%); --p2: hsl(calc(var(--hue) + 80) 90% 38%); --p3: hsl(calc(var(--hue) + 120) 90% 38%); --p4: hsl(calc(var(--hue) + 160) 90% 38%);
       --p5: hsl(calc(var(--hue) + 200) 90% 38%); --p6: hsl(calc(var(--hue) + 240) 90% 38%); --p7: hsl(calc(var(--hue) + 280) 90% 38%); --p8: hsl(calc(var(--hue) + 320) 90% 38%); }
-    :where(html, body) { margin: 0; background: #fff; color: #123; font-family: system-ui, sans-serif; } :where(*) { box-sizing: border-box; }
-    :where(button, input, textarea, select) { font: inherit; min-height: 4.125rem; padding: 0 .75rem; }
+    :where(html, body) { margin: 0; background: #fff; color: #123; font-family: system-ui, sans-serif; overflow-wrap: anywhere; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; } :where(*) { box-sizing: border-box; }
+    :where(button, input, textarea, select) { font: inherit; min-height: 4.125rem; padding: .375rem .75rem; } :where(button) { white-space: normal; }
     :where(button, input, textarea, select, .pop) { border: 0; border-radius: .75rem; background: var(--pop, var(--p0)); color: #fff; } /* each control's own --pop (app classes) */
-    :where(input:is([type=checkbox], [type=radio], [type=range])) { min-height: 0; background: none; }
+    :where(input:is([type=checkbox], [type=radio], [type=range])) { min-height: 0; background: none; } :where(button, input:not([type=checkbox], [type=radio]), select, textarea) { width: 100%; margin: .375rem 0; }
+    .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(clamp(calc(50% - .375rem), (5em - 50%) * 999, 100%), 1fr)); gap: .75rem; } .bar { display: flex; align-items: center; gap: .75rem; } .bar > * { flex: 0 1 auto; width: auto; margin: 0; } .bar > :is(span, label, input) { flex: 1; min-width: 0; } .pop > select { position: absolute; inset: 0; opacity: 0; } .pop:has(> select) { position: relative; display: flex; align-items: center; justify-content: center; }
   </style>
   <link rel="stylesheet" href="mood.css"><script src="mood.js"></script>
   <!-- CodeMirror & Diff2Html -->
@@ -49,19 +50,18 @@
     .c-device { --pop: var(--p5); } .c-open { --pop: var(--p2); } .c-new { --pop: var(--p7); } .c-remote { --pop: var(--p8); } .c-line { --pop: var(--p5); }
     .CodeMirror { background: transparent; color: var(--ink); } .CodeMirror-cursor { border-left-color: var(--ink) !important; }
     [data-mood=neon] .CodeMirror { --mood: #fff; --ink: var(--p0); color-scheme: light; background: var(--mood); color: var(--ink); } /* neon: syntax colours clash with the neon, so the editor is a light-mood island (white base, neon text) */
-    body { display: flex; flex-direction: column; font-size: 1.5rem; padding-top: 0; } /* top inset: the top bar's own padding */
+    body { display: flex; flex-direction: column; font-size: calc(1.5rem * var(--size, 1)); padding-top: 0; } /* text 1.5x the mood.css base; top inset: the top bar's own padding */
     main { flex: 1; overflow-x: clip; }
-    input, textarea { width: 100%; margin-bottom: var(--gap); }
     .view { display: none; } .view.active { display: block; }
 
-    .btn { width: 100%; font-weight: 900; display:flex; align-items:center; justify-content:center; }
+    .btn { font-weight: 900; } /* size, wrap, centring: mood.css button */
     .btn-neutral { --pop: var(--pn); }
     .btn-primary { --pop: var(--act); }
     .btn-yes { --pop: var(--yes); }
     .btn-act { --pop: var(--act); }
     .btn-limbo { --pop: var(--limbo); }
     .btn-hot { --pop: var(--hot); }
-    .btn-discard { --pop: var(--hot); border-radius: 0 0 var(--sap) var(--sap); font-size: .75rem; }
+    .btn-discard { --pop: var(--hot); border-radius: 0 0 var(--sap) var(--sap); font-size: calc(.75rem * var(--size, 1)); }
 
     .btn-save-header { width: auto; }
     .btn-save-header[style*="display: none"] { display: none !important; } /* Force hide override for flex */
@@ -71,11 +71,10 @@
     .file-card {  }
     .file-header { padding: 0 var(--gap); display: flex; align-items: center; gap: .4em; font-weight: 700; cursor: pointer; top: calc(env(safe-area-inset-top) + .5rem); /* sticky only while open (below), stuck just off the edge: iOS 26 Safari tints its bars from any full-width sticky/fixed box at an edge (probe 4px in) */ z-index: 100; border-radius: var(--sap); -webkit-backdrop-filter: blur(var(--blur)); backdrop-filter: blur(var(--blur)); }
     .file-card:not(.collapsed) > .file-header { position: -webkit-sticky; position: sticky; }
-    .stage-toggle { width: calc(var(--thumb) - 2 * var(--gap)); height: calc(var(--thumb) - 2 * var(--gap)); /* header = gap + circle + gap = one thumb */ border-radius: 50%; border: .0625rem solid var(--yes); display: grid; place-items: center; transition:0.2s; flex-shrink:0; }
+    .stage-toggle { width: calc(var(--thumb) - 2 * var(--gap)); height: calc(var(--thumb) - 2 * var(--gap)); /* header = gap + circle + gap = one thumb */ border-radius: 50%; border: .0625rem solid var(--yes); font-size: 1.25rem; line-height: 1; display: grid; place-items: center; transition:0.2s; flex-shrink:0; }
     [data-mood=neon] .stage-toggle { border-color: #fff; } /* unchecked ring = the pop colour (white in neon); its ✓ is transparent so not currentColor */
     .stage-toggle:not(.checked) { color: transparent; } /* ✓ shows only when checked, in the pop's text colour */
     .stage-toggle.checked { --pop: var(--yes); border-color: transparent; } /* .pop added with .checked */
-    .file-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .chevron { width: .6em; height: .6em; flex-shrink: 0; background: currentColor; clip-path: polygon(0 18%, 100% 18%, 50% 82%); transition: transform .2s ease; will-change: transform; } /* drawn triangle centred in its box: rotates/spins on the GPU without wobble */
     .collapsed .chevron { transform: rotate(-90deg); }
     .file-header.saving { --pop: var(--act); } /* + .pop (cardState) */
@@ -83,43 +82,33 @@
     .file-header .trash { display: none; width: auto; padding: .2em .6em; background: transparent; color: inherit; border: 0; box-shadow: none; text-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
     .file-header.saving .trash, .file-header.saved .trash { display: flex; }
     #modal .btn-row { flex: 1 1 100% !important; }
-    .halves { display: grid; grid-template-columns: 1fr 1fr; gap: var(--gap); margin-bottom: var(--gap); }
-    .halves .btn { width: 100%; min-width: 0; white-space: nowrap; position: relative; }
-    #review-view > .halves > .btn, #repo-modal .btn, #modal .btn { min-height: var(--thumb); padding-top: 0; padding-bottom: 0; box-sizing: border-box; } /* fat-thumb: same height whatever the text size */
-    #review-view > .halves > .btn { padding: 0 var(--gap); }
-    #remote-select { align-self: stretch; }
-    #remote-wrap { padding: 0; }
-    #repo-modal { font-size: min(1em, 4.5vw); } /* Open popup: text scales with the screen so labels and the URL placeholder fit */
-    #repo-modal .halves { gap: var(--gap); margin-bottom: var(--gap); }
-    #repo-modal .btn, #repo-modal #remote-select { padding: 0 var(--gap); }
+    #repo-modal { font-size: calc(1.125rem * var(--size, 1)); } /* Open popup: scales with Settings > Size like everything else; rows wrap instead of overlapping */
     #repo-modal input { padding: var(--gap); margin-bottom: var(--gap); font-size: 1em; }
     .dashed { border-bottom: .125rem dashed var(--mood) !important; /* dashes of whatever is beneath (the mood), gaps show the field */ border-radius: var(--sap); padding: var(--gap) var(--gap); } /* commit message + clone URL */
-    #repo-modal input.dashed { height: var(--thumb); box-sizing: border-box; padding: 0 var(--gap); }
+    #repo-modal input.dashed { min-height: var(--thumb); padding: 0 var(--gap); }
     dialog { transition: opacity .2s; } /* popups: just their buttons, floating */
     dialog.fade, dialog:not([open]) { opacity: 0; pointer-events: none; } dialog[open] { pointer-events: none; } dialog[open]:not(.fade) > * { pointer-events: auto; } /* only a showing popup's own content catches taps; its see-through box and a fading popup never do */ /* fading out after close() (UI.init) */
     dialog[open] { position: fixed; inset: 0; margin: auto; width: calc(100% - 2 * var(--gap)); max-width: none; box-sizing: border-box; /* edges flush with the page's buttons */ height: fit-content; max-height: 90vh; overflow: auto; z-index: 1000; } /* non-modal popups, centred above the page */
     input[type=range] { padding: 0; margin: 0 0 var(--gap); height: var(--thumb); }
-    #repo-modal #remote-wrap { padding: 0; }
-    #remote-select { background: transparent; border: none; box-shadow: none; text-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; margin: 0; font: inherit; color: inherit; width: 100%; padding: var(--gap); text-align: center; text-align-last: center; cursor: pointer; }
     #remote-wrap.busy::after { position: absolute; right: .5em; top: 50%; margin: -.3em 0 0; }
-    #repo-list .row { padding: 0 var(--gap); cursor: pointer; min-width: 0; }
-    #repo-list .row b, #repo-list .row small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    #repo-list .row small { font-weight: 400; opacity: .6; font-size: .75em; }
-    #repo-list .row.on b { text-decoration: underline; }
+    #repo-list .repo { padding: 0 var(--gap); cursor: pointer; min-width: 0; }
+    #repo-list .repo b, #repo-list .repo small { display: block; }
+    #repo-list .repo small { font-weight: 400; opacity: .6; font-size: .75em; }
+    #repo-list .repo.on b { text-decoration: underline; }
     @keyframes spin { to { transform: rotate(360deg); } }
     .busy::after { content: ''; display: inline-block; flex-shrink: 0; width: .6em; height: .6em; margin-left: .4em; border: .125rem solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin .7s linear infinite; will-change: transform; vertical-align: middle; opacity: .6; }
     .chevron.spin { animation: spin .7s linear infinite; transition: none; }
-    #current-repo { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #current-repo { min-width: 0; }
     .collapsed .file-content { display: none; }
 
     .file-content { padding: 0; position: relative; } /* No padding for editor */
 
-    .diff-block { background: #fafafa; border: .0625rem solid #eee; border-radius: var(--sap); font-family: "SF Mono", monospace; font-size: .875rem; overflow-x: auto; margin-top:.625rem; }
+    .diff-block { background: #fafafa; border: .0625rem solid #eee; border-radius: var(--sap); font-family: "SF Mono", monospace; font-size: calc(.875rem * var(--size, 1)); overflow-x: auto; margin-top:.625rem; }
     .diff-line { padding: .5rem; border-bottom: .0625rem solid #f0f0f0; white-space: pre-wrap; display: flex; }
     .diff-line.add { background: #e8f5e9; color: #1b5e20; }
     .diff-line.del { background: #ffebee; color: #b71c1c; }
     .diff-line.ctx { color: #555; }
-    .change-header { background: var(--yes); color: #fff; padding: .625rem; font-size: .6875rem; font-weight: 800; border-radius: var(--sap) var(--sap) 0 0; margin-top: .9375rem; display:flex; justify-content:space-between; }
+    .change-header { background: var(--yes); color: #fff; padding: .625rem; font-size: calc(.6875rem * var(--size, 1)); font-weight: 800; border-radius: var(--sap) var(--sap) 0 0; margin-top: .9375rem; display:flex; justify-content:space-between; }
 
     #editor-overlay { position: fixed; inset: 0; padding-top: env(safe-area-inset-top); background: var(--mood); z-index: 200; display: none; flex-direction: column; height: auto; }
     #editor-overlay.active { display: flex; }
@@ -166,13 +155,13 @@
     .line-del-widget {
         background: rgba(255, 59, 48, 0.15);
         color: #b71c1c; padding: 0 .25rem 0 0; position: relative; min-height: 2.2em; /* padding-left set like its line's (App.lnPad) */
-        font-family: "SF Mono", "Menlo", monospace; font-size: 1.125rem; line-height: 2.2;
+        font-family: "SF Mono", "Menlo", monospace; font-size: calc(1.125rem * var(--size, 1)); line-height: 2.2;
         white-space: pre-wrap; user-select: none;
     }
     .line-del-widget::before { content: '−'; position: absolute; left: 0; top: 0; font-size: .5em; line-height: 4.4; }
     .char-del { background: rgba(255, 59, 48, 0.4); text-decoration: line-through; } /* Darker red */
     .file-actions { display: flex; align-items: center; gap: var(--gap); margin-left: auto; flex-shrink: 0; }
-    .btn-sm { font-size: .8125rem; padding: 0 .9375rem; border-radius: var(--sap); }
+    .btn-sm { font-size: calc(.8125rem * var(--size, 1)); padding: 0 .9375rem; border-radius: var(--sap); }
 
     .fullscreen-only { display: none !important; }
     .mode-fullscreen .fullscreen-only { display: flex !important; }
@@ -186,9 +175,8 @@
       to { background-color: transparent; }
     }
     /* fat-thumb: every control (and a container whose only height is its controls) is exactly one --thumb tall at least; nested controls fill it, never add to it */
-    #repo-list .row, .file-header, .ctl-row { min-height: var(--thumb); } /* fat-thumb rows too (controls: mood.css) */
-    #repo-list .row { display: flex; flex-direction: column; justify-content: center; }
-    #remote-select { min-height: 0; } /* fills its pop wrapper, which is the thumb-tall control */
+    #repo-list .repo, .file-header, .ctl { min-height: var(--thumb); } /* fat-thumb rows too (controls: mood.css) */
+    #repo-list .repo { display: flex; flex-direction: column; justify-content: center; }
   </style>
 </head>
 <body>
@@ -196,7 +184,7 @@
 
 <!-- DIALOGS -->
 <dialog id="modal" style="border:none; border-radius:var(--sap); padding:var(--gap); text-align:center;">
-  <p id="modal-msg" style="font-size:1.0625rem; font-weight:500; margin:0 0 var(--gap); white-space:pre-wrap; overflow-wrap:break-word; word-break:break-word;"></p>
+  <p id="modal-msg" style="font-size: calc(1.0625rem * var(--size, 1)); font-weight:500; margin:0 0 var(--gap); white-space:pre-wrap; overflow-wrap:break-word; word-break:break-word;"></p>
   <input type="text" id="modal-input" style="display:none;">
   <div style="display:flex; gap:var(--gap); flex-wrap:wrap; justify-content:center;">
     <button class="btn btn-neutral" id="modal-cancel">Cancel</button>
@@ -238,20 +226,19 @@
 <!-- MAIN UI -->
 <main id="main">
   <div id="review-view" class="view active">
-    <div class="halves" style="padding:calc(var(--gap) + env(safe-area-inset-top)) var(--gap) 0; gap:var(--gap); margin:0"> <!-- no bottom: the first diff header's own padding is the gap below -->
-      <button class="btn c-open" style="grid-column:1/-1; white-space:nowrap" onclick="App.openRepoDialog()">Open&nbsp;<span id="current-repo" style="opacity:0.7">/</span></button>
-      <button class="btn c-fetch" onclick="App.runGit('fetch')">Fetch</button>
-      <button class="btn c-pull" onclick="App.runGit('pull')">Pull</button>
-      <button class="btn c-new" style="grid-column:1/-1" onclick="App.openEditor()">+ NEW CHANGES</button>
+    <div style="padding:calc(var(--gap) + env(safe-area-inset-top)) var(--gap) 0;"> <!-- no bottom: the first diff header's own padding is the gap below -->
+      <button class="btn c-open" onclick="App.openRepoDialog()">Open&nbsp;<span id="current-repo" style="opacity:0.7">/</span></button>
+      <div class="row"><button class="btn c-fetch" onclick="App.runGit('fetch')">Fetch</button><button class="btn c-pull" onclick="App.runGit('pull')">Pull</button></div>
+      <button class="btn c-new" onclick="App.openEditor()">+ NEW CHANGES</button>
     </div>
 
     <div id="file-list"></div>
 
 <!-- REPO DIALOG -->
 <dialog id="repo-modal" style="border:none; border-radius:var(--sap); padding:var(--gap);">
-  <div class="halves">
+  <div class="row">
       <button class="btn c-device" onclick="App.importDeviceFolder()">📂 Device</button>
-      <span id="remote-wrap" class="btn c-remote pop"><select id="remote-select" onchange="App.openRemote(this)"><option value="">🖥️ Remote</option></select></span>
+      <span id="remote-wrap" class="btn c-remote pop">🖥️ Remote<select id="remote-select" onchange="App.openRemote(this)"><option value="">🖥️ Remote</option></select></span>
   </div>
   <input id="new-repo-url" class="dashed" placeholder="https://github.com/user/repo">
   <button class="btn c-clone" style="margin-bottom:var(--gap);" onclick="App.cloneFromDialog()">📋 Clone</button>
@@ -259,7 +246,7 @@
   <input id="import-input-main" type="file" webkitdirectory directory multiple style="display:none" onchange="App.handleImport(this, false)">
   <input id="import-input-git" type="file" webkitdirectory directory multiple style="display:none" onchange="App.handleImport(this, true)">
 
-  <div id="import-debug" style="font-family:monospace; font-size:.625rem; background:#eee; padding:.3125rem; margin-top:.625rem; max-height:6.25rem; overflow:auto; display:none;"></div>
+  <div id="import-debug" style="font-family:monospace; font-size: calc(.625rem * var(--size, 1)); background:#eee; padding:.3125rem; margin-top:.625rem; max-height:6.25rem; overflow:auto; display:none;"></div>
 
   <!-- Shared Progress UI -->
 
@@ -296,7 +283,7 @@
     <h3>Git Config</h3>
     <input id="cfg-key" placeholder="Key (e.g. user.name)">
     <input id="cfg-val" placeholder="Value">
-    <div style="display:flex; gap:var(--gap);">
+    <div class="row">
         <button class="btn btn-act" onclick="App.cfg('get')">Get</button>
         <button class="btn btn-act" onclick="App.cfg('set')">Set</button>
     </div>
@@ -307,9 +294,10 @@
     <label for="theme-lit">Brightness</label><input type="range" id="theme-lit" min="0" max="100" oninput="App.theme('lit', this.value)">
     <label for="theme-radius">Radius</label><input type="range" id="theme-radius" min="0" max="2" step=".0625" oninput="App.theme('radius', this.value)">
     <label for="theme-gap">Gap</label><input type="range" id="theme-gap" min="0" max="1.5" step=".0625" oninput="App.theme('gap', this.value)">
+    <label for="theme-size">Size</label><input type="range" id="theme-size" min=".5" max="2" step=".0625" oninput="App.theme('size', this.value)">
 
-    <div class="ctl-row" style="margin-top: var(--gap); display: flex; align-items: center; gap: var(--gap);">
-        <input type="checkbox" id="debug-toggle" onchange="App.toggleDebug(this.checked)" style="width: auto; margin: 0;">
+    <div class="bar ctl" style="margin-top: var(--gap);">
+        <input type="checkbox" id="debug-toggle" onchange="App.toggleDebug(this.checked)">
         <label for="debug-toggle" style="font-weight: bold;">Show Debug Info</label>
     </div>
 
@@ -317,10 +305,7 @@
     <h3>Browser Git</h3>
     <div style="background: var(--tint); padding: var(--gap); border-radius: var(--sap);">
         <p style="font-size: 0.8em; margin-top: 0;">Runs entirely in your browser (IndexedDB). No server needed.</p>
-        <div style="display:flex; gap:var(--gap); margin-bottom: var(--gap);">
-            
-            <button class="btn btn-yes" onclick="App.setMode('browser')">Use Browser (IsoGit)</button>
-        </div>
+        <button class="btn btn-yes" onclick="App.setMode('browser')">Use Browser (IsoGit)</button>
         <div id="browser-controls">
             <input id="cors-proxy" placeholder="CORS Proxy" value="https://cors.isomorphic-git.org">
             <input id="token" type="password" placeholder="Token (push/pull, saved in this browser only)">
@@ -331,13 +316,13 @@
 
             <h4 style="margin-top:var(--gap)">Debug Tools</h4>
             <button class="btn btn-neutral" onclick="App.runGit('debug-status')">Check Status Matrix (Raw)</button>
-            <div style="display:flex; gap:var(--gap); margin-top:var(--gap)">
-                <input id="debug-file" placeholder="File path (e.g. README.md)" style="margin:0; flex:1">
-                <button class="btn btn-neutral" style="width:auto" onclick="App.runGit('debug-read')">Read Content</button>
+            <div class="row">
+                <input id="debug-file" placeholder="File path (e.g. README.md)">
+                <button class="btn btn-neutral" onclick="App.runGit('debug-read')">Read Content</button>
             </div>
             <button class="btn btn-neutral" style="margin-top:var(--gap)" onclick="App.runGit('debug-refs')">Check Refs (HEAD)</button>
             <button class="btn btn-neutral" style="margin-top:var(--gap)" onclick="App.runGit('debug-diff')">Check Diff (Raw)</button>
-            <pre id="debug-out" class="debug-ui" onclick="navigator.clipboard.writeText(this.textContent).then(()=>alert('Logs copied!'))" style="background:#333; color:#0f0; padding:var(--gap); border-radius:var(--sap); font-size:.625rem; overflow:auto; max-height:12.5rem; margin-top:var(--gap); display:none; cursor:pointer;" title="Tap to copy logs"></pre>
+            <pre id="debug-out" class="debug-ui" onclick="navigator.clipboard.writeText(this.textContent).then(()=>alert('Logs copied!'))" style="background:#333; color:#0f0; padding:var(--gap); border-radius:var(--sap); font-size: calc(.625rem * var(--size, 1)); overflow:auto; max-height:12.5rem; margin-top:var(--gap); display:none; cursor:pointer;" title="Tap to copy logs"></pre>
 
             <h4 style="margin-top:var(--gap); color:var(--hot)">Danger Zone</h4>
             <button class="btn btn-hot" onclick="App.resetStorage()">Dangerously Reset All Storage</button>
@@ -1163,7 +1148,7 @@ const App = {
           items.sort((a, b) => b.t - a.t || a.name.localeCompare(b.name));
           list.replaceChildren(...items.map(it => {
               const row = document.createElement('div'), b = document.createElement('b');
-              row.className = 'row' + (it.on ? ' on' : ''); row.setAttribute('role', 'button'); row.tabIndex = 0;
+              row.className = 'repo' + (it.on ? ' on' : ''); row.setAttribute('role', 'button'); row.tabIndex = 0;
               b.textContent = it.e + ' ' + it.name; row.appendChild(b);
               if (items.filter(x => x.name === it.name).length > 1) { const c = document.createElement('small'); c.textContent = it.ctx; row.appendChild(c); } // same name: say which
               row.onclick = () => { modal.close(); it.go(); };
@@ -1852,7 +1837,8 @@ const App = {
   },
 
   theme(k, v) { // Settings > Appearance sliders set --hue / --lit / --sap / --gap on <html>; mood.css/mood.js do the rest (mood from --lit thirds, bar colour)
-    const t = Object.assign({ hue: 210, lit: 20, radius: .75, gap: .75 }, JSON.parse(localStorage.theme || '{}')), css = { hue: ['hue', ''], lit: ['lit', ''], radius: ['sap', 'rem'], gap: ['gap', 'rem'] };
+    const t = Object.assign({ hue: 210, lit: 20, radius: .75, gap: .75, size: 1 }, JSON.parse(localStorage.theme || '{}')), css = { hue: ['hue', ''], lit: ['lit', ''], radius: ['sap', 'rem'], gap: ['gap', 'rem'], size: ['size', ''] };
+    delete t.textonly; // retired 'Size: text only' option (Size is always text only now)
     if (k) { t[k] = +v; localStorage.theme = JSON.stringify(t); }
     if (!(t.lit >= 0 && t.lit <= 100) || typeof t.lit !== 'number') t.lit = 20;
     for (const n in css) { document.documentElement.style.setProperty('--' + css[n][0], t[n] + css[n][1]); const i = document.getElementById('theme-' + n); if (i) i.value = t[n]; }
@@ -2222,7 +2208,7 @@ const App = {
       header.className = 'file-header';
 
       const headerTitle = document.createElement('div');
-      headerTitle.style = 'flex:1; display:flex; align-items:center; overflow:hidden; gap:.3em; min-width:0;';
+      headerTitle.className = 'bar'; headerTitle.style = 'flex:1; min-width:0; gap:.4em;'; // check | name (stretches, wraps) | twirl | trash
       headerTitle.onclick = (e) => {
            if (e.target.closest('.stage-toggle') || e.target.closest('.trash')) return;
            App.toggleCard(name, card);
@@ -2237,9 +2223,8 @@ const App = {
            this.refresh(true); // Manual trigger
       };
 
-      const nameDiv = document.createElement('div');
+      const nameDiv = document.createElement('span');
       nameDiv.className = 'file-name';
-      nameDiv.style = 'direction:rtl; text-align:left; flex:1;';
       nameDiv.textContent = name; // Already decoded
 
       const chevron = document.createElement('div');
@@ -2412,7 +2397,7 @@ const App = {
       const card = document.getElementById(`card-${name.replace(/\W/g, '-')}`), h = card && card.querySelector('.file-header'), n = card && card.querySelector('.file-name');
       if (!h) return;
       h.classList.remove('saving', 'saved', 'pop'); if (st) h.classList.add(st, 'pop');
-      n.textContent = st === 'saving' ? 'Saving…' : st === 'saved' ? 'Saved' : name; n.style.direction = st ? 'ltr' : 'rtl'; n.classList.toggle('busy', st === 'saving');
+      n.textContent = st === 'saving' ? 'Saving…' : st === 'saved' ? 'Saved' : name; n.classList.toggle('busy', st === 'saving');
       clearTimeout(h.back); if (st === 'saved') h.back = setTimeout(() => this.cardState(name, ''), 2500);
   },
 
@@ -2500,7 +2485,7 @@ const UI = {
        const closeAll = () => document.querySelectorAll('dialog[open]').forEach(d => d.close());
        // Outside = anywhere but a popup's own controls (popups have no box now, so their gaps/text look like page too).
        // That gesture only closes: its click (UI.eat) and any swipe (detectSwipe checks UI.eat) never reach what's underneath; a scroll still scrolls.
-       document.addEventListener('pointerdown', e => { this.eat = false; if (document.querySelector('dialog[open]:not(.fade)') && !e.target.closest('dialog[open] :is(button, input, select, textarea, label, .row, .btn)')) { closeAll(); this.eat = true; this.up = 0; } }, true);
+       document.addEventListener('pointerdown', e => { this.eat = false; if (document.querySelector('dialog[open]:not(.fade)') && !e.target.closest('dialog[open] :is(button, input, select, textarea, label, .repo, .btn, .pop)')) { closeAll(); this.eat = true; this.up = 0; } }, true);
        document.addEventListener('click', e => { if (this.eat && (!this.up || performance.now() - this.up < 400)) { e.preventDefault(); e.stopPropagation(); } this.eat = false; }, true); // only that gesture's own click
        const done = () => { if (this.eat) this.up = performance.now(); }; // its click comes right after its pointerup; any later click (or the next pointerdown) is never eaten
        document.addEventListener('pointerup', done, true); document.addEventListener('pointercancel', done, true);
