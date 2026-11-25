@@ -15,7 +15,7 @@
     :where(button, input, textarea, select) { font: inherit; min-height: 4.125rem; padding: .375rem .75rem; } :where(button) { white-space: normal; }
     :where(button, input, textarea, select, .pop) { border: 0; border-radius: .75rem; background: var(--pop, var(--p0)); color: #fff; } /* each control's own --pop (app classes) */
     :where(input:is([type=checkbox], [type=radio], [type=range])) { min-height: 0; background: none; } :where(button, input:not([type=checkbox], [type=radio]), select, textarea) { width: 100%; margin: .375rem 0; }
-    .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(clamp(calc(50% - .375rem), (5em - 50%) * 999, 100%), 1fr)); gap: .75rem; } .bar { display: flex; align-items: center; gap: .75rem; } .bar > * { flex: 0 1 auto; width: auto; margin: 0; } .bar > :is(span, label, input) { flex: 1; min-width: 0; } .pop > select { position: absolute; inset: 0; opacity: 0; } .pop:has(> select) { position: relative; display: flex; align-items: center; justify-content: center; }
+    .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(clamp(calc(50% - .375rem), (5em - 50%) * 999, 100%), 1fr)); gap: .75rem; } .bar { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; } .bar > * { flex: 0 1 auto; width: auto; margin: 0; } .bar > :is(span, label, input) { flex: 1 1 0; min-width: min(100%, 5em); } .pop > select { position: absolute; inset: 0; opacity: 0; } .pop:has(> select) { position: relative; display: flex; align-items: center; justify-content: center; }
   </style>
   <link rel="stylesheet" href="mood.css"><script src="mood.js"></script>
   <!-- CodeMirror & Diff2Html -->
@@ -242,7 +242,7 @@
   </div>
   <input id="new-repo-url" class="dashed" placeholder="https://github.com/user/repo">
   <button class="btn c-clone" style="margin-bottom:var(--gap);" onclick="App.cloneFromDialog()">📋 Clone</button>
-  <div id="repo-list" style="display:flex; flex-direction:column; gap:var(--gap); max-height:40vh; overflow:auto;"></div>
+  <div id="repo-list" class="pop" style="display:flex; flex-direction:column; gap:var(--gap); max-height:40vh; overflow:auto;"></div>
   <input id="import-input-main" type="file" webkitdirectory directory multiple style="display:none" onchange="App.handleImport(this, false)">
   <input id="import-input-git" type="file" webkitdirectory directory multiple style="display:none" onchange="App.handleImport(this, true)">
 
